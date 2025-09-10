@@ -1,0 +1,112 @@
+require 'httparty'
+
+class ApiService
+  include HTTParty
+  
+  BASE_URL = ENV.fetch('API_BASE_URL', 'http://localhost:3001/api/v1')
+  
+  class ApiError < StandardError; end
+  class AuthenticationError < ApiError; end
+  class ValidationError < ApiError
+    attr_reader :errors
+    
+    def initialize(message, errors = {})
+      super(message)
+      @errors = errors
+    end
+  end
+  
+  class << self
+    def get(endpoint, token: nil, params: {})
+      authenticated_request(:get, endpoint, token: token, query: params)
+    end
+    
+    def post(endpoint, token: nil, body: {})
+      authenticated_request(:post, endpoint, token: token, body: body)
+    end
+    
+    def put(endpoint, token: nil, body: {})
+      authenticated_request(:put, endpoint, token: token, body: body)
+    end
+    
+    def patch(endpoint, token: nil, body: {})
+      authenticated_request(:patch, endpoint, token: token, body: body)
+    end
+    
+    def delete(endpoint, token: nil)
+      authenticated_request(:delete, endpoint, token: token)
+    end
+    
+    private
+    
+    def authenticated_request(method, endpoint, token: nil, body: nil, query: nil)
+      options = build_request_options(token: token, body: body, query: query)
+      url = "#{BASE_URL}#{endpoint}"
+      
+      Rails.logger.info "API Request: #{method.upcase} #{url}"
+      
+      response = HTTParty.send(method, url, options)
+      
+      handle_response(response)
+    rescue HTTParty::Error => e
+      Rails.logger.error "API Request Failed: #{e.message}"
+      raise ApiError, "Network error: #{e.message}"
+    rescue => e
+      Rails.logger.error "Unexpected error: #{e.message}"
+      raise ApiError, "Unexpected error: #{e.message}"
+    end
+    
+    def build_request_options(token: nil, body: nil, query: nil)
+      options = {
+        headers: {
+          'Content-Type' => 'application/json',
+          'Accept' => 'application/json'
+        }
+      }
+      
+      options[:headers]['Authorization'] = "Bearer #{token}" if token
+      options[:body] = body.to_json if body
+      options[:query] = query if query
+      
+      options
+    end
+    
+    def handle_response(response)
+      case response.code
+      when 200..299
+        parse_response_body(response)
+      when 401
+        raise AuthenticationError, 'Authentication failed. Please login again.'
+      when 403
+        raise ApiError, 'You do not have permission to perform this action.'
+      when 404
+        raise ApiError, 'The requested resource was not found.'
+      when 422
+        errors = parse_validation_errors(response)
+        raise ValidationError.new('Validation failed', errors)
+      when 500..599
+        raise ApiError, 'Server error. Please try again later.'
+      else
+        raise ApiError, "Unexpected response: #{response.code} - #{response.message}"
+      end
+    end
+    
+    def parse_response_body(response)
+      return nil if response.body.blank?
+      
+      JSON.parse(response.body, symbolize_names: true)
+    rescue JSON::ParserError => e
+      Rails.logger.error "Failed to parse response JSON: #{e.message}"
+      response.body
+    end
+    
+    def parse_validation_errors(response)
+      body = parse_response_body(response)
+      return {} unless body.is_a?(Hash)
+      
+      body[:errors] || body[:error] || {}
+    rescue
+      {}
+    end
+  end
+end

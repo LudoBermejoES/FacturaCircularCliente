@@ -54,11 +54,18 @@ Content-Type: application/json
 
 {
   "data": {
+    "type": "companies",
     "attributes": {
-      "name": "Company Name",
-      "tax_id": "B12345678",
-      "country": "ES",
-      "email": "contact@company.com"
+      "corporate_name": "Company Name S.L.",
+      "tax_identification_number": "B12345678",
+      "person_type_code": "J",
+      "residence_type_code": "R",
+      "email": "contact@company.com",
+      "address": "Street Name 123",
+      "postal_code": "28001",
+      "town": "Madrid",
+      "province": "Madrid",
+      "country_code": "ESP"
     }
   }
 }
@@ -88,16 +95,23 @@ Content-Type: application/json
 
 {
   "data": {
+    "type": "invoices",
     "attributes": {
-      "seller_party_id": 1,
-      "buyer_party_id": 2,
-      "invoice_series_code": "A",
+      "invoice_series_code": "FC2024",
       "invoice_number": "001",
       "document_type": "FC",
       "document_class": "OO",
       "issue_date": "2024-01-15",
       "currency_code": "EUR",
       "language_code": "es"
+    },
+    "relationships": {
+      "seller_party": {
+        "data": { "type": "companies", "id": "1" }
+      },
+      "buyer_party": {
+        "data": { "type": "companies", "id": "2" }
+      }
     }
   }
 }
@@ -105,18 +119,34 @@ Content-Type: application/json
 
 ### Invoice Actions
 ```
-POST /api/v1/invoices/:id/freeze          # Make invoice immutable
-POST /api/v1/invoices/:id/convert         # Convert invoice type  
+POST /api/v1/invoices/:id/freeze          # Make invoice immutable (requires approved status)
+POST /api/v1/invoices/:id/convert         # Convert proforma to regular invoice
 PATCH /api/v1/invoices/:id/status         # Change workflow status
 GET /api/v1/invoices/:id/facturae         # Download Facturae XML
+
+# Note: Freeze requires invoice to be in 'approved' status or higher
+# Convert only works for proforma invoices (document_type: 'FP')
 ```
 
 ### Invoice Line Items
 ```
 GET /api/v1/invoices/:id/lines            # List line items
-POST /api/v1/invoices/:id/lines           # Add line item
+POST /api/v1/invoices/:id/lines           # Add line item (auto line_number)
 PUT /api/v1/invoices/:id/lines/:line_id   # Update line item
 DELETE /api/v1/invoices/:id/lines/:line_id # Remove line item
+
+# Add line item example:
+POST /api/v1/invoices/:id/lines
+{
+  "data": {
+    "type": "invoice_lines",
+    "attributes": {
+      "item_description": "Service description",
+      "quantity": 10,
+      "unit_price_without_tax": 100.00
+    }
+  }
+}
 ```
 
 ### Invoice Taxes
@@ -207,13 +237,42 @@ Content-Type: application/json
     {
       "status": "401",
       "title": "Unauthorized", 
-      "detail": "Invalid or expired token"
+      "detail": "Invalid or expired token",
+      "code": "UNAUTHORIZED"
     }
   ]
 }
 ```
 
-### 422 Validation Error
+### 403 Forbidden
+```json
+{
+  "errors": [
+    {
+      "status": "403",
+      "title": "Forbidden",
+      "detail": "You are not authorized to perform this action",
+      "code": "FORBIDDEN"
+    }
+  ]
+}
+```
+
+### 409 Conflict
+```json
+{
+  "errors": [
+    {
+      "status": "409",
+      "title": "Conflict",
+      "detail": "Company cannot be deleted due to existing invoices",
+      "code": "CANNOT_DELETE"
+    }
+  ]
+}
+```
+
+### 422 Validation Error (Rails 8: unprocessable_content)
 ```json
 {
   "errors": [
@@ -221,7 +280,8 @@ Content-Type: application/json
       "status": "422",
       "title": "Validation Error",
       "detail": "Email can't be blank",
-      "source": { "pointer": "/data/attributes/email" }
+      "source": { "pointer": "/data/attributes/email" },
+      "code": "VALIDATION_ERROR"
     }
   ]
 }
@@ -274,6 +334,25 @@ Most endpoints follow JSON:API specification with data wrapped in:
   "meta": { "pagination": {...} }
 }
 ```
+
+## ⚠️ Important API Changes (Sept 2025)
+
+### Request Format
+- All POST/PUT/PATCH requests must include `"type"` in the data object
+- Company creation now requires full address fields (address, postal_code, town, province, country_code)
+- Country code must be 3 letters (e.g., "ESP" not "ES")
+- Invoice relationships use separate `relationships` object, not attributes
+
+### Status Codes
+- Rails 8 uses `:unprocessable_content` (422) instead of `:unprocessable_entity`
+- Frozen invoice operations return 403 Forbidden, not 422
+- Company deletion with invoices returns 409 Conflict, not 422
+
+### Business Rules
+- Invoices must be in 'approved' status before freezing
+- Proforma invoices use different series codes (e.g., "PF2024" vs "FC2024")
+- Invoice lines get automatic line numbers if not provided
+- All invoice lines currently use 21% tax rate (hardcoded)
 
 ---
 *For complete examples and detailed explanations, see `/Users/ludo/code/albaranes/HOW_TO_API.md`*
