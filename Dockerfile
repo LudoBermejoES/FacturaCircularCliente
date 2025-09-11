@@ -11,14 +11,53 @@ ENV RAILS_ENV="development" \
     BUNDLE_PATH="/usr/local/bundle" \
     BUNDLE_WITHOUT=""
 
-# Install packages needed for Rails
+# Install packages needed for Rails and Chrome for testing
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y \
     build-essential \
     curl \
     git \
     libvips \
-    libyaml-dev && \
+    libyaml-dev \
+    wget \
+    gnupg \
+    unzip \
+    xvfb \
+    ca-certificates \
+    fonts-liberation \
+    libasound2 \
+    libatk-bridge2.0-0 \
+    libatk1.0-0 \
+    libatspi2.0-0 \
+    libcairo2 \
+    libcups2 \
+    libdbus-1-3 \
+    libdrm2 \
+    libexpat1 \
+    libgbm1 \
+    libgcc-s1 \
+    libglib2.0-0 \
+    libgtk-3-0 \
+    libnspr4 \
+    libnss3 \
+    libpango-1.0-0 \
+    libvulkan1 \
+    libx11-6 \
+    libxcb1 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxext6 \
+    libxfixes3 \
+    libxkbcommon0 \
+    libxrandr2 \
+    lsb-release && \
+    rm -rf /var/lib/apt/lists /var/cache/apt/archives
+
+# Install Chromium browser for Selenium tests (more compatible than Chrome)
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y \
+    chromium \
+    chromium-driver && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # Install Node.js and Yarn for Rails asset pipeline
