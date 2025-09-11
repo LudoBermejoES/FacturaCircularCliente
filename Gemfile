@@ -23,7 +23,7 @@ gem "jbuilder"
 gem "bcrypt", "~> 3.1.7"
 
 # HTTP client for API communication
-gem "httparty", "~> 0.22.0"
+gem "httparty", "~> 0.23.1"
 
 # JWT token handling
 gem "jwt", "~> 2.7"
