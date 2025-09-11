@@ -1,0 +1,21 @@
+# Minimal database configuration for test environment only
+# This stateless client doesn't need a database in production, 
+# but Rails tests expect a database connection
+
+test:
+  adapter: sqlite3
+  database: ":memory:"
+  pool: 1
+  timeout: 5000
+
+development:
+  adapter: sqlite3
+  database: db/development.sqlite3
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  timeout: 5000
+
+production:
+  adapter: sqlite3
+  database: db/production.sqlite3
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  timeout: 5000

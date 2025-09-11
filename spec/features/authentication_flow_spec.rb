@@ -23,6 +23,7 @@ RSpec.feature 'Authentication Flow', type: :feature do
       }.to_json)
     
     stub_request(:get, 'http://localhost:3001/api/v1/invoices')
+      .with(query: { limit: '5', status: 'recent' })
       .to_return(status: 200, body: { invoices: [], total: 0 }.to_json)
 
     # Visit login page
@@ -30,9 +31,11 @@ RSpec.feature 'Authentication Flow', type: :feature do
     expect(page).to have_content('Sign in to FacturaCircular')
     
     # Fill in credentials and submit
-    fill_in 'Email address', with: valid_email
-    fill_in 'Password', with: valid_password
-    click_button 'Sign in'
+    within 'form' do
+      find('input[type="email"]').set(valid_email)
+      find('input[type="password"]').set(valid_password)
+      click_button 'Sign in'
+    end
     
     # Should redirect to dashboard
     expect(page).to have_current_path(dashboard_path)
@@ -54,9 +57,11 @@ RSpec.feature 'Authentication Flow', type: :feature do
     visit login_path
     
     # Fill in invalid credentials
-    fill_in 'Email address', with: valid_email
-    fill_in 'Password', with: 'wrongpassword'
-    click_button 'Sign in'
+    within 'form' do
+      find('input[type="email"]').set(valid_email)
+      find('input[type="password"]').set('wrongpassword')
+      click_button 'Sign in'
+    end
     
     # Should stay on login page with error
     expect(page).to have_current_path(login_path)
@@ -73,6 +78,7 @@ RSpec.feature 'Authentication Flow', type: :feature do
     stub_request(:get, 'http://localhost:3001/api/v1/invoices/stats')
       .to_return(status: 200, body: { total_invoices: 0, total_amount: 0 }.to_json)
     stub_request(:get, 'http://localhost:3001/api/v1/invoices')
+      .with(query: { limit: '5', status: 'recent' })
       .to_return(status: 200, body: { invoices: [] }.to_json)
     
     # Stub logout API call
@@ -118,6 +124,7 @@ RSpec.feature 'Authentication Flow', type: :feature do
       .to_return(status: 200, body: invoice_stats.to_json)
     
     stub_request(:get, 'http://localhost:3001/api/v1/invoices')
+      .with(query: { limit: '5', status: 'recent' })
       .to_return(status: 200, body: { 
         invoices: [build(:invoice_response, invoice_number: 'INV-001')], 
         total: 1 
@@ -144,6 +151,7 @@ RSpec.feature 'Authentication Flow', type: :feature do
     stub_request(:get, 'http://localhost:3001/api/v1/invoices/stats')
       .to_return(status: 200, body: { total_invoices: 0 }.to_json)
     stub_request(:get, 'http://localhost:3001/api/v1/invoices')
+      .with(query: { limit: '5', status: 'recent' })
       .to_return(status: 200, body: { invoices: [] }.to_json)
 
     login_via_ui(valid_email, valid_password)
@@ -151,6 +159,7 @@ RSpec.feature 'Authentication Flow', type: :feature do
 
     # Simulate expired session on next request
     stub_request(:get, 'http://localhost:3001/api/v1/companies')
+      .with(query: { page: '1', per_page: '25' })
       .to_return(status: 401, body: { error: 'Token expired' }.to_json)
 
     # Try to access companies page

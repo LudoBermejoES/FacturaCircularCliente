@@ -65,8 +65,8 @@ WebMock.disable_net_connect!(
 Dir[Rails.root.join('spec', 'support', '**', '*.rb')].sort.each { |f| require f }
 
 RSpec.configure do |config|
-  # Remove this line to enable support for ActiveRecord
-  config.use_active_record = false
+  # Use ActiveRecord for test database connection (stateless client uses in-memory DB for tests only)
+  config.use_active_record = true
 
   # RSpec Rails can automatically mix in different behaviours to your tests
   # based on their file location, for example enabling you to call `get` and

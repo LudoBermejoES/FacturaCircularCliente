@@ -14,7 +14,10 @@ RSpec.describe 'Companies', type: :request do
   describe 'GET /companies' do
     before do
       stub_request(:get, 'http://localhost:3001/api/v1/companies')
-        .with(headers: { 'Authorization' => "Bearer #{token}" })
+        .with(
+          headers: { 'Authorization' => "Bearer #{token}" },
+          query: { 'page' => '1', 'per_page' => '25' }
+        )
         .to_return(
           status: 200,
           body: {

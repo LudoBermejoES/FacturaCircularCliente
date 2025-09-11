@@ -17,7 +17,7 @@ class InvoicesController < ApplicationController
     begin
       response = InvoiceService.all(
         token: current_token,
-        params: {
+        filters: {
           page: @page,
           per_page: @per_page,
           **@filters
@@ -25,7 +25,7 @@ class InvoicesController < ApplicationController
       )
       
       @invoices = response[:invoices] || []
-      @total_count = response[:meta][:total] if response[:meta]
+      @total_count = response[:meta] ? response[:meta][:total] : response[:total]
       @current_page = response[:meta][:page] if response[:meta]
       @total_pages = response[:meta][:pages] if response[:meta]
       
@@ -68,7 +68,7 @@ class InvoicesController < ApplicationController
       invoice_params_with_lines = process_invoice_params(invoice_params)
       
       response = InvoiceService.create(invoice_params_with_lines, token: current_token)
-      redirect_to invoice_path(response[:id]), notice: 'Invoice was successfully created.'
+      redirect_to invoice_path(response[:id]), notice: 'Invoice created successfully'
     rescue ApiService::ValidationError => e
       @invoice = invoice_params
       @invoice[:invoice_lines] = params[:invoice][:invoice_lines]&.values || [build_empty_line_item]
@@ -94,7 +94,7 @@ class InvoicesController < ApplicationController
       invoice_params_with_lines = process_invoice_params(invoice_params)
       
       InvoiceService.update(@invoice[:id], invoice_params_with_lines, token: current_token)
-      redirect_to invoice_path(@invoice[:id]), notice: 'Invoice was successfully updated.'
+      redirect_to invoice_path(@invoice[:id]), notice: 'Invoice updated successfully'
     rescue ApiService::ValidationError => e
       @errors = e.errors
       @invoice[:invoice_lines] = params[:invoice][:invoice_lines]&.values || @invoice[:invoice_lines]
@@ -111,8 +111,8 @@ class InvoicesController < ApplicationController
   
   def destroy
     begin
-      InvoiceService.destroy(@invoice[:id], token: current_token)
-      redirect_to invoices_path, notice: 'Invoice was successfully deleted.'
+      InvoiceService.delete(@invoice[:id], token: current_token)
+      redirect_to invoices_path, notice: 'Invoice deleted successfully'
     rescue ApiService::ApiError => e
       redirect_to invoices_path, alert: "Error deleting invoice: #{e.message}"
     end
@@ -121,7 +121,7 @@ class InvoicesController < ApplicationController
   def freeze
     begin
       InvoiceService.freeze(@invoice[:id], token: current_token)
-      redirect_to invoice_path(@invoice[:id]), notice: 'Invoice was successfully frozen.'
+      redirect_to invoice_path(@invoice[:id]), notice: 'Invoice frozen'
     rescue ApiService::ApiError => e
       redirect_to invoice_path(@invoice[:id]), alert: "Error freezing invoice: #{e.message}"
     end
@@ -130,7 +130,7 @@ class InvoicesController < ApplicationController
   def send_email
     begin
       InvoiceService.send_email(@invoice[:id], params[:recipient_email], token: current_token)
-      redirect_to invoice_path(@invoice[:id]), notice: 'Invoice was successfully sent by email.'
+      redirect_to invoice_path(@invoice[:id]), notice: 'Email sent'
     rescue ApiService::ApiError => e
       redirect_to invoice_path(@invoice[:id]), alert: "Error sending invoice: #{e.message}"
     end
@@ -185,7 +185,8 @@ class InvoicesController < ApplicationController
       :invoice_number, :invoice_type, :date, :due_date, :status,
       :company_id, :notes, :internal_notes, :payment_method,
       :payment_terms, :currency, :exchange_rate,
-      :discount_percentage, :discount_amount
+      :discount_percentage, :discount_amount,
+      invoice_lines_attributes: [:description, :quantity, :unit_price, :tax_rate, :discount_percentage, :product_code]
     )
   end
   

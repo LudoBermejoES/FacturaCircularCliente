@@ -32,7 +32,7 @@
       </div>
     </div>
 
-    <!-- Pending Invoices Card -->
+    <!-- Pending Amount Card -->
     <div class="bg-white overflow-hidden shadow rounded-lg">
       <div class="p-5">
         <div class="flex items-center">
@@ -44,13 +44,13 @@
           <div class="ml-5 w-0 flex-1">
             <dl>
               <dt class="text-sm font-medium text-gray-500 truncate">Pending</dt>
-              <dd class="mt-1 text-3xl font-semibold text-gray-900">0</dd>
+              <dd class="mt-1 text-3xl font-semibold text-gray-900"><%= format_currency(@stats[:pending_amount] || 0) %></dd>
             </dl>
           </div>
         </div>
         <div class="mt-4">
           <div class="text-sm text-yellow-600">
-            Awaiting approval
+            Awaiting payment
           </div>
         </div>
       </div>
@@ -102,6 +102,31 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18" />
             </svg>
             0% from last month
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Breakdown -->
+  <div class="bg-white shadow rounded-lg">
+    <div class="px-4 py-5 sm:px-6">
+      <h3 class="text-lg font-medium text-gray-900">Invoice Status Breakdown</h3>
+    </div>
+    <div class="border-t border-gray-200">
+      <div class="px-4 py-5 sm:p-6">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div class="text-center">
+            <div class="text-2xl font-semibold text-gray-900"><%= @stats[:draft_count] || 0 %></div>
+            <div class="text-sm text-gray-500">Draft</div>
+          </div>
+          <div class="text-center">
+            <div class="text-2xl font-semibold text-gray-900"><%= @stats[:sent_count] || 0 %></div>
+            <div class="text-sm text-gray-500">Sent</div>
+          </div>
+          <div class="text-center">
+            <div class="text-2xl font-semibold text-gray-900"><%= @stats[:paid_count] || 0 %></div>
+            <div class="text-sm text-gray-500">Paid</div>
           </div>
         </div>
       </div>

@@ -15,6 +15,7 @@ FactoryBot.define do
     status { %w[draft sent paid].sample }
     total { Faker::Commerce.price(range: 100..10000) }
     company { association :company_response }
+    company_id { Faker::Number.number(digits: 3) }
     
     initialize_with { attributes }
   end

@@ -1,7 +1,6 @@
 class SessionsController < ApplicationController
   skip_before_action :authenticate_user!, only: [:new, :create]
   skip_before_action :debug_request
-  skip_before_action :verify_authenticity_token, only: [:create, :destroy], if: -> { Rails.env.test? }
   
   def new
     Rails.logger.info "DEBUG: SessionsController#new called"

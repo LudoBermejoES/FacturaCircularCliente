@@ -1,14 +1,16 @@
 module SessionHelper
   def login_via_ui(email = 'admin@example.com', password = 'password123')
     visit login_path
-    fill_in 'Email address', with: email
-    fill_in 'Password', with: password
-    click_button 'Sign in'
+    within 'form' do
+      find('input[type="email"]').set(email)
+      find('input[type="password"]').set(password)
+      click_button 'Sign in'
+    end
   end
   
   def logout_via_ui
-    find('[data-dropdown-target="button"]').click
-    click_link 'Sign out'
+    find('[data-action="click->dropdown#toggle"]').click
+    click_button 'Sign out'
   end
   
   def expect_to_be_logged_in

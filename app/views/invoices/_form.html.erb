@@ -1,5 +1,5 @@
-<%= form_with model: invoice, url: invoice.is_a?(Hash) && !invoice[:id] ? invoices_path : invoice_path(invoice[:id]), 
-              method: invoice.is_a?(Hash) && !invoice[:id] ? :post : :patch,
+<%= form_with url: invoice.is_a?(Hash) && invoice[:id].present? ? invoice_path(invoice[:id]) : invoices_path, 
+              method: invoice.is_a?(Hash) && invoice[:id].present? ? :patch : :post,
               local: true, 
               data: { controller: "invoice-form" },
               class: "space-y-6" do |form| %>

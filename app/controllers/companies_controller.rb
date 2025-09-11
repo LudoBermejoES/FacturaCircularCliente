@@ -20,6 +20,9 @@ class CompaniesController < ApplicationController
       @total_count = response[:meta] ? response[:meta][:total] : response[:total]
       @current_page = response[:meta][:page] if response[:meta]
       @total_pages = response[:meta][:pages] if response[:meta]
+    rescue ApiService::AuthenticationError => e
+      clear_session
+      redirect_to login_path, alert: 'Please sign in to continue'
     rescue ApiService::ApiError => e
       @companies = []
       flash.now[:alert] = "Error loading companies: #{e.message}"

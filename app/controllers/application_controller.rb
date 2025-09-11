@@ -18,11 +18,6 @@ class ApplicationController < ActionController::Base
     redirect_to login_path, alert: 'Your session has expired. Please login again.'
   end
   
-  rescue_from ApiService::ValidationError do |e|
-    Rails.logger.error "Validation error: #{e.message}"
-    flash[:alert] = e.message
-    redirect_back(fallback_location: root_path)
-  end
   
   private
   
@@ -43,7 +38,7 @@ class ApplicationController < ActionController::Base
     
     unless logged_in?
       Rails.logger.info "DEBUG: User not logged in, redirecting to login"
-      redirect_to login_path, alert: 'Please login to continue.'
+      redirect_to login_path, alert: 'Please sign in to continue'
     end
   rescue => e
     Rails.logger.error "DEBUG: authenticate_user! error: #{e.message}"

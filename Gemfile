@@ -51,6 +51,11 @@ group :development, :test do
   gem "rubocop-rails-omakase", require: false
 end
 
+group :test do
+  # Minimal database for tests only (stateless client doesn't need DB in production)
+  gem "sqlite3", "~> 2.2"
+end
+
 group :development do
   # Use console on exceptions pages [https://github.com/rails/web-console]
   gem "web-console"
@@ -67,6 +72,6 @@ gem "factory_bot_rails", "~> 6.5", group: :test
 gem "faker", "~> 3.5", group: :test
 gem "webmock", "~> 3.25", group: :test
 gem "vcr", "~> 6.3", group: :test
-gem "database_cleaner-active_record", "~> 2.2", group: :test
+# gem "database_cleaner-active_record", "~> 2.2", group: :test  # Not needed for stateless client
 gem "shoulda-matchers", "~> 6.5", group: :test
 gem "simplecov", "~> 0.22.0", group: :test
