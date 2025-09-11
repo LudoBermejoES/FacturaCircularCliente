@@ -23,22 +23,11 @@ RSpec.describe 'Dashboard', type: :request do
     end
 
     before do
-      stub_request(:get, 'http://localhost:3001/api/v1/invoices/stats')
-        .with(headers: { 'Authorization' => "Bearer #{token}" })
-        .to_return(status: 200, body: invoice_stats.to_json)
-      
-      stub_request(:get, 'http://localhost:3001/api/v1/invoices')
-        .with(
-          query: { limit: 5, status: 'recent' },
-          headers: { 'Authorization' => "Bearer #{token}" }
-        )
-        .to_return(
-          status: 200, 
-          body: { 
-            invoices: [build(:invoice_response), build(:invoice_response)],
-            total: 2 
-          }.to_json
-        )
+      # Mock InvoiceService methods to avoid HTTP calls (using same pattern as other specs)
+      allow(InvoiceService).to receive(:stats).with(any_args).and_return(invoice_stats)
+      allow(InvoiceService).to receive(:recent).with(any_args).and_return([
+        build(:invoice_response), build(:invoice_response)
+      ])
     end
 
     it 'renders dashboard with statistics' do
@@ -58,8 +47,12 @@ RSpec.describe 'Dashboard', type: :request do
 
   describe 'without authentication' do
     before do
+      # Override all RequestHelper authentication mocks to simulate no authentication
+      allow_any_instance_of(ApplicationController).to receive(:current_user).and_return(nil)
       allow_any_instance_of(ApplicationController).to receive(:user_signed_in?).and_return(false)
-      allow_any_instance_of(ApplicationController).to receive(:logged_in?).and_return(false)
+      allow_any_instance_of(ApplicationController).to receive(:logged_in?).and_return(false) 
+      allow_any_instance_of(ApplicationController).to receive(:current_token).and_return(nil)
+      allow_any_instance_of(ApplicationController).to receive(:authenticate_user!).and_call_original
     end
 
     it 'redirects to login' do
