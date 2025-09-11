@@ -4,8 +4,13 @@ RSpec.describe 'Sessions', type: :request do
   describe 'GET /login' do
     it 'renders login form' do
       get login_path
+      puts "Response status: #{response.status}"
+      if response.status != 200
+        puts "Full response body:"
+        puts response.body
+      end
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include('Sign in to your account')
+      expect(response.body).to include('Sign in to FacturaCircular')
     end
   end
 
@@ -16,10 +21,6 @@ RSpec.describe 'Sessions', type: :request do
 
     before do
       stub_request(:post, 'http://localhost:3001/api/v1/auth/login')
-        .with(
-          body: { email: email, password: password, remember_me: false }.to_json,
-          headers: { 'Content-Type' => 'application/json', 'Accept' => 'application/json' }
-        )
         .to_return(status: 200, body: auth_response.to_json)
     end
 

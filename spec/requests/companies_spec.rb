@@ -8,7 +8,7 @@ RSpec.describe 'Companies', type: :request do
   before do
     allow_any_instance_of(ApplicationController).to receive(:current_user).and_return(user)
     allow_any_instance_of(ApplicationController).to receive(:user_signed_in?).and_return(true)
-    allow(user).to receive(:access_token).and_return(token)
+    allow_any_instance_of(ApplicationController).to receive(:current_token).and_return(token)
   end
 
   describe 'GET /companies' do

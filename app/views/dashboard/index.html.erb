@@ -20,13 +20,13 @@
           <div class="ml-5 w-0 flex-1">
             <dl>
               <dt class="text-sm font-medium text-gray-500 truncate">Total Invoices</dt>
-              <dd class="mt-1 text-3xl font-semibold text-gray-900">0</dd>
+              <dd class="mt-1 text-3xl font-semibold text-gray-900"><%= @stats[:total_invoices] || 0 %></dd>
             </dl>
           </div>
         </div>
         <div class="mt-4">
           <div class="text-sm">
-            <a href="#" class="font-medium text-indigo-600 hover:text-indigo-500">View all →</a>
+            <a href="#" class="font-medium text-indigo-600 hover:text-indigo-500"><%= @stats[:total_invoices] || 0 %> invoices</a>
           </div>
         </div>
       </div>
@@ -92,7 +92,7 @@
           <div class="ml-5 w-0 flex-1">
             <dl>
               <dt class="text-sm font-medium text-gray-500 truncate">This Month</dt>
-              <dd class="mt-1 text-3xl font-semibold text-gray-900">€0</dd>
+              <dd class="mt-1 text-3xl font-semibold text-gray-900"><%= format_currency(@stats[:total_amount] || 0) %></dd>
             </dl>
           </div>
         </div>
@@ -137,6 +137,35 @@
           </svg>
           Settings
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Invoices -->
+  <div class="bg-white shadow rounded-lg">
+    <div class="px-4 py-5 sm:px-6">
+      <h3 class="text-lg font-medium text-gray-900">Recent Invoices</h3>
+    </div>
+    <div class="border-t border-gray-200">
+      <div class="px-4 py-5 sm:p-6">
+        <% if @recent_invoices && @recent_invoices.any? %>
+          <div class="space-y-3">
+            <% @recent_invoices.each do |invoice| %>
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-medium text-gray-900">Invoice #<%= invoice[:invoice_number] %></p>
+                  <p class="text-sm text-gray-500"><%= invoice[:customer_name] %></p>
+                </div>
+                <div class="text-right">
+                  <p class="text-sm font-medium text-gray-900"><%= format_currency(invoice[:total_amount]) %></p>
+                  <p class="text-sm text-gray-500"><%= invoice[:status]&.humanize %></p>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <p class="text-sm text-gray-500">No recent invoices</p>
+        <% end %>
       </div>
     </div>
   </div>

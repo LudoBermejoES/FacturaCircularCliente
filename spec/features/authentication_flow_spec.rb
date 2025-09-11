@@ -27,10 +27,10 @@ RSpec.feature 'Authentication Flow', type: :feature do
 
     # Visit login page
     visit login_path
-    expect(page).to have_content('Sign in to your account')
+    expect(page).to have_content('Sign in to FacturaCircular')
     
     # Fill in credentials and submit
-    fill_in 'Email', with: valid_email
+    fill_in 'Email address', with: valid_email
     fill_in 'Password', with: valid_password
     click_button 'Sign in'
     
@@ -54,14 +54,14 @@ RSpec.feature 'Authentication Flow', type: :feature do
     visit login_path
     
     # Fill in invalid credentials
-    fill_in 'Email', with: valid_email
+    fill_in 'Email address', with: valid_email
     fill_in 'Password', with: 'wrongpassword'
     click_button 'Sign in'
     
     # Should stay on login page with error
     expect(page).to have_current_path(login_path)
     expect(page).to have_content('Invalid credentials')
-    expect(page).to have_content('Sign in to your account')
+    expect(page).to have_content('Sign in to FacturaCircular')
   end
 
   scenario 'User logs out successfully' do

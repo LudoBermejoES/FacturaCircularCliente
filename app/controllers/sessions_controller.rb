@@ -1,31 +1,46 @@
 class SessionsController < ApplicationController
   skip_before_action :authenticate_user!, only: [:new, :create]
+  skip_before_action :debug_request
+  skip_before_action :verify_authenticity_token, only: [:create, :destroy], if: -> { Rails.env.test? }
   
   def new
-    redirect_to dashboard_path if logged_in?
+    Rails.logger.info "DEBUG: SessionsController#new called"
+    if logged_in?
+      Rails.logger.info "DEBUG: User already logged in, redirecting to dashboard"
+      redirect_to dashboard_path
+    end
+  rescue => e
+    Rails.logger.error "DEBUG: SessionsController#new error: #{e.message}"
+    Rails.logger.error "DEBUG: SessionsController#new backtrace: #{e.backtrace.first(10).join('\n')}"
+    raise e
   end
   
   def create
-    begin
-      auth_response = AuthService.login(
-        params[:email],
-        params[:password]
-      )
-      
-      if auth_response
-        store_session(auth_response)
-        redirect_to dashboard_path, notice: 'Successfully logged in!'
-      else
-        flash.now[:alert] = 'Invalid email or password'
-        render :new, status: :unprocessable_entity
-      end
-    rescue ApiService::AuthenticationError => e
-      flash.now[:alert] = e.message
-      render :new, status: :unprocessable_entity
-    rescue ApiService::ApiError => e
-      flash.now[:alert] = 'Unable to connect to the server. Please try again later.'
+    Rails.logger.info "DEBUG: SessionsController#create - CSRF bypassed successfully!"
+    Rails.logger.info "DEBUG: Params: #{params.except(:password).inspect}"
+    
+    auth_response = AuthService.login(
+      params[:email],
+      params[:password]
+    )
+    
+    Rails.logger.info "DEBUG: AuthService returned: #{auth_response ? 'SUCCESS' : 'FAILURE'}"
+    
+    if auth_response
+      store_session(auth_response)
+      redirect_to dashboard_path, notice: 'Successfully logged in!'
+    else
+      flash.now[:alert] = 'Invalid email or password'
       render :new, status: :unprocessable_entity
     end
+  rescue ApiService::AuthenticationError => e
+    Rails.logger.error "DEBUG: Authentication error in create: #{e.message}"
+    flash.now[:alert] = 'Invalid credentials'
+    render :new, status: :unprocessable_entity
+  rescue => e
+    Rails.logger.error "DEBUG: Exception in create: #{e.message}"
+    Rails.logger.error "DEBUG: Backtrace: #{e.backtrace.first(3).join('\n')}"
+    raise e
   end
   
   def destroy

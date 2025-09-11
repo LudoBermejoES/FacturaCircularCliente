@@ -27,8 +27,8 @@ Rails.application.routes.draw do
     member do
       post :freeze
       post :send_email
-      get :download_pdf
-      get :download_facturae
+      get :pdf, action: :download_pdf
+      get :facturae, action: :download_facturae
     end
     
     # Workflow management

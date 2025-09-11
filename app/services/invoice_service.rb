@@ -80,6 +80,17 @@ class InvoiceService < ApiService
       get('/invoices/statistics', token: token, params: params)
     end
     
+    # Dashboard stats
+    def stats(token:)
+      get('/invoices/stats', token: token)
+    end
+    
+    # Recent invoices
+    def recent(token:, limit: 5)
+      response = get('/invoices', token: token, params: { limit: limit, status: 'recent' })
+      response&.[](:invoices) || []
+    end
+    
     private
     
     # Special method for downloading files (PDF, XML) that are not JSON

@@ -17,7 +17,7 @@ class CompaniesController < ApplicationController
       )
       
       @companies = response[:companies] || []
-      @total_count = response[:meta][:total] if response[:meta]
+      @total_count = response[:meta] ? response[:meta][:total] : response[:total]
       @current_page = response[:meta][:page] if response[:meta]
       @total_pages = response[:meta][:pages] if response[:meta]
     rescue ApiService::ApiError => e

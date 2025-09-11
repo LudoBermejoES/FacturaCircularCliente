@@ -1,19 +1,27 @@
 class AuthService < ApiService
   class << self
     def login(email, password, remember_me = false)
+      Rails.logger.info "DEBUG: AuthService.login called with email=#{email}"
       response = post('/auth/login', body: {
         email: email,
         password: password,
         remember_me: remember_me
       })
+      Rails.logger.info "DEBUG: AuthService.login got response: #{response.inspect}"
       
       if response && response[:access_token] && response[:refresh_token]
-        {
+        result = {
           access_token: response[:access_token],
           refresh_token: response[:refresh_token],
           user: response[:user]
         }
+        Rails.logger.info "DEBUG: AuthService.login returning: #{result.inspect}"
+        result
       else
+        Rails.logger.error "DEBUG: AuthService.login failed - response was invalid"
+        Rails.logger.error "DEBUG: response present: #{response.present?}"
+        Rails.logger.error "DEBUG: access_token present: #{response&.[](:access_token).present?}"
+        Rails.logger.error "DEBUG: refresh_token present: #{response&.[](:refresh_token).present?}"
         raise ApiService::AuthenticationError, 'Invalid login response from server'
       end
     end

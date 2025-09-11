@@ -1,7 +1,7 @@
 module SessionHelper
   def login_via_ui(email = 'admin@example.com', password = 'password123')
     visit login_path
-    fill_in 'Email', with: email
+    fill_in 'Email address', with: email
     fill_in 'Password', with: password
     click_button 'Sign in'
   end
@@ -13,11 +13,11 @@ module SessionHelper
   
   def expect_to_be_logged_in
     expect(page).to have_content('Dashboard')
-    expect(page).not_to have_content('Sign in to your account')
+    expect(page).not_to have_content('Sign in to FacturaCircular')
   end
   
   def expect_to_be_logged_out
-    expect(page).to have_content('Sign in to your account')
+    expect(page).to have_content('Sign in to FacturaCircular')
     expect(page).not_to have_content('Dashboard')
   end
   

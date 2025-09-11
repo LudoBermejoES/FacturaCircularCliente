@@ -18,15 +18,14 @@ Rails.application.configure do
   # Configure public file server for tests with cache-control for performance.
   config.public_file_server.headers = { "cache-control" => "public, max-age=3600" }
 
-  # Show full error reports.
+  # Raise exceptions in test so we can see the actual error
   config.consider_all_requests_local = true
   config.cache_store = :null_store
-
-  # Render exception templates for rescuable exceptions and raise for other exceptions.
-  config.action_dispatch.show_exceptions = :rescuable
+  config.action_dispatch.show_exceptions = false
 
   # Disable request forgery protection in test environment.
   config.action_controller.allow_forgery_protection = false
+  config.action_controller.perform_caching = false
 
   # Tell Action Mailer not to deliver emails to the real world.
   # The :test delivery method accumulates sent emails in the
@@ -47,4 +46,9 @@ Rails.application.configure do
 
   # Raise error when a before_action's only/except options reference missing actions.
   config.action_controller.raise_on_missing_callback_actions = true
+  
+  # Allow test hosts for RSpec and Capybara
+  config.hosts << "localhost"
+  config.hosts << "127.0.0.1"
+  config.hosts << "localhost:3002"
 end
