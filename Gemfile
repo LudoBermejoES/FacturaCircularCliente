@@ -61,3 +61,12 @@ group :test do
   gem "capybara"
   gem "selenium-webdriver"
 end
+
+gem "rspec-rails", "~> 8.0", group: :test
+gem "factory_bot_rails", "~> 6.5", group: :test
+gem "faker", "~> 3.5", group: :test
+gem "webmock", "~> 3.25", group: :test
+gem "vcr", "~> 6.3", group: :test
+gem "database_cleaner-active_record", "~> 2.2", group: :test
+gem "shoulda-matchers", "~> 6.5", group: :test
+gem "simplecov", "~> 0.22.0", group: :test

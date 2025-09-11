@@ -51,6 +51,9 @@ class ApiService
     rescue HTTParty::Error => e
       Rails.logger.error "API Request Failed: #{e.message}"
       raise ApiError, "Network error: #{e.message}"
+    rescue AuthenticationError, ValidationError => e
+      # Re-raise our own exceptions without wrapping
+      raise e
     rescue => e
       Rails.logger.error "Unexpected error: #{e.message}"
       raise ApiError, "Unexpected error: #{e.message}"

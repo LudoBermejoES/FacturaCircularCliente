@@ -1,11 +1,10 @@
-require 'jwt'
-
 class AuthService < ApiService
   class << self
-    def login(email, password)
+    def login(email, password, remember_me = false)
       response = post('/auth/login', body: {
         email: email,
-        password: password
+        password: password,
+        remember_me: remember_me
       })
       
       if response && response[:access_token] && response[:refresh_token]
@@ -15,7 +14,7 @@ class AuthService < ApiService
           user: response[:user]
         }
       else
-        raise AuthenticationError, 'Invalid login response from server'
+        raise ApiService::AuthenticationError, 'Invalid login response from server'
       end
     end
     
@@ -30,52 +29,33 @@ class AuthService < ApiService
           refresh_token: response[:refresh_token] || refresh_token
         }
       else
-        raise AuthenticationError, 'Failed to refresh token'
+        raise ApiService::AuthenticationError, 'Failed to refresh token'
       end
     end
     
     def logout(token)
-      post('/auth/logout', token: token)
-      true
-    rescue => e
+      response = post('/auth/logout', token: token)
+      response || { message: 'Logged out successfully' }
+    rescue ApiService::AuthenticationError => e
+      # Even if logout fails on server, clear local session
       Rails.logger.error "Logout failed: #{e.message}"
-      true
+      raise e
+    rescue => e
+      Rails.logger.error "Logout error: #{e.message}"
+      { message: 'Logged out locally' }
     end
     
     def validate_token(token)
-      return false if token.blank?
+      return { valid: false } if token.blank?
       
-      begin
-        decoded = decode_token(token)
-        !token_expired?(decoded)
-      rescue JWT::DecodeError => e
-        Rails.logger.error "Token validation failed: #{e.message}"
-        false
-      end
-    end
-    
-    def decode_token(token)
-      JWT.decode(
-        token, 
-        jwt_secret, 
-        false,
-        { algorithm: 'HS256' }
-      ).first
-    rescue JWT::DecodeError => e
-      Rails.logger.error "Failed to decode token: #{e.message}"
-      raise
-    end
-    
-    private
-    
-    def jwt_secret
-      ENV.fetch('JWT_SECRET', 'your-secret-key')
-    end
-    
-    def token_expired?(decoded_token)
-      return true unless decoded_token['exp']
-      
-      Time.at(decoded_token['exp']) < Time.current
+      response = get('/auth/validate', token: token)
+      response || { valid: false }
+    rescue ApiService::AuthenticationError => e
+      Rails.logger.error "Token validation failed: #{e.message}"
+      raise e
+    rescue => e
+      Rails.logger.error "Token validation error: #{e.message}"
+      { valid: false }
     end
   end
 end

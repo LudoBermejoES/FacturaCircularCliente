@@ -1,7 +1,7 @@
 class InvoiceService < ApiService
   class << self
-    def all(token:, params: {})
-      get('/invoices', token: token, params: params)
+    def all(token:, filters: {})
+      get('/invoices', token: token, params: filters)
     end
     
     def find(id, token:)
@@ -9,15 +9,15 @@ class InvoiceService < ApiService
     end
     
     def create(params, token:)
-      post('/invoices', token: token, body: { invoice: params })
+      post('/invoices', token: token, body: params)
     end
     
     def update(id, params, token:)
-      put("/invoices/#{id}", token: token, body: { invoice: params })
+      put("/invoices/#{id}", token: token, body: params)
     end
     
-    def destroy(id, token:)
-      delete("/invoices/#{id}", token: token)
+    def delete(id, token:)
+      super("/invoices/#{id}", token: token)
     end
     
     # Invoice actions
@@ -43,13 +43,13 @@ class InvoiceService < ApiService
       }.compact)
     end
     
-    # Export functions
+    # Export functions - these return raw content, not JSON
     def download_pdf(id, token:)
-      get("/invoices/#{id}/pdf", token: token)
+      download_file("/invoices/#{id}/pdf", token: token)
     end
     
     def download_facturae(id, token:)
-      get("/invoices/#{id}/facturae", token: token)
+      download_file("/invoices/#{id}/facturae", token: token)
     end
     
     # Line items management
@@ -78,6 +78,34 @@ class InvoiceService < ApiService
     # Statistics
     def statistics(token:, params: {})
       get('/invoices/statistics', token: token, params: params)
+    end
+    
+    private
+    
+    # Special method for downloading files (PDF, XML) that are not JSON
+    def download_file(endpoint, token:)
+      options = {
+        headers: {
+          'Authorization' => "Bearer #{token}",
+          'Accept' => '*/*'
+        }
+      }
+      
+      url = "#{ApiService::BASE_URL}#{endpoint}"
+      response = HTTParty.get(url, options)
+      
+      case response.code
+      when 200
+        response.body
+      when 401
+        raise ApiService::AuthenticationError, 'Authentication failed'
+      when 404
+        raise ApiService::NotFoundError, 'Resource not found'
+      else
+        raise ApiService::ApiError, "Request failed with status: #{response.code}"
+      end
+    rescue HTTParty::Error => e
+      raise ApiService::ApiError, "Network error: #{e.message}"
     end
   end
 end
