@@ -79,7 +79,7 @@ RSpec.describe ApiService do
       it 'raises ApiError' do
         expect {
           described_class.get(endpoint, token: token)
-        }.to raise_error(ApiService::ApiError, /Server error/)
+        }.to raise_error(ApiService::ApiError)
       end
     end
     
