@@ -1,0 +1,239 @@
+<% breadcrumb ["Tax Rates", tax_rates_path], "Tax Calculator" %>
+
+<div class="max-w-4xl mx-auto space-y-6">
+  <!-- Header -->
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900">Tax Calculator</h1>
+    <p class="mt-1 text-sm text-gray-600">Calculate taxes for invoices and validate tax IDs</p>
+  </div>
+  
+  <!-- Calculator Tabs -->
+  <div class="bg-white shadow rounded-lg">
+    <div class="border-b border-gray-200">
+      <nav class="-mb-px flex" data-controller="tabs">
+        <button type="button"
+                data-tabs-target="tab"
+                data-action="click->tabs#show"
+                data-panel="simple-calculator"
+                class="w-1/3 py-2 px-1 text-center border-b-2 border-indigo-500 font-medium text-sm text-indigo-600">
+          Simple Calculator
+        </button>
+        <button type="button"
+                data-tabs-target="tab"
+                data-action="click->tabs#show"
+                data-panel="advanced-calculator"
+                class="w-1/3 py-2 px-1 text-center border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">
+          Advanced Calculator
+        </button>
+        <button type="button"
+                data-tabs-target="tab"
+                data-action="click->tabs#show"
+                data-panel="tax-validation"
+                class="w-1/3 py-2 px-1 text-center border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">
+          Tax ID Validation
+        </button>
+      </nav>
+    </div>
+    
+    <!-- Simple Calculator Panel -->
+    <div id="simple-calculator" data-tabs-target="panel" class="p-6">
+      <%= form_with url: tax_calculations_path, 
+                    data: { controller: "tax-calculator", turbo_frame: "calculation_result" },
+                    local: false do |f| %>
+        <div class="space-y-4">
+          <div>
+            <%= f.label :base_amount, "Base Amount (€)", class: "block text-sm font-medium text-gray-700" %>
+            <%= f.number_field :base_amount, 
+                value: 0,
+                step: 0.01,
+                data: { 
+                  tax_calculator_target: "baseAmount",
+                  action: "input->tax-calculator#calculate"
+                },
+                class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+          </div>
+          
+          <div>
+            <%= f.label :tax_rate, "Tax Rate (%)", class: "block text-sm font-medium text-gray-700" %>
+            <%= f.select :tax_rate,
+                options_for_select([
+                  ['21% - Standard IVA', 21],
+                  ['10% - Reduced IVA', 10],
+                  ['4% - Super Reduced IVA', 4],
+                  ['0% - Exempt', 0],
+                  ['7% - IGIC Standard (Canary Islands)', 7],
+                  ['3% - IGIC Reduced (Canary Islands)', 3]
+                ], 21),
+                {},
+                data: { 
+                  tax_calculator_target: "taxRate",
+                  action: "change->tax-calculator#calculate"
+                },
+                class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+          </div>
+          
+          <div>
+            <%= f.label :discount_percentage, "Discount (%)", class: "block text-sm font-medium text-gray-700" %>
+            <%= f.number_field :discount_percentage,
+                value: 0,
+                step: 0.01,
+                min: 0,
+                max: 100,
+                data: { 
+                  tax_calculator_target: "discount",
+                  action: "input->tax-calculator#calculate"
+                },
+                class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+          </div>
+          
+          <!-- Results -->
+          <div class="border-t pt-4 space-y-2" data-tax-calculator-target="results">
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-600">Base Amount:</span>
+              <span class="font-medium" data-tax-calculator-target="baseResult">€0.00</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-600">Discount:</span>
+              <span class="font-medium text-red-600" data-tax-calculator-target="discountResult">-€0.00</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-600">Subtotal:</span>
+              <span class="font-medium" data-tax-calculator-target="subtotalResult">€0.00</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-600">Tax (<span data-tax-calculator-target="taxRateLabel">21%</span>):</span>
+              <span class="font-medium" data-tax-calculator-target="taxResult">€0.00</span>
+            </div>
+            <div class="flex justify-between text-base font-semibold border-t pt-2">
+              <span>Total:</span>
+              <span data-tax-calculator-target="totalResult">€0.00</span>
+            </div>
+          </div>
+          
+          <div class="flex justify-end">
+            <%= f.submit "Calculate", 
+                class: "inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+    
+    <!-- Advanced Calculator Panel -->
+    <div id="advanced-calculator" data-tabs-target="panel" class="p-6 hidden">
+      <%= form_with url: tax_calculations_path,
+                    data: { controller: "advanced-tax-calculator" },
+                    local: false do |f| %>
+        <div class="space-y-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <%= f.label :base_amount, "Base Amount (€)", class: "block text-sm font-medium text-gray-700" %>
+              <%= f.number_field :base_amount,
+                  value: 0,
+                  step: 0.01,
+                  class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+            </div>
+            
+            <div>
+              <%= f.label :region, "Region", class: "block text-sm font-medium text-gray-700" %>
+              <%= f.select :region,
+                  options_for_select([
+                    ['Mainland Spain', 'mainland'],
+                    ['Canary Islands', 'canary_islands'],
+                    ['Ceuta', 'ceuta'],
+                    ['Melilla', 'melilla']
+                  ]),
+                  {},
+                  class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <%= f.label :tax_rate, "Tax Rate (%)", class: "block text-sm font-medium text-gray-700" %>
+              <%= f.number_field :tax_rate,
+                  value: 21,
+                  step: 0.01,
+                  class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+            </div>
+            
+            <div>
+              <%= f.label :surcharge_percentage, "Equivalence Surcharge (%)", class: "block text-sm font-medium text-gray-700" %>
+              <%= f.number_field :surcharge_percentage,
+                  value: 0,
+                  step: 0.01,
+                  class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <%= f.label :discount_percentage, "Discount (%)", class: "block text-sm font-medium text-gray-700" %>
+              <%= f.number_field :discount_percentage,
+                  value: 0,
+                  step: 0.01,
+                  class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+            </div>
+            
+            <div>
+              <%= f.label :retention_percentage, "IRPF Retention (%)", class: "block text-sm font-medium text-gray-700" %>
+              <%= f.number_field :retention_percentage,
+                  value: 0,
+                  step: 0.01,
+                  class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+            </div>
+          </div>
+          
+          <div class="flex justify-end">
+            <%= f.submit "Calculate Advanced", 
+                class: "inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700" %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+    
+    <!-- Tax ID Validation Panel -->
+    <div id="tax-validation" data-tabs-target="panel" class="p-6 hidden">
+      <%= form_with url: validate_tax_calculations_path,
+                    data: { turbo_frame: "validation_result" },
+                    local: false do |f| %>
+        <div class="space-y-4">
+          <div>
+            <%= f.label :tax_id, "Tax ID (CIF/NIF)", class: "block text-sm font-medium text-gray-700" %>
+            <%= f.text_field :tax_id,
+                placeholder: "e.g., B12345678 or 12345678A",
+                class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+            <p class="mt-1 text-xs text-gray-500">Enter a Spanish tax identification number</p>
+          </div>
+          
+          <div>
+            <%= f.label :country, "Country", class: "block text-sm font-medium text-gray-700" %>
+            <%= f.select :country,
+                options_for_select([
+                  ['Spain', 'ES'],
+                  ['Portugal', 'PT'],
+                  ['France', 'FR'],
+                  ['Germany', 'DE'],
+                  ['Italy', 'IT']
+                ], 'ES'),
+                {},
+                class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+          </div>
+          
+          <div class="flex justify-end">
+            <%= f.submit "Validate Tax ID", 
+                class: "inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700" %>
+          </div>
+        </div>
+      <% end %>
+      
+      <turbo-frame id="validation_result">
+        <!-- Validation results will appear here -->
+      </turbo-frame>
+    </div>
+  </div>
+  
+  <!-- Calculation Result Frame -->
+  <turbo-frame id="calculation_result">
+    <!-- Calculation results will appear here -->
+  </turbo-frame>
+</div>

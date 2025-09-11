@@ -1,0 +1,176 @@
+<% breadcrumb ["Invoices", invoices_path], [@invoice[:invoice_number], invoice_path(@invoice[:id])], "Workflow" %>
+
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex justify-between items-start">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Invoice Workflow</h1>
+      <p class="mt-1 text-sm text-gray-600">
+        Manage status transitions for invoice <%= @invoice[:invoice_number] %>
+      </p>
+    </div>
+    
+    <div class="flex items-center space-x-2">
+      <span class="text-sm text-gray-500">Current Status:</span>
+      <span class="<%= status_badge_class(@invoice[:status]) %>">
+        <%= @invoice[:status].humanize %>
+      </span>
+    </div>
+  </div>
+  
+  <!-- Available Transitions -->
+  <% if @available_transitions.present? %>
+    <div class="bg-white shadow rounded-lg p-6">
+      <h2 class="text-lg font-semibold text-gray-900 mb-4">Available Transitions</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <% @available_transitions.each do |transition| %>
+          <div class="border border-gray-200 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-sm font-medium text-gray-900">
+                <%= transition[:to_status].humanize %>
+              </span>
+              <span class="<%= status_badge_class(transition[:to_status]) %>">
+                <%= transition[:to_status] %>
+              </span>
+            </div>
+            
+            <% if transition[:description].present? %>
+              <p class="text-sm text-gray-600 mb-3">
+                <%= transition[:description] %>
+              </p>
+            <% end %>
+            
+            <%= form_with url: invoice_workflow_transition_path(@invoice[:id]), 
+                          method: :post,
+                          data: { turbo_frame: "workflow_content" },
+                          class: "space-y-3" do |f| %>
+              <%= hidden_field_tag :status, transition[:to_status] %>
+              
+              <% if transition[:requires_comment] %>
+                <div>
+                  <%= f.text_area :comment,
+                                  placeholder: "Add a comment (required)",
+                                  required: true,
+                                  rows: 2,
+                                  class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+                </div>
+              <% else %>
+                <div>
+                  <%= f.text_area :comment,
+                                  placeholder: "Add a comment (optional)",
+                                  rows: 2,
+                                  class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+                </div>
+              <% end %>
+              
+              <%= f.submit "Transition to #{transition[:to_status].humanize}",
+                          class: "w-full inline-flex justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2",
+                          data: { 
+                            confirm: "Are you sure you want to change the status to #{transition[:to_status]}?",
+                            turbo_confirm: "Are you sure?"
+                          } %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% else %>
+    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+          </svg>
+        </div>
+        <div class="ml-3">
+          <h3 class="text-sm font-medium text-yellow-800">No transitions available</h3>
+          <p class="mt-1 text-sm text-yellow-700">
+            This invoice cannot be transitioned from its current status.
+          </p>
+        </div>
+      </div>
+    </div>
+  <% end %>
+  
+  <!-- Workflow History -->
+  <div class="bg-white shadow rounded-lg p-6">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">Workflow History</h2>
+    
+    <% if @history.present? %>
+      <div class="flow-root">
+        <ul role="list" class="-mb-8">
+          <% @history.each_with_index do |event, index| %>
+            <li>
+              <div class="relative pb-8">
+                <% if index != @history.length - 1 %>
+                  <span class="absolute left-4 top-4 -ml-px h-full w-0.5 bg-gray-200" aria-hidden="true"></span>
+                <% end %>
+                
+                <div class="relative flex space-x-3">
+                  <div>
+                    <span class="h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white
+                                <%= event[:from_status] == 'draft' ? 'bg-gray-400' : 'bg-indigo-500' %>">
+                      <svg class="h-5 w-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 2a1 1 0 00-1 1v1a1 1 0 002 0V3a1 1 0 00-1-1zM4 4h3a3 3 0 006 0h3a2 2 0 012 2v9a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2zm2.5 7a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm2.45 4a2.5 2.5 0 10-4.9 0h4.9zM12 9a1 1 0 100 2h3a1 1 0 100-2h-3zm-1 4a1 1 0 011-1h2a1 1 0 110 2h-2a1 1 0 01-1-1z" clip-rule="evenodd"/>
+                      </svg>
+                    </span>
+                  </div>
+                  
+                  <div class="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5">
+                    <div>
+                      <p class="text-sm text-gray-900">
+                        Status changed from 
+                        <span class="font-medium"><%= event[:from_status] %></span>
+                        to
+                        <span class="font-medium"><%= event[:to_status] %></span>
+                      </p>
+                      
+                      <% if event[:comment].present? %>
+                        <p class="mt-1 text-sm text-gray-600">
+                          <%= event[:comment] %>
+                        </p>
+                      <% end %>
+                      
+                      <% if event[:user_name].present? %>
+                        <p class="mt-1 text-xs text-gray-500">
+                          by <%= event[:user_name] %>
+                        </p>
+                      <% end %>
+                    </div>
+                    
+                    <div class="whitespace-nowrap text-right text-sm text-gray-500">
+                      <time datetime="<%= event[:created_at] %>">
+                        <%= format_date_short(event[:created_at]) %>
+                      </time>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </li>
+          <% end %>
+        </ul>
+      </div>
+    <% else %>
+      <p class="text-sm text-gray-500">No workflow history available.</p>
+    <% end %>
+  </div>
+  
+  <!-- Back Button -->
+  <div class="flex justify-start">
+    <%= link_to invoice_path(@invoice[:id]), 
+                class: "inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" do %>
+      <svg class="mr-2 -ml-1 h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/>
+      </svg>
+      Back to Invoice
+    <% end %>
+  </div>
+</div>
+
+<!-- Turbo Frame for dynamic updates -->
+<turbo-frame id="workflow_content">
+  <!-- Content will be replaced via Turbo Stream -->
+</turbo-frame>
+
+<div id="workflow_errors"></div>

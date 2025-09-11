@@ -1,0 +1,312 @@
+<%= form_with model: invoice, url: invoice.is_a?(Hash) && !invoice[:id] ? invoices_path : invoice_path(invoice[:id]), 
+              method: invoice.is_a?(Hash) && !invoice[:id] ? :post : :patch,
+              local: true, 
+              data: { controller: "invoice-form" },
+              class: "space-y-6" do |form| %>
+  
+  <% if @errors.present? %>
+    <div class="rounded-md bg-red-50 p-4">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+          </svg>
+        </div>
+        <div class="ml-3">
+          <h3 class="text-sm font-medium text-red-800">
+            There were errors with your submission
+          </h3>
+          <div class="mt-2 text-sm text-red-700">
+            <ul class="list-disc pl-5 space-y-1">
+              <% @errors.each do |field, messages| %>
+                <% Array(messages).each do |message| %>
+                  <li><%= field.to_s.humanize %> <%= message %></li>
+                <% end %>
+              <% end %>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Invoice Header -->
+  <div class="bg-white shadow rounded-lg">
+    <div class="px-4 py-5 sm:p-6">
+      <h3 class="text-lg font-medium text-gray-900 mb-4">Invoice Information</h3>
+      
+      <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
+        <div>
+          <%= form.label :invoice_number, class: "block text-sm font-medium text-gray-700" %>
+          <%= form.text_field :invoice_number, value: invoice[:invoice_number],
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+              placeholder: "INV-001" %>
+        </div>
+        
+        <div>
+          <%= form.label :invoice_type, class: "block text-sm font-medium text-gray-700" %>
+          <%= form.select :invoice_type,
+              options_for_select([
+                ['Invoice', 'invoice'],
+                ['Credit Note', 'credit_note'],
+                ['Debit Note', 'debit_note'],
+                ['Proforma', 'proforma']
+              ], invoice[:invoice_type]),
+              {},
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+        </div>
+        
+        <div>
+          <%= form.label :status, class: "block text-sm font-medium text-gray-700" %>
+          <%= form.select :status,
+              options_for_select([
+                ['Draft', 'draft'],
+                ['Pending', 'pending'],
+                ['Sent', 'sent'],
+                ['Paid', 'paid'],
+                ['Cancelled', 'cancelled']
+              ], invoice[:status]),
+              {},
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+        </div>
+        
+        <div>
+          <%= form.label :company_id, "Customer", class: "block text-sm font-medium text-gray-700" %>
+          <%= form.select :company_id,
+              options_for_select(
+                @companies.map { |c| [c[:name], c[:id]] },
+                invoice[:company_id]
+              ),
+              { include_blank: 'Select a customer' },
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+              data: { action: "change->invoice-form#updateCompany" },
+              required: true %>
+        </div>
+        
+        <div>
+          <%= form.label :date, "Invoice Date", class: "block text-sm font-medium text-gray-700" %>
+          <%= form.date_field :date, value: invoice[:date],
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+              required: true %>
+        </div>
+        
+        <div>
+          <%= form.label :due_date, class: "block text-sm font-medium text-gray-700" %>
+          <%= form.date_field :due_date, value: invoice[:due_date],
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Line Items -->
+  <div class="bg-white shadow rounded-lg">
+    <div class="px-4 py-5 sm:p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-medium text-gray-900">Line Items</h3>
+        <button type="button" 
+                data-action="click->invoice-form#addLineItem"
+                data-invoice-form-target="addButton"
+                class="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+          <svg class="-ml-0.5 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          Add Line
+        </button>
+      </div>
+      
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead>
+            <tr>
+              <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Description
+              </th>
+              <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Qty
+              </th>
+              <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Unit Price
+              </th>
+              <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Tax %
+              </th>
+              <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Discount %
+              </th>
+              <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Total
+              </th>
+              <th scope="col" class="relative px-3 py-3">
+                <span class="sr-only">Actions</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200" data-invoice-form-target="lineItems">
+            <% (invoice[:invoice_lines] || []).each_with_index do |line, index| %>
+              <tr class="line-item">
+                <td class="px-3 py-2">
+                  <%= text_field_tag "invoice[invoice_lines][#{index}][description]", 
+                      line[:description],
+                      class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                      placeholder: "Item description" %>
+                </td>
+                <td class="px-3 py-2">
+                  <%= number_field_tag "invoice[invoice_lines][#{index}][quantity]",
+                      line[:quantity],
+                      class: "block w-20 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                      step: 0.01,
+                      min: 0,
+                      data: { action: "input->invoice-form#calculateLineTotal" } %>
+                </td>
+                <td class="px-3 py-2">
+                  <%= number_field_tag "invoice[invoice_lines][#{index}][unit_price]",
+                      line[:unit_price],
+                      class: "block w-24 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                      step: 0.01,
+                      min: 0,
+                      data: { action: "input->invoice-form#calculateLineTotal" } %>
+                </td>
+                <td class="px-3 py-2">
+                  <%= number_field_tag "invoice[invoice_lines][#{index}][tax_rate]",
+                      line[:tax_rate],
+                      class: "block w-20 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                      step: 0.01,
+                      min: 0,
+                      max: 100,
+                      data: { action: "input->invoice-form#calculateLineTotal" } %>
+                </td>
+                <td class="px-3 py-2">
+                  <%= number_field_tag "invoice[invoice_lines][#{index}][discount_percentage]",
+                      line[:discount_percentage],
+                      class: "block w-20 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                      step: 0.01,
+                      min: 0,
+                      max: 100,
+                      data: { action: "input->invoice-form#calculateLineTotal" } %>
+                </td>
+                <td class="px-3 py-2">
+                  <span class="line-total text-sm font-medium text-gray-900">€0.00</span>
+                </td>
+                <td class="px-3 py-2">
+                  <button type="button"
+                          data-action="click->invoice-form#removeLineItem"
+                          class="text-red-600 hover:text-red-900">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                    </svg>
+                  </button>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Line Item Template -->
+      <template data-invoice-form-target="lineItemTemplate">
+        <tr class="line-item">
+          <td class="px-3 py-2">
+            <input type="text" name="invoice[invoice_lines][NEW_RECORD][description]"
+                   class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                   placeholder="Item description">
+          </td>
+          <td class="px-3 py-2">
+            <input type="number" name="invoice[invoice_lines][NEW_RECORD][quantity]"
+                   value="1"
+                   class="block w-20 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                   step="0.01" min="0"
+                   data-action="input->invoice-form#calculateLineTotal">
+          </td>
+          <td class="px-3 py-2">
+            <input type="number" name="invoice[invoice_lines][NEW_RECORD][unit_price]"
+                   value="0"
+                   class="block w-24 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                   step="0.01" min="0"
+                   data-action="input->invoice-form#calculateLineTotal">
+          </td>
+          <td class="px-3 py-2">
+            <input type="number" name="invoice[invoice_lines][NEW_RECORD][tax_rate]"
+                   value="21"
+                   class="block w-20 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                   step="0.01" min="0" max="100"
+                   data-action="input->invoice-form#calculateLineTotal">
+          </td>
+          <td class="px-3 py-2">
+            <input type="number" name="invoice[invoice_lines][NEW_RECORD][discount_percentage]"
+                   value="0"
+                   class="block w-20 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                   step="0.01" min="0" max="100"
+                   data-action="input->invoice-form#calculateLineTotal">
+          </td>
+          <td class="px-3 py-2">
+            <span class="line-total text-sm font-medium text-gray-900">€0.00</span>
+          </td>
+          <td class="px-3 py-2">
+            <button type="button"
+                    data-action="click->invoice-form#removeLineItem"
+                    class="text-red-600 hover:text-red-900">
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+              </svg>
+            </button>
+          </td>
+        </tr>
+      </template>
+      
+      <!-- Totals -->
+      <div class="mt-6 border-t pt-4">
+        <div class="flex justify-end">
+          <dl class="space-y-2 text-sm">
+            <div class="flex justify-between">
+              <dt class="font-medium text-gray-500">Subtotal:</dt>
+              <dd class="font-medium text-gray-900" data-invoice-form-target="subtotal">€0.00</dd>
+            </div>
+            <div class="flex justify-between">
+              <dt class="font-medium text-gray-500">Tax:</dt>
+              <dd class="font-medium text-gray-900" data-invoice-form-target="tax">€0.00</dd>
+            </div>
+            <div class="flex justify-between border-t pt-2">
+              <dt class="text-base font-medium text-gray-900">Total:</dt>
+              <dd class="text-base font-medium text-gray-900" data-invoice-form-target="total">€0.00</dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Additional Information -->
+  <div class="bg-white shadow rounded-lg">
+    <div class="px-4 py-5 sm:p-6">
+      <h3 class="text-lg font-medium text-gray-900 mb-4">Additional Information</h3>
+      
+      <div class="space-y-4">
+        <div>
+          <%= form.label :notes, "Customer Notes", class: "block text-sm font-medium text-gray-700" %>
+          <%= form.text_area :notes, value: invoice[:notes],
+              rows: 3,
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+              placeholder: "Notes visible to the customer" %>
+        </div>
+        
+        <div>
+          <%= form.label :internal_notes, class: "block text-sm font-medium text-gray-700" %>
+          <%= form.text_area :internal_notes, value: invoice[:internal_notes],
+              rows: 3,
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+              placeholder: "Internal notes (not visible to customer)" %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex justify-end space-x-3">
+    <%= link_to "Cancel", invoices_path, 
+        class: "px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+    <%= form.submit "Save as Draft", name: "save_draft",
+        class: "px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+    <%= form.submit invoice.is_a?(Hash) && !invoice[:id] ? "Create Invoice" : "Update Invoice", 
+        class: "px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+  </div>
+<% end %>

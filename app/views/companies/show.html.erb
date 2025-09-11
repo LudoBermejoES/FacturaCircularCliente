@@ -1,0 +1,250 @@
+<% breadcrumb ["Companies", companies_path], @company[:name] %>
+
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="sm:flex sm:items-center sm:justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900"><%= @company[:name] %></h1>
+      <% if @company[:legal_name].present? && @company[:legal_name] != @company[:name] %>
+        <p class="mt-1 text-sm text-gray-600"><%= @company[:legal_name] %></p>
+      <% end %>
+      <div class="mt-2 flex items-center space-x-3">
+        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <%= @company[:company_type] == 'supplier' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800' %>">
+          <%= @company[:company_type]&.capitalize || 'Customer' %>
+        </span>
+        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+          Active
+        </span>
+      </div>
+    </div>
+    <div class="mt-4 sm:mt-0 flex space-x-3">
+      <%= link_to edit_company_path(@company[:id]), class: "inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" do %>
+        <svg class="-ml-1 mr-2 h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+        </svg>
+        Edit
+      <% end %>
+      <%= button_to company_path(@company[:id]), method: :delete,
+          data: { confirm: "Are you sure you want to delete this company?" },
+          class: "inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500" do %>
+        <svg class="-ml-1 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+        </svg>
+        Delete
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Company Details -->
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+    <!-- Main Information -->
+    <div class="lg:col-span-2 space-y-6">
+      <!-- Basic Information -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:px-6">
+          <h3 class="text-lg font-medium text-gray-900">Basic Information</h3>
+        </div>
+        <div class="border-t border-gray-200 px-4 py-5 sm:px-6">
+          <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Tax ID</dt>
+              <dd class="mt-1 text-sm text-gray-900"><%= @company[:tax_id] || '-' %></dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Company Type</dt>
+              <dd class="mt-1 text-sm text-gray-900"><%= @company[:company_type]&.capitalize || 'Customer' %></dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Email</dt>
+              <dd class="mt-1 text-sm text-gray-900">
+                <% if @company[:email].present? %>
+                  <a href="mailto:<%= @company[:email] %>" class="text-indigo-600 hover:text-indigo-500">
+                    <%= @company[:email] %>
+                  </a>
+                <% else %>
+                  -
+                <% end %>
+              </dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Phone</dt>
+              <dd class="mt-1 text-sm text-gray-900">
+                <% if @company[:phone].present? %>
+                  <a href="tel:<%= @company[:phone] %>" class="text-indigo-600 hover:text-indigo-500">
+                    <%= @company[:phone] %>
+                  </a>
+                <% else %>
+                  -
+                <% end %>
+              </dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Website</dt>
+              <dd class="mt-1 text-sm text-gray-900">
+                <% if @company[:website].present? %>
+                  <a href="<%= @company[:website] %>" target="_blank" class="text-indigo-600 hover:text-indigo-500">
+                    <%= @company[:website] %>
+                  </a>
+                <% else %>
+                  -
+                <% end %>
+              </dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Created</dt>
+              <dd class="mt-1 text-sm text-gray-900">
+                <%= @company[:created_at] ? Time.parse(@company[:created_at]).strftime("%B %d, %Y") : '-' %>
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+
+      <!-- Payment Information -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:px-6">
+          <h3 class="text-lg font-medium text-gray-900">Payment Information</h3>
+        </div>
+        <div class="border-t border-gray-200 px-4 py-5 sm:px-6">
+          <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Payment Terms</dt>
+              <dd class="mt-1 text-sm text-gray-900">
+                <%= @company[:default_payment_terms] ? "#{@company[:default_payment_terms]} days" : '-' %>
+              </dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Payment Method</dt>
+              <dd class="mt-1 text-sm text-gray-900">
+                <%= @company[:default_payment_method]&.humanize || '-' %>
+              </dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">IBAN</dt>
+              <dd class="mt-1 text-sm text-gray-900 font-mono">
+                <%= @company[:bank_account] || '-' %>
+              </dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">SWIFT/BIC</dt>
+              <dd class="mt-1 text-sm text-gray-900 font-mono">
+                <%= @company[:swift_bic] || '-' %>
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+
+      <!-- Addresses -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
+          <h3 class="text-lg font-medium text-gray-900">Addresses</h3>
+          <button type="button" class="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            Add Address
+          </button>
+        </div>
+        <div class="border-t border-gray-200">
+          <% if @addresses && @addresses.any? %>
+            <ul class="divide-y divide-gray-200">
+              <% @addresses.each do |address| %>
+                <li class="px-4 py-4 sm:px-6">
+                  <div class="flex items-start justify-between">
+                    <div>
+                      <p class="text-sm font-medium text-gray-900">
+                        <%= address[:address_type]&.capitalize || 'Main' %> Address
+                        <% if address[:is_default] %>
+                          <span class="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                            Default
+                          </span>
+                        <% end %>
+                      </p>
+                      <p class="mt-1 text-sm text-gray-600">
+                        <%= address[:street_line_1] %><br>
+                        <% if address[:street_line_2].present? %>
+                          <%= address[:street_line_2] %><br>
+                        <% end %>
+                        <%= address[:postal_code] %> <%= address[:city] %><br>
+                        <%= address[:province] %>, <%= address[:country] %>
+                      </p>
+                    </div>
+                    <div class="flex space-x-2">
+                      <button type="button" class="text-indigo-600 hover:text-indigo-900 text-sm">Edit</button>
+                      <button type="button" class="text-red-600 hover:text-red-900 text-sm">Delete</button>
+                    </div>
+                  </div>
+                </li>
+              <% end %>
+            </ul>
+          <% else %>
+            <div class="px-4 py-5 sm:px-6 text-center">
+              <p class="text-sm text-gray-500">No addresses added yet</p>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="space-y-6">
+      <!-- Notes -->
+      <% if @company[:description].present? || @company[:notes].present? %>
+        <div class="bg-white shadow rounded-lg">
+          <div class="px-4 py-5 sm:px-6">
+            <h3 class="text-lg font-medium text-gray-900">Additional Information</h3>
+          </div>
+          <div class="border-t border-gray-200 px-4 py-5 sm:px-6">
+            <% if @company[:description].present? %>
+              <div class="mb-4">
+                <dt class="text-sm font-medium text-gray-500">Description</dt>
+                <dd class="mt-1 text-sm text-gray-900"><%= @company[:description] %></dd>
+              </div>
+            <% end %>
+            <% if @company[:notes].present? %>
+              <div>
+                <dt class="text-sm font-medium text-gray-500">Internal Notes</dt>
+                <dd class="mt-1 text-sm text-gray-900"><%= @company[:notes] %></dd>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+      <!-- Recent Invoices -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:px-6">
+          <h3 class="text-lg font-medium text-gray-900">Recent Invoices</h3>
+        </div>
+        <div class="border-t border-gray-200">
+          <% if @invoices && @invoices.any? %>
+            <ul class="divide-y divide-gray-200">
+              <% @invoices.first(5).each do |invoice| %>
+                <li class="px-4 py-3 sm:px-6">
+                  <div class="flex items-center justify-between">
+                    <p class="text-sm font-medium text-indigo-600 truncate">
+                      <%= invoice[:number] %>
+                    </p>
+                    <p class="text-sm text-gray-500">
+                      €<%= invoice[:total] %>
+                    </p>
+                  </div>
+                  <p class="text-xs text-gray-500">
+                    <%= Time.parse(invoice[:date]).strftime("%b %d, %Y") %>
+                  </p>
+                </li>
+              <% end %>
+            </ul>
+            <div class="px-4 py-3 sm:px-6">
+              <a href="#" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                View all invoices →
+              </a>
+            </div>
+          <% else %>
+            <div class="px-4 py-5 sm:px-6 text-center">
+              <p class="text-sm text-gray-500">No invoices yet</p>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

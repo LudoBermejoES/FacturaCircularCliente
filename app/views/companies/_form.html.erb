@@ -1,0 +1,169 @@
+<%= form_with model: company, url: company.is_a?(Hash) && !company[:id] ? companies_path : company_path(company[:id]), 
+              method: company.is_a?(Hash) && !company[:id] ? :post : :patch,
+              local: true, class: "space-y-6" do |form| %>
+  
+  <% if @errors.present? %>
+    <div class="rounded-md bg-red-50 p-4">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+          </svg>
+        </div>
+        <div class="ml-3">
+          <h3 class="text-sm font-medium text-red-800">
+            There were errors with your submission
+          </h3>
+          <div class="mt-2 text-sm text-red-700">
+            <ul class="list-disc pl-5 space-y-1">
+              <% @errors.each do |field, messages| %>
+                <% Array(messages).each do |message| %>
+                  <li><%= field.to_s.humanize %> <%= message %></li>
+                <% end %>
+              <% end %>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <div class="bg-white shadow rounded-lg">
+    <div class="px-4 py-5 sm:p-6">
+      <h3 class="text-lg font-medium text-gray-900 mb-4">Basic Information</h3>
+      
+      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div>
+          <%= form.label :name, class: "block text-sm font-medium text-gray-700" %>
+          <%= form.text_field :name, value: company[:name],
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+              required: true %>
+        </div>
+        
+        <div>
+          <%= form.label :legal_name, class: "block text-sm font-medium text-gray-700" %>
+          <%= form.text_field :legal_name, value: company[:legal_name],
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+          <p class="mt-1 text-xs text-gray-500">Official registered name if different from display name</p>
+        </div>
+        
+        <div>
+          <%= form.label :tax_id, "Tax ID (CIF/NIF)", class: "block text-sm font-medium text-gray-700" %>
+          <%= form.text_field :tax_id, value: company[:tax_id],
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+              required: true %>
+        </div>
+        
+        <div>
+          <%= form.label :company_type, class: "block text-sm font-medium text-gray-700" %>
+          <%= form.select :company_type, 
+              options_for_select([
+                ['Customer', 'customer'],
+                ['Supplier', 'supplier'],
+                ['Both', 'both']
+              ], company[:company_type]),
+              {},
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white shadow rounded-lg">
+    <div class="px-4 py-5 sm:p-6">
+      <h3 class="text-lg font-medium text-gray-900 mb-4">Contact Information</h3>
+      
+      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div>
+          <%= form.label :email, class: "block text-sm font-medium text-gray-700" %>
+          <%= form.email_field :email, value: company[:email],
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+        </div>
+        
+        <div>
+          <%= form.label :phone, class: "block text-sm font-medium text-gray-700" %>
+          <%= form.telephone_field :phone, value: company[:phone],
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+        </div>
+        
+        <div class="sm:col-span-2">
+          <%= form.label :website, class: "block text-sm font-medium text-gray-700" %>
+          <%= form.text_field :website, value: company[:website],
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+              placeholder: "https://www.example.com" %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white shadow rounded-lg">
+    <div class="px-4 py-5 sm:p-6">
+      <h3 class="text-lg font-medium text-gray-900 mb-4">Payment Information</h3>
+      
+      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div>
+          <%= form.label :default_payment_terms, "Payment Terms (days)", class: "block text-sm font-medium text-gray-700" %>
+          <%= form.number_field :default_payment_terms, value: company[:default_payment_terms],
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+              placeholder: "30" %>
+        </div>
+        
+        <div>
+          <%= form.label :default_payment_method, class: "block text-sm font-medium text-gray-700" %>
+          <%= form.select :default_payment_method,
+              options_for_select([
+                ['Bank Transfer', 'transfer'],
+                ['Cash', 'cash'],
+                ['Check', 'check'],
+                ['Credit Card', 'credit_card'],
+                ['PayPal', 'paypal']
+              ], company[:default_payment_method]),
+              { include_blank: 'Select payment method' },
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+        </div>
+        
+        <div>
+          <%= form.label :bank_account, "IBAN", class: "block text-sm font-medium text-gray-700" %>
+          <%= form.text_field :bank_account, value: company[:bank_account],
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+              placeholder: "ES00 0000 0000 0000 0000 0000" %>
+        </div>
+        
+        <div>
+          <%= form.label :swift_bic, "SWIFT/BIC", class: "block text-sm font-medium text-gray-700" %>
+          <%= form.text_field :swift_bic, value: company[:swift_bic],
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white shadow rounded-lg">
+    <div class="px-4 py-5 sm:p-6">
+      <h3 class="text-lg font-medium text-gray-900 mb-4">Additional Information</h3>
+      
+      <div class="space-y-6">
+        <div>
+          <%= form.label :description, class: "block text-sm font-medium text-gray-700" %>
+          <%= form.text_area :description, value: company[:description],
+              rows: 3,
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+        </div>
+        
+        <div>
+          <%= form.label :notes, "Internal Notes", class: "block text-sm font-medium text-gray-700" %>
+          <%= form.text_area :notes, value: company[:notes],
+              rows: 3,
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+          <p class="mt-1 text-xs text-gray-500">These notes are for internal use only</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex justify-end space-x-3">
+    <%= link_to "Cancel", companies_path, class: "px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+    <%= form.submit company.is_a?(Hash) && !company[:id] ? "Create Company" : "Update Company", 
+        class: "px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+  </div>
+<% end %>

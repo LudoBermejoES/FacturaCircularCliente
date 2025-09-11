@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title><%= content_for(:title) || "Factura Circular Cliente" %></title>
+    <title><%= content_for(:title) || "FacturaCircular" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
@@ -22,9 +22,29 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body>
-    <main class="container mx-auto mt-28 px-5 flex">
+  <body class="bg-gray-50">
+    <% if logged_in? %>
+      <%= render 'shared/navigation' %>
+      <%= render 'shared/sidebar' %>
+      
+      <div class="lg:pl-64">
+        <main class="py-10">
+          <% if content_for?(:breadcrumb) %>
+            <div class="px-4 sm:px-6 lg:px-8 mb-6">
+              <%= yield :breadcrumb %>
+            </div>
+          <% end %>
+          
+          <div class="px-4 sm:px-6 lg:px-8">
+            <%= render 'shared/flash_messages' %>
+            <%= yield %>
+          </div>
+        </main>
+      </div>
+      
+      <%= render 'shared/toast_container' %>
+    <% else %>
       <%= yield %>
-    </main>
+    <% end %>
   </body>
 </html>

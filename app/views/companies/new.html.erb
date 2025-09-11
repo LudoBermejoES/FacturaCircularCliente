@@ -1,0 +1,10 @@
+<% breadcrumb ["Companies", companies_path], "New Company" %>
+
+<div class="space-y-6">
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900">New Company</h1>
+    <p class="mt-1 text-sm text-gray-600">Add a new customer or supplier to your system</p>
+  </div>
+
+  <%= render 'form', company: @company %>
+</div>

@@ -1,0 +1,292 @@
+<% breadcrumb "Invoices" %>
+
+<div class="space-y-6">
+  <div class="sm:flex sm:items-center sm:justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Invoices</h1>
+      <p class="mt-1 text-sm text-gray-600">Manage your invoices and billing documents</p>
+    </div>
+    <div class="mt-4 sm:mt-0">
+      <%= link_to new_invoice_path, class: "inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" do %>
+        <svg class="-ml-1 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+        </svg>
+        New Invoice
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Statistics Cards -->
+  <% if @statistics.present? %>
+    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="bg-white overflow-hidden shadow rounded-lg">
+        <div class="p-5">
+          <div class="flex items-center">
+            <div class="flex-shrink-0">
+              <svg class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+              </svg>
+            </div>
+            <div class="ml-5 w-0 flex-1">
+              <dl>
+                <dt class="text-sm font-medium text-gray-500 truncate">Total</dt>
+                <dd class="text-2xl font-semibold text-gray-900"><%= @statistics[:total_count] || 0 %></dd>
+              </dl>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="bg-white overflow-hidden shadow rounded-lg">
+        <div class="p-5">
+          <div class="flex items-center">
+            <div class="flex-shrink-0">
+              <svg class="h-6 w-6 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div class="ml-5 w-0 flex-1">
+              <dl>
+                <dt class="text-sm font-medium text-gray-500 truncate">Pending</dt>
+                <dd class="text-2xl font-semibold text-gray-900"><%= @statistics[:pending_count] || 0 %></dd>
+              </dl>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="bg-white overflow-hidden shadow rounded-lg">
+        <div class="p-5">
+          <div class="flex items-center">
+            <div class="flex-shrink-0">
+              <svg class="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div class="ml-5 w-0 flex-1">
+              <dl>
+                <dt class="text-sm font-medium text-gray-500 truncate">Paid</dt>
+                <dd class="text-2xl font-semibold text-gray-900"><%= @statistics[:paid_count] || 0 %></dd>
+              </dl>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="bg-white overflow-hidden shadow rounded-lg">
+        <div class="p-5">
+          <div class="flex items-center">
+            <div class="flex-shrink-0">
+              <svg class="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div class="ml-5 w-0 flex-1">
+              <dl>
+                <dt class="text-sm font-medium text-gray-500 truncate">Total Value</dt>
+                <dd class="text-2xl font-semibold text-gray-900">€<%= number_with_delimiter(@statistics[:total_value] || 0) %></dd>
+              </dl>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Filters -->
+  <div class="bg-white shadow rounded-lg">
+    <div class="px-4 py-5 sm:p-6">
+      <%= form_with url: invoices_path, method: :get, local: true, class: "space-y-4" do |f| %>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-4">
+          <div>
+            <%= f.text_field :search, value: @filters[:search], 
+                placeholder: "Search invoices...",
+                class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+          </div>
+          
+          <div>
+            <%= f.select :status,
+                options_for_select([
+                  ['All Status', ''],
+                  ['Draft', 'draft'],
+                  ['Pending', 'pending'],
+                  ['Sent', 'sent'],
+                  ['Paid', 'paid'],
+                  ['Cancelled', 'cancelled']
+                ], @filters[:status]),
+                {},
+                class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+          </div>
+          
+          <div>
+            <%= f.select :invoice_type,
+                options_for_select([
+                  ['All Types', ''],
+                  ['Invoice', 'invoice'],
+                  ['Credit Note', 'credit_note'],
+                  ['Debit Note', 'debit_note'],
+                  ['Proforma', 'proforma']
+                ], @filters[:invoice_type]),
+                {},
+                class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+          </div>
+          
+          <div>
+            <%= f.submit "Filter", class: "w-full inline-flex justify-center items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div>
+            <%= f.date_field :date_from, value: @filters[:date_from],
+                class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                placeholder: "From date" %>
+          </div>
+          
+          <div>
+            <%= f.date_field :date_to, value: @filters[:date_to],
+                class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                placeholder: "To date" %>
+          </div>
+          
+          <% if @filters.any? { |k, v| v.present? } %>
+            <%= link_to "Clear Filters", invoices_path, 
+                class: "inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Invoices Table -->
+  <div class="bg-white shadow rounded-lg overflow-hidden">
+    <% if @invoices.any? %>
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Invoice
+            </th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Company
+            </th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Date
+            </th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Due Date
+            </th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Amount
+            </th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Status
+            </th>
+            <th scope="col" class="relative px-6 py-3">
+              <span class="sr-only">Actions</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <% @invoices.each do |invoice| %>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div>
+                  <div class="text-sm font-medium text-gray-900">
+                    <%= link_to invoice[:invoice_number], invoice_path(invoice[:id]), class: "hover:text-indigo-600" %>
+                  </div>
+                  <div class="text-sm text-gray-500">
+                    <%= invoice[:invoice_type]&.humanize %>
+                  </div>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm text-gray-900">
+                  <%= invoice[:company_name] || '-' %>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <%= invoice[:date] ? Date.parse(invoice[:date]).strftime("%b %d, %Y") : '-' %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <%= invoice[:due_date] ? Date.parse(invoice[:due_date]).strftime("%b %d, %Y") : '-' %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm font-medium text-gray-900">
+                  €<%= number_with_delimiter(invoice[:total] || 0, delimiter: ',') %>
+                </div>
+                <div class="text-xs text-gray-500">
+                  Tax: €<%= number_with_delimiter(invoice[:total_tax] || 0, delimiter: ',') %>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <% status_color = case invoice[:status]
+                     when 'draft' then 'bg-gray-100 text-gray-800'
+                     when 'pending' then 'bg-yellow-100 text-yellow-800'
+                     when 'sent' then 'bg-blue-100 text-blue-800'
+                     when 'paid' then 'bg-green-100 text-green-800'
+                     when 'cancelled' then 'bg-red-100 text-red-800'
+                     else 'bg-gray-100 text-gray-800'
+                   end %>
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <%= status_color %>">
+                  <%= invoice[:status]&.capitalize %>
+                </span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <div class="flex justify-end space-x-2">
+                  <%= link_to "View", invoice_path(invoice[:id]), class: "text-indigo-600 hover:text-indigo-900" %>
+                  <% if invoice[:status] == 'draft' %>
+                    <%= link_to "Edit", edit_invoice_path(invoice[:id]), class: "text-indigo-600 hover:text-indigo-900" %>
+                  <% end %>
+                </div>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+      
+      <!-- Pagination -->
+      <% if @total_pages && @total_pages > 1 %>
+        <div class="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
+          <div class="flex items-center justify-between">
+            <div class="flex-1 flex justify-between sm:hidden">
+              <% if @current_page > 1 %>
+                <%= link_to "Previous", invoices_path(page: @current_page - 1, **@filters),
+                    class: "relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50" %>
+              <% end %>
+              <% if @current_page < @total_pages %>
+                <%= link_to "Next", invoices_path(page: @current_page + 1, **@filters),
+                    class: "ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50" %>
+              <% end %>
+            </div>
+            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+              <div>
+                <p class="text-sm text-gray-700">
+                  Showing page <span class="font-medium"><%= @current_page %></span> of
+                  <span class="font-medium"><%= @total_pages %></span>
+                  (<span class="font-medium"><%= @total_count %></span> total results)
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    <% else %>
+      <div class="text-center py-12">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">No invoices found</h3>
+        <p class="mt-1 text-sm text-gray-500">Get started by creating a new invoice.</p>
+        <div class="mt-6">
+          <%= link_to new_invoice_path, class: "inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" do %>
+            <svg class="-ml-1 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            New Invoice
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>
