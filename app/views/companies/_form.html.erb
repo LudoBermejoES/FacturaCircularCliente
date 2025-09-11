@@ -1,5 +1,6 @@
 <%= form_with url: company.is_a?(Hash) && company[:id].present? ? company_path(company[:id]) : companies_path, 
               method: company.is_a?(Hash) && company[:id].present? ? :patch : :post,
+              scope: :company,
               local: true, class: "space-y-6" do |form| %>
   
   <% if @errors.present? %>

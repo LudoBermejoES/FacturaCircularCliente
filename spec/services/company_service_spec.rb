@@ -10,9 +10,31 @@ RSpec.describe CompanyService, type: :service do
     context 'when successful' do
       let(:companies_response) do
         {
-          companies: [
-            { id: 1, name: 'ACME Corp', tax_id: 'B12345678' },
-            { id: 2, name: 'Test Inc', tax_id: 'B87654321' }
+          data: [
+            {
+              id: 1,
+              type: 'companies',
+              attributes: {
+                corporate_name: 'ACME Corp',
+                trade_name: 'ACME Corp',
+                tax_identification_number: 'B12345678',
+                email: 'contact@acme.com',
+                telephone: '123456789',
+                web_address: 'https://acme.com'
+              }
+            },
+            {
+              id: 2,
+              type: 'companies',
+              attributes: {
+                corporate_name: 'Test Inc',
+                trade_name: 'Test Inc',
+                tax_identification_number: 'B87654321',
+                email: 'info@test.com',
+                telephone: '987654321',
+                web_address: 'https://test.com'
+              }
+            }
           ],
           meta: { total: 2, page: 1, pages: 1 }
         }
@@ -29,6 +51,7 @@ RSpec.describe CompanyService, type: :service do
         
         expect(result[:companies].size).to eq(2)
         expect(result[:companies].first[:name]).to eq('ACME Corp')
+        expect(result[:companies].first[:tax_id]).to eq('B12345678')
         expect(result[:meta][:total]).to eq(2)
       end
     end
@@ -123,14 +146,40 @@ RSpec.describe CompanyService, type: :service do
 
     context 'when successful' do
       let(:created_company) do
-        company_params.merge(id: 789, created_at: Time.current.iso8601)
+        {
+          data: {
+            id: 789,
+            type: 'companies',
+            attributes: {
+              trade_name: 'New Company',
+              corporate_name: 'New Company',
+              tax_identification_number: 'B99999999',
+              email: 'info@newcompany.com',
+              telephone: '+34123456789',
+              created_at: Time.current.iso8601
+            }
+          }
+        }
       end
 
       before do
         stub_request(:post, "#{base_url}/companies")
           .with(
             headers: { 'Authorization' => "Bearer #{token}" },
-            body: { company: company_params }.to_json
+            body: {
+              data: {
+                type: 'companies',
+                attributes: {
+                  trade_name: 'New Company',
+                  corporate_name: 'New Company',
+                  tax_identification_number: 'B99999999',
+                  email: 'info@newcompany.com',
+                  telephone: '+34123456789',
+                  person_type_code: 'J',
+                  residence_type_code: 'R'
+                }
+              }
+            }.to_json
           )
           .to_return(status: 201, body: created_company.to_json)
       end
@@ -138,9 +187,9 @@ RSpec.describe CompanyService, type: :service do
       it 'creates company and returns data' do
         result = CompanyService.create(company_params, token: token)
         
-        expect(result[:id]).to eq(789)
-        expect(result[:name]).to eq('New Company')
-        expect(result[:tax_id]).to eq('B99999999')
+        expect(result[:data][:id]).to eq(789)
+        expect(result[:data][:attributes][:trade_name]).to eq('New Company')
+        expect(result[:data][:attributes][:tax_identification_number]).to eq('B99999999')
       end
     end
 
@@ -178,11 +227,17 @@ RSpec.describe CompanyService, type: :service do
     context 'when successful' do
       let(:updated_company) do
         {
-          id: company_id,
-          name: 'Updated Company Name',
-          tax_id: 'B12345678',
-          email: 'updated@company.com',
-          updated_at: Time.current.iso8601
+          data: {
+            id: company_id,
+            type: 'companies',
+            attributes: {
+              trade_name: 'Updated Company Name',
+              corporate_name: 'Updated Company Name',
+              tax_identification_number: 'B12345678',
+              email: 'updated@company.com',
+              updated_at: Time.current.iso8601
+            }
+          }
         }
       end
 
@@ -190,7 +245,18 @@ RSpec.describe CompanyService, type: :service do
         stub_request(:put, "#{base_url}/companies/#{company_id}")
           .with(
             headers: { 'Authorization' => "Bearer #{token}" },
-            body: { company: update_params }.to_json
+            body: {
+              data: {
+                type: 'companies',
+                attributes: {
+                  trade_name: 'Updated Company Name',
+                  corporate_name: 'Updated Company Name',
+                  email: 'updated@company.com',
+                  person_type_code: 'J',
+                  residence_type_code: 'R'
+                }
+              }
+            }.to_json
           )
           .to_return(status: 200, body: updated_company.to_json)
       end
@@ -198,9 +264,9 @@ RSpec.describe CompanyService, type: :service do
       it 'updates company and returns data' do
         result = CompanyService.update(company_id, update_params, token: token)
         
-        expect(result[:id]).to eq(company_id)
-        expect(result[:name]).to eq('Updated Company Name')
-        expect(result[:email]).to eq('updated@company.com')
+        expect(result[:data][:id]).to eq(company_id)
+        expect(result[:data][:attributes][:trade_name]).to eq('Updated Company Name')
+        expect(result[:data][:attributes][:email]).to eq('updated@company.com')
       end
     end
 
@@ -255,9 +321,33 @@ RSpec.describe CompanyService, type: :service do
     context 'when successful' do
       let(:addresses_response) do
         {
-          addresses: [
-            { id: 1, type: 'billing', street: 'Main St 123', city: 'Madrid' },
-            { id: 2, type: 'shipping', street: 'Oak Ave 456', city: 'Barcelona' }
+          data: [
+            {
+              id: 1,
+              type: 'addresses',
+              attributes: {
+                address_type: 'billing',
+                address: 'Main St 123',
+                town: 'Madrid',
+                post_code: '28001',
+                province: 'Madrid',
+                country_code: 'ESP',
+                is_primary: true
+              }
+            },
+            {
+              id: 2,
+              type: 'addresses',
+              attributes: {
+                address_type: 'shipping',
+                address: 'Oak Ave 456',
+                town: 'Barcelona',
+                post_code: '08001',
+                province: 'Barcelona',
+                country_code: 'ESP',
+                is_primary: false
+              }
+            }
           ]
         }
       end
@@ -271,9 +361,12 @@ RSpec.describe CompanyService, type: :service do
       it 'returns company addresses' do
         result = CompanyService.addresses(company_id, token: token)
         
-        expect(result[:addresses].size).to eq(2)
-        expect(result[:addresses].first[:type]).to eq('billing')
-        expect(result[:addresses].last[:type]).to eq('shipping')
+        expect(result.size).to eq(2)
+        expect(result.first[:address_type]).to eq('billing')
+        expect(result.first[:address]).to eq('Main St 123')
+        expect(result.first[:is_default]).to eq(true)
+        expect(result.last[:address_type]).to eq('shipping')
+        expect(result.last[:is_default]).to eq(false)
       end
     end
   end
@@ -281,24 +374,53 @@ RSpec.describe CompanyService, type: :service do
   describe '.create_address' do
     let(:address_params) do
       {
-        type: 'billing',
-        street: 'New Street 789',
-        city: 'Valencia',
-        postal_code: '46001',
-        country: 'Spain'
+        address_type: 'billing',
+        address: 'New Street 789',
+        town: 'Valencia',
+        post_code: '46001',
+        country_code: 'ESP',
+        province: 'Valencia',
+        is_default: false
       }
     end
 
     context 'when successful' do
       let(:created_address) do
-        address_params.merge(id: address_id, company_id: company_id)
+        {
+          data: {
+            id: address_id,
+            type: 'addresses',
+            attributes: {
+              address_type: 'billing',
+              address: 'New Street 789',
+              town: 'Valencia',
+              post_code: '46001',
+              country_code: 'ESP',
+              province: 'Valencia',
+              is_primary: false
+            }
+          }
+        }
       end
 
       before do
         stub_request(:post, "#{base_url}/companies/#{company_id}/addresses")
           .with(
             headers: { 'Authorization' => "Bearer #{token}" },
-            body: { address: address_params }.to_json
+            body: {
+              data: {
+                type: 'addresses',
+                attributes: {
+                  address: 'New Street 789',
+                  post_code: '46001',
+                  town: 'Valencia',
+                  province: 'Valencia',
+                  country_code: 'ESP',
+                  is_primary: false,
+                  address_type: 'billing'
+                }
+              }
+            }.to_json
           )
           .to_return(status: 201, body: created_address.to_json)
       end
@@ -306,10 +428,10 @@ RSpec.describe CompanyService, type: :service do
       it 'creates address and returns data' do
         result = CompanyService.create_address(company_id, address_params, token: token)
         
-        expect(result[:id]).to eq(address_id)
-        expect(result[:company_id]).to eq(company_id)
-        expect(result[:street]).to eq('New Street 789')
-        expect(result[:city]).to eq('Valencia')
+        expect(result[:data][:id]).to eq(address_id)
+        expect(result[:data][:attributes][:address]).to eq('New Street 789')
+        expect(result[:data][:attributes][:town]).to eq('Valencia')
+        expect(result[:data][:attributes][:address_type]).to eq('billing')
       end
     end
   end
@@ -317,21 +439,32 @@ RSpec.describe CompanyService, type: :service do
   describe '.update_address' do
     let(:address_update_params) do
       {
-        street: 'Updated Street 999',
-        postal_code: '46002'
+        address: 'Updated Street 999',
+        post_code: '46002',
+        town: 'Valencia',
+        province: 'Valencia',
+        country_code: 'ESP',
+        address_type: 'billing',
+        is_default: true
       }
     end
 
     context 'when successful' do
       let(:updated_address) do
         {
-          id: address_id,
-          company_id: company_id,
-          type: 'billing',
-          street: 'Updated Street 999',
-          city: 'Valencia',
-          postal_code: '46002',
-          country: 'Spain'
+          data: {
+            id: address_id,
+            type: 'addresses',
+            attributes: {
+              address_type: 'billing',
+              address: 'Updated Street 999',
+              town: 'Valencia',
+              post_code: '46002',
+              province: 'Valencia',
+              country_code: 'ESP',
+              is_primary: true
+            }
+          }
         }
       end
 
@@ -339,7 +472,20 @@ RSpec.describe CompanyService, type: :service do
         stub_request(:put, "#{base_url}/companies/#{company_id}/addresses/#{address_id}")
           .with(
             headers: { 'Authorization' => "Bearer #{token}" },
-            body: { address: address_update_params }.to_json
+            body: {
+              data: {
+                type: 'addresses',
+                attributes: {
+                  address: 'Updated Street 999',
+                  post_code: '46002',
+                  town: 'Valencia',
+                  province: 'Valencia',
+                  country_code: 'ESP',
+                  is_primary: true,
+                  address_type: 'billing'
+                }
+              }
+            }.to_json
           )
           .to_return(status: 200, body: updated_address.to_json)
       end
@@ -347,9 +493,10 @@ RSpec.describe CompanyService, type: :service do
       it 'updates address and returns data' do
         result = CompanyService.update_address(company_id, address_id, address_update_params, token: token)
         
-        expect(result[:id]).to eq(address_id)
-        expect(result[:street]).to eq('Updated Street 999')
-        expect(result[:postal_code]).to eq('46002')
+        expect(result[:data][:id]).to eq(address_id)
+        expect(result[:data][:attributes][:address]).to eq('Updated Street 999')
+        expect(result[:data][:attributes][:post_code]).to eq('46002')
+        expect(result[:data][:attributes][:is_primary]).to eq(true)
       end
     end
   end

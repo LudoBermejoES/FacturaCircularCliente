@@ -92,20 +92,26 @@ class ApplicationController < ActionController::Base
     Rails.logger.info "DEBUG: valid_token? called"
     return false unless current_token.present?
     
+    # Cache token validation result for the duration of the request
+    return @token_valid_cache if defined?(@token_valid_cache)
+    
     begin
       Rails.logger.info "DEBUG: Calling AuthService.validate_token"
       result = AuthService.validate_token(current_token)
       Rails.logger.info "DEBUG: AuthService.validate_token returned: #{result.inspect}"
       
       if result
+        @token_valid_cache = true
         true
       else
         Rails.logger.info "DEBUG: Token invalid, trying refresh"
-        try_token_refresh
+        @token_valid_cache = try_token_refresh
+        @token_valid_cache
       end
     rescue => e
       Rails.logger.error "DEBUG: valid_token? error: #{e.message}"
       Rails.logger.error "DEBUG: valid_token? backtrace: #{e.backtrace.first(5).join('\n')}"
+      @token_valid_cache = false
       false
     end
   end
@@ -120,6 +126,8 @@ class ApplicationController < ActionController::Base
         session[:access_token] = auth_response[:access_token]
         session[:refresh_token] = auth_response[:refresh_token] if auth_response[:refresh_token]
         @current_token = auth_response[:access_token]
+        # Clear token validation cache since we have a new token
+        @token_valid_cache = nil
         true
       else
         false
@@ -138,6 +146,7 @@ class ApplicationController < ActionController::Base
     session[:user_name] = nil
     @current_token = nil
     @current_user = nil
+    @token_valid_cache = nil
   end
   
   helper_method :current_user, :logged_in?, :user_signed_in?

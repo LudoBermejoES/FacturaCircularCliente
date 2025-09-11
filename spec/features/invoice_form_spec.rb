@@ -28,9 +28,34 @@ RSpec.feature 'Invoice Form Interactions', type: :feature, js: true do
     
     # Mock company data for form dropdowns - allow any query params
     stub_request(:get, %r{http://albaranes-api:3000/api/v1/companies})
-      .to_return(status: 200, body: { 
-        companies: [company, build(:company_response, name: 'Another Company')], 
-        total: 2 
+      .to_return(status: 200, body: {
+        data: [
+          {
+            id: 1,
+            type: 'companies',
+            attributes: {
+              corporate_name: 'Test Company',
+              trade_name: 'Test Company',
+              tax_identification_number: 'B12345678',
+              email: 'test@company.com',
+              telephone: '123456789',
+              web_address: 'https://test.com'
+            }
+          },
+          {
+            id: 2,
+            type: 'companies',
+            attributes: {
+              corporate_name: 'Another Company',
+              trade_name: 'Another Company',
+              tax_identification_number: 'B98765432',
+              email: 'info@another.com',
+              telephone: '987654321',
+              web_address: 'https://another.com'
+            }
+          }
+        ],
+        meta: { total: 2, page: 1, pages: 1 }
       }.to_json)
     
     # Mock invoice creation/update endpoints
