@@ -5,29 +5,18 @@ RSpec.describe 'Companies', type: :request do
   let(:token) { 'test_access_token' }
   let(:company) { build(:company_response) }
 
+  # HTTP stubs and authentication mocking handled by RequestHelper
+  
   before do
-    # Mock authentication
-    allow_any_instance_of(ApplicationController).to receive(:current_user).and_return(user)
-    allow_any_instance_of(ApplicationController).to receive(:user_signed_in?).and_return(true)
-    allow_any_instance_of(ApplicationController).to receive(:logged_in?).and_return(true)
-    allow_any_instance_of(ApplicationController).to receive(:current_token).and_return(token)
-    allow_any_instance_of(ApplicationController).to receive(:authenticate_user!).and_return(true)
-    
-    # Mock session to return token
-    session_double = { access_token: token }
-    allow_any_instance_of(ApplicationController).to receive(:session).and_return(session_double)
-    
-    # Mock AuthService to avoid API calls
-    allow(AuthService).to receive(:validate_token).with(any_args).and_return({ valid: true })
-    
-    # Mock CompanyService methods to avoid HTTP calls
+    # Mock CompanyService methods to use the test's company data
     allow(CompanyService).to receive(:all).with(any_args).and_return({ 
       companies: [company], total: 1, meta: { page: 1, pages: 1, total: 1 }
     })
     allow(CompanyService).to receive(:find).with(any_args).and_return(company)
     allow(CompanyService).to receive(:create).with(any_args).and_return(company)
     allow(CompanyService).to receive(:update).with(any_args).and_return(company)
-    allow(CompanyService).to receive(:delete).with(any_args).and_return(true)
+    allow(CompanyService).to receive(:destroy).with(any_args).and_return(true)
+    allow(CompanyService).to receive(:addresses).with(any_args).and_return([])
   end
 
   describe 'GET /companies' do
@@ -63,7 +52,7 @@ RSpec.describe 'Companies', type: :request do
       post companies_path, params: { company: company_params }
       expect(response).to redirect_to(company_path(company[:id]))
       follow_redirect!
-      expect(response.body).to include('Company created successfully')
+      expect(response.body).to include('Company was successfully created')
     end
 
     context 'with invalid data' do
@@ -109,7 +98,7 @@ RSpec.describe 'Companies', type: :request do
       put company_path(company[:id]), params: { company: updated_params }
       expect(response).to redirect_to(company_path(company[:id]))
       follow_redirect!
-      expect(response.body).to include('Company updated successfully')
+      expect(response.body).to include('Company was successfully updated')
     end
   end
 
@@ -118,7 +107,7 @@ RSpec.describe 'Companies', type: :request do
       delete company_path(company[:id])
       expect(response).to redirect_to(companies_path)
       follow_redirect!
-      expect(response.body).to include('Company deleted successfully')
+      expect(response.body).to include('Company was successfully deleted')
     end
   end
 end

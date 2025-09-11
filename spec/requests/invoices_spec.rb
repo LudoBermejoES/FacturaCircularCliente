@@ -6,28 +6,21 @@ RSpec.describe 'Invoices', type: :request do
   let(:invoice) { build(:invoice_response) }
   let(:company) { build(:company_response) }
 
+  # HTTP stubs and authentication mocking handled by RequestHelper
+  
   before do
-    # Mock authentication
-    allow_any_instance_of(ApplicationController).to receive(:current_user).and_return(user)
-    allow_any_instance_of(ApplicationController).to receive(:user_signed_in?).and_return(true)
-    allow_any_instance_of(ApplicationController).to receive(:logged_in?).and_return(true)
-    allow_any_instance_of(ApplicationController).to receive(:current_token).and_return(token)
-    allow_any_instance_of(ApplicationController).to receive(:authenticate_user!).and_return(true)
-    
-    # Mock session to return token
-    session_double = { access_token: token }
-    allow_any_instance_of(ApplicationController).to receive(:session).and_return(session_double)
-    
-    # Mock AuthService to avoid API calls
-    allow(AuthService).to receive(:validate_token).with(any_args).and_return({ valid: true })
-    
-    # Mock InvoiceService methods to avoid HTTP calls
+    # Mock InvoiceService methods to use the test's invoice data
     allow(InvoiceService).to receive(:all).with(any_args).and_return({ 
       invoices: [invoice], total: 1, meta: { page: 1, pages: 1, total: 1 }
     })
     allow(InvoiceService).to receive(:statistics).with(any_args).and_return({
-      total_count: 1, total_value: 1000.00, status_counts: { draft: 1 }
+      total_count: 1, total_value: 1500.00, status_counts: { draft: 1 }
     })
+    allow(InvoiceService).to receive(:stats).with(any_args).and_return({
+      total_invoices: 45, draft_count: 12, sent_count: 18, paid_count: 15,
+      total_amount: 1500.00, pending_amount: 500.00
+    })
+    allow(InvoiceService).to receive(:recent).with(any_args).and_return([invoice])
     allow(InvoiceService).to receive(:find).with(any_args).and_return(invoice)
     allow(InvoiceService).to receive(:workflow_history).with(any_args).and_return([])
     allow(InvoiceService).to receive(:create).with(any_args).and_return(invoice)
@@ -37,22 +30,11 @@ RSpec.describe 'Invoices', type: :request do
     allow(InvoiceService).to receive(:send_email).with(any_args).and_return({ sent: true, message: 'Email sent' })
     allow(InvoiceService).to receive(:download_pdf).with(any_args).and_return('%PDF-1.4 fake pdf content')
     allow(InvoiceService).to receive(:download_facturae).with(any_args).and_return('<?xml version="1.0"?><Facturae></Facturae>')
-    
-    # Mock CompanyService for form population
+
+    # Mock CompanyService for invoice forms that need company data
     allow(CompanyService).to receive(:all).with(any_args).and_return({ 
       companies: [company], total: 1, meta: { page: 1, pages: 1, total: 1 }
     })
-    allow(CompanyService).to receive(:find).with(any_args).and_return(company)
-    
-    # Mock controller-level methods
-    allow_any_instance_of(InvoicesController).to receive(:load_companies) do |instance|
-      instance.instance_variable_set(:@companies, [company])
-      true
-    end
-    allow_any_instance_of(InvoicesController).to receive(:set_invoice) do |instance|
-      instance.instance_variable_set(:@invoice, invoice)
-      true
-    end
   end
 
   describe 'GET /invoices' do
