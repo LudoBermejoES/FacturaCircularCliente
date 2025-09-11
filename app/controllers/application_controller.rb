@@ -12,6 +12,8 @@ class ApplicationController < ActionController::Base
   before_action :debug_request
   before_action :authenticate_user!
   
+  around_action :log_action_execution
+  
   rescue_from ApiService::AuthenticationError do |e|
     Rails.logger.error "Authentication error: #{e.message}"
     clear_session
@@ -134,4 +136,15 @@ class ApplicationController < ActionController::Base
   end
   
   helper_method :current_user, :logged_in?, :user_signed_in?
+  
+  def log_action_execution
+    Rails.logger.info "AROUND_ACTION: Starting #{controller_name}##{action_name}"
+    begin
+      yield
+      Rails.logger.info "AROUND_ACTION: Completed #{controller_name}##{action_name} with status #{response.status}"
+    rescue => e
+      Rails.logger.error "AROUND_ACTION: Error in #{controller_name}##{action_name}: #{e.class} - #{e.message}"
+      raise
+    end
+  end
 end

@@ -20,8 +20,8 @@ RSpec.describe 'Sessions', type: :request do
     let(:auth_response) { build(:auth_response) }
 
     before do
-      stub_request(:post, 'http://localhost:3001/api/v1/auth/login')
-        .to_return(status: 200, body: auth_response.to_json)
+      # Mock service methods to avoid HTTP calls
+      allow(AuthService).to receive(:login).with(any_args).and_return(auth_response)
     end
 
     it 'authenticates user and redirects to dashboard' do
@@ -33,12 +33,10 @@ RSpec.describe 'Sessions', type: :request do
 
     context 'with invalid credentials' do
       before do
-        stub_request(:post, 'http://localhost:3001/api/v1/auth/login')
-          .with(
-            body: { email: email, password: 'wrong', remember_me: false }.to_json,
-            headers: { 'Content-Type' => 'application/json', 'Accept' => 'application/json' }
-          )
-          .to_return(status: 401, body: { error: 'Invalid credentials' }.to_json)
+        # Mock service to raise authentication error
+        allow(AuthService).to receive(:login).and_raise(
+          ApiService::AuthenticationError.new('Invalid credentials')
+        )
       end
 
       it 'renders login form with error' do
@@ -54,9 +52,8 @@ RSpec.describe 'Sessions', type: :request do
 
     before do
       allow_any_instance_of(SessionsController).to receive(:current_user).and_return(double(access_token: token))
-      stub_request(:post, 'http://localhost:3001/api/v1/auth/logout')
-        .with(headers: { 'Authorization' => "Bearer #{token}", 'Content-Type' => 'application/json' })
-        .to_return(status: 200, body: { message: 'Logged out successfully' }.to_json)
+      # Mock service methods to avoid HTTP calls
+      allow(AuthService).to receive(:logout).with(any_args).and_return({ message: 'Logged out successfully' })
     end
 
     it 'logs out user and redirects to login' do

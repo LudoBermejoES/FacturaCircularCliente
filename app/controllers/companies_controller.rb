@@ -53,16 +53,27 @@ class CompaniesController < ApplicationController
   
   def create
     begin
+      Rails.logger.info "DEBUG: CompaniesController#create starting"
       response = CompanyService.create(company_params, token: current_token)
+      Rails.logger.info "DEBUG: CompanyService.create returned: #{response.inspect}"
       redirect_to company_path(response[:id]), notice: 'Company was successfully created.'
+      Rails.logger.info "DEBUG: Redirect to company_path(#{response[:id]}) initiated"
     rescue ApiService::ValidationError => e
+      Rails.logger.info "DEBUG: ValidationError caught: #{e.message}, errors: #{e.errors}"
       @company = company_params
       @errors = e.errors
       flash.now[:alert] = 'There were errors creating the company.'
       render :new, status: :unprocessable_entity
     rescue ApiService::ApiError => e
+      Rails.logger.info "DEBUG: ApiError caught: #{e.message}"
       @company = company_params
       flash.now[:alert] = "Error creating company: #{e.message}"
+      render :new, status: :unprocessable_entity
+    rescue => e
+      Rails.logger.info "DEBUG: Unexpected error: #{e.class}: #{e.message}"
+      Rails.logger.info "DEBUG: Backtrace: #{e.backtrace[0..5].join('\n')}"
+      @company = company_params
+      flash.now[:alert] = "Unexpected error: #{e.message}"
       render :new, status: :unprocessable_entity
     end
   end

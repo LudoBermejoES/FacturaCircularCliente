@@ -64,12 +64,21 @@ class InvoicesController < ApplicationController
   
   def create
     begin
+      Rails.logger.info "DEBUG: InvoicesController#create - Starting"
+      Rails.logger.info "DEBUG: Raw params: #{params.inspect}"
+      Rails.logger.info "DEBUG: Invoice params: #{invoice_params.inspect}"
+      
       # Process invoice lines
       invoice_params_with_lines = process_invoice_params(invoice_params)
+      Rails.logger.info "DEBUG: Processed params: #{invoice_params_with_lines.inspect}"
       
+      Rails.logger.info "DEBUG: Calling InvoiceService.create"
       response = InvoiceService.create(invoice_params_with_lines, token: current_token)
+      Rails.logger.info "DEBUG: InvoiceService.create returned: #{response.inspect}"
       redirect_to invoice_path(response[:id]), notice: 'Invoice created successfully'
     rescue ApiService::ValidationError => e
+      Rails.logger.info "DEBUG: ValidationError caught: #{e.message}"
+      Rails.logger.info "DEBUG: ValidationError errors: #{e.errors.inspect}"
       @invoice = invoice_params
       @invoice[:invoice_lines] = params[:invoice][:invoice_lines]&.values || [build_empty_line_item]
       @errors = e.errors
@@ -77,10 +86,17 @@ class InvoicesController < ApplicationController
       flash.now[:alert] = 'There were errors creating the invoice.'
       render :new, status: :unprocessable_entity
     rescue ApiService::ApiError => e
+      Rails.logger.info "DEBUG: ApiError caught: #{e.message}"
       @invoice = invoice_params
       @invoice[:invoice_lines] = params[:invoice][:invoice_lines]&.values || [build_empty_line_item]
       load_companies
       flash.now[:alert] = "Error creating invoice: #{e.message}"
+      render :new, status: :unprocessable_entity
+    rescue => e
+      Rails.logger.error "DEBUG: Unexpected error in create: #{e.class} - #{e.message}"
+      Rails.logger.error "DEBUG: Backtrace: #{e.backtrace.first(5).join("\n")}"
+      @invoice = invoice_params
+      flash.now[:alert] = "Unexpected error: #{e.message}"
       render :new, status: :unprocessable_entity
     end
   end
