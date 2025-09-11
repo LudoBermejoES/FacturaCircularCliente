@@ -73,6 +73,11 @@ class ApplicationController < ActionController::Base
     @current_token ||= session[:access_token]
   end
   
+  # Alias for current_token
+  def current_user_token
+    current_token
+  end
+  
   def current_user
     return nil unless logged_in?
     

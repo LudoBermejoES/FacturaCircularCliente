@@ -111,7 +111,7 @@ class InvoiceService < ApiService
       when 401
         raise ApiService::AuthenticationError, 'Authentication failed'
       when 404
-        raise ApiService::NotFoundError, 'Resource not found'
+        raise ApiService::ApiError, 'Resource not found'
       else
         raise ApiService::ApiError, "Request failed with status: #{response.code}"
       end

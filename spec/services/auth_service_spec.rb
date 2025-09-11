@@ -200,5 +200,218 @@ RSpec.describe AuthService do
         }.to raise_error(ApiService::AuthenticationError)
       end
     end
+
+    context 'when token is blank' do
+      it 'returns invalid for nil token' do
+        result = described_class.validate_token(nil)
+        expect(result[:valid]).to be false
+      end
+
+      it 'returns invalid for empty token' do
+        result = described_class.validate_token('')
+        expect(result[:valid]).to be false
+      end
+
+      it 'returns invalid for whitespace token' do
+        result = described_class.validate_token('   ')
+        expect(result[:valid]).to be false
+      end
+    end
+
+    context 'when unexpected error occurs' do
+      before do
+        stub_request(:get, 'http://localhost:3001/api/v1/auth/validate')
+          .with(headers: { 'Authorization' => "Bearer #{token}", 'Accept' => 'application/json' })
+          .to_raise(StandardError.new('Network failure'))
+        allow(Rails.logger).to receive(:error)
+      end
+      
+      it 'logs error and returns invalid' do
+        result = described_class.validate_token(token)
+        expect(result[:valid]).to be false
+        expect(Rails.logger).to have_received(:error).with(/Token validation error: Unexpected error: Network failure/)
+      end
+    end
+  end
+
+  describe '.logout' do
+    let(:token) { 'test_access_token' }
+    
+    context 'when logout is successful' do
+      let(:response_body) { { message: 'Logged out successfully' } }
+      
+      before do
+        stub_request(:post, 'http://localhost:3001/api/v1/auth/logout')
+          .with(headers: { 'Authorization' => "Bearer #{token}", 'Accept' => 'application/json' })
+          .to_return(status: 200, body: response_body.to_json)
+      end
+      
+      it 'returns success message' do
+        result = described_class.logout(token)
+        expect(result).to eq(response_body)
+      end
+    end
+
+    context 'when logout API returns nil' do
+      before do
+        stub_request(:post, 'http://localhost:3001/api/v1/auth/logout')
+          .to_return(status: 204, body: '')
+      end
+      
+      it 'returns default message' do
+        result = described_class.logout(token)
+        expect(result[:message]).to eq('Logged out successfully')
+      end
+    end
+
+    context 'when AuthenticationError occurs' do
+      before do
+        stub_request(:post, 'http://localhost:3001/api/v1/auth/logout')
+          .to_return(status: 401, body: { error: 'Token invalid' }.to_json)
+        allow(Rails.logger).to receive(:error)
+      end
+      
+      it 'logs error and re-raises AuthenticationError' do
+        expect {
+          described_class.logout(token)
+        }.to raise_error(ApiService::AuthenticationError)
+        expect(Rails.logger).to have_received(:error).with(/Logout failed:/)
+      end
+    end
+
+    context 'when unexpected error occurs' do
+      before do
+        stub_request(:post, 'http://localhost:3001/api/v1/auth/logout')
+          .with(
+            headers: {
+              'Authorization' => "Bearer #{token}",
+              'Content-Type' => 'application/json',
+              'Accept' => 'application/json'
+            }
+          )
+          .to_raise(StandardError.new('Network failure'))
+        allow(Rails.logger).to receive(:error)
+      end
+      
+      it 'logs error and returns local logout message' do
+        result = described_class.logout(token)
+        expect(result[:message]).to eq('Logged out locally')
+        expect(Rails.logger).to have_received(:error).with(/Logout error: Unexpected error: Network failure/)
+      end
+    end
+  end
+
+  describe '.login edge cases' do
+    let(:email) { 'test@example.com' }
+    let(:password) { 'password123' }
+
+    context 'when login response is missing tokens' do
+      before do
+        stub_request(:post, 'http://localhost:3001/api/v1/auth/login')
+          .to_return(status: 200, body: { user: { id: 1 } }.to_json)
+        allow(Rails.logger).to receive(:info)
+        allow(Rails.logger).to receive(:error)
+      end
+      
+      it 'raises AuthenticationError for invalid response' do
+        expect {
+          described_class.login(email, password)
+        }.to raise_error(ApiService::AuthenticationError, /Invalid login response from server/)
+        
+        expect(Rails.logger).to have_received(:error).with(/AuthService.login failed - response was invalid/)
+      end
+    end
+
+    context 'when login response is nil' do
+      before do
+        stub_request(:post, 'http://localhost:3001/api/v1/auth/login')
+          .to_return(status: 204, body: '')
+        allow(Rails.logger).to receive(:info)
+        allow(Rails.logger).to receive(:error)
+      end
+      
+      it 'raises AuthenticationError for nil response' do
+        expect {
+          described_class.login(email, password)
+        }.to raise_error(ApiService::AuthenticationError, /Invalid login response from server/)
+      end
+    end
+
+    context 'when access_token is missing' do
+      before do
+        stub_request(:post, 'http://localhost:3001/api/v1/auth/login')
+          .to_return(status: 200, body: { refresh_token: 'token', user: { id: 1 } }.to_json)
+        allow(Rails.logger).to receive(:info)
+        allow(Rails.logger).to receive(:error)
+      end
+      
+      it 'logs specific debug information' do
+        expect {
+          described_class.login(email, password)
+        }.to raise_error(ApiService::AuthenticationError)
+        
+        expect(Rails.logger).to have_received(:error).with(/access_token present: false/)
+      end
+    end
+
+    context 'when refresh_token is missing' do
+      before do
+        stub_request(:post, 'http://localhost:3001/api/v1/auth/login')
+          .to_return(status: 200, body: { access_token: 'token', user: { id: 1 } }.to_json)
+        allow(Rails.logger).to receive(:info)
+        allow(Rails.logger).to receive(:error)
+      end
+      
+      it 'logs specific debug information' do
+        expect {
+          described_class.login(email, password)
+        }.to raise_error(ApiService::AuthenticationError)
+        
+        expect(Rails.logger).to have_received(:error).with(/refresh_token present: false/)
+      end
+    end
+  end
+
+  describe '.refresh_token edge cases' do
+    let(:refresh_token) { 'test_refresh_token' }
+
+    context 'when refresh response is missing access_token' do
+      before do
+        stub_request(:post, 'http://localhost:3001/api/v1/auth/refresh')
+          .to_return(status: 200, body: { user: { id: 1 } }.to_json)
+      end
+      
+      it 'raises AuthenticationError' do
+        expect {
+          described_class.refresh_token(refresh_token)
+        }.to raise_error(ApiService::AuthenticationError, /Failed to refresh token/)
+      end
+    end
+
+    context 'when refresh response is nil' do
+      before do
+        stub_request(:post, 'http://localhost:3001/api/v1/auth/refresh')
+          .to_return(status: 204, body: '')
+      end
+      
+      it 'raises AuthenticationError' do
+        expect {
+          described_class.refresh_token(refresh_token)
+        }.to raise_error(ApiService::AuthenticationError, /Failed to refresh token/)
+      end
+    end
+
+    context 'when refresh response omits refresh_token' do
+      before do
+        stub_request(:post, 'http://localhost:3001/api/v1/auth/refresh')
+          .to_return(status: 200, body: { access_token: 'new_access_token' }.to_json)
+      end
+      
+      it 'uses original refresh_token as fallback' do
+        result = described_class.refresh_token(refresh_token)
+        expect(result[:access_token]).to eq('new_access_token')
+        expect(result[:refresh_token]).to eq(refresh_token)
+      end
+    end
   end
 end
