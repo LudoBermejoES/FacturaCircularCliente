@@ -7,9 +7,28 @@ RSpec.feature 'Invoice Form Interactions', type: :feature, js: true do
   let(:auth_response) { build(:auth_response) }
 
   before do
-    # Mock authentication
+    # Mock authentication endpoints needed for login_via_ui (exact match from authentication_flow_spec.rb)
     stub_request(:post, 'http://localhost:3001/api/v1/auth/login')
+      .with(
+        body: { email: 'admin@example.com', password: 'password123', remember_me: false }.to_json,
+        headers: { 'Content-Type' => 'application/json', 'Accept' => 'application/json' }
+      )
       .to_return(status: 200, body: auth_response.to_json)
+    
+    stub_request(:get, 'http://localhost:3001/api/v1/auth/validate')
+      .to_return(status: 200, body: { valid: true }.to_json)
+    
+    # Mock dashboard data calls (needed after login redirect)
+    stub_request(:get, 'http://localhost:3001/api/v1/invoices/stats')
+      .to_return(status: 200, body: {
+        total_invoices: 25,
+        total_amount: 50000.00,
+        pending_amount: 15000.00
+      }.to_json)
+    
+    stub_request(:get, 'http://localhost:3001/api/v1/invoices')
+      .with(query: { limit: '5', status: 'recent' })
+      .to_return(status: 200, body: { invoices: [], total: 0 }.to_json)
     
     # Mock company data for form dropdowns
     stub_request(:get, 'http://localhost:3001/api/v1/companies')
@@ -17,6 +36,16 @@ RSpec.feature 'Invoice Form Interactions', type: :feature, js: true do
         companies: [company, build(:company_response, name: 'Another Company')], 
         total: 2 
       }.to_json)
+    
+    # Mock invoice creation/update endpoints
+    stub_request(:post, 'http://localhost:3001/api/v1/invoices')
+      .to_return(status: 201, body: build(:invoice_response).to_json)
+    
+    stub_request(:get, %r{http://localhost:3001/api/v1/invoices/\d+})
+      .to_return(status: 200, body: build(:invoice_response).to_json)
+    
+    stub_request(:put, %r{http://localhost:3001/api/v1/invoices/\d+})
+      .to_return(status: 200, body: build(:invoice_response).to_json)
   end
 
   scenario 'User creates a new invoice with single line item' do
@@ -37,9 +66,21 @@ RSpec.feature 'Invoice Form Interactions', type: :feature, js: true do
       .with(body: invoice_data.to_json)
       .to_return(status: 201, body: build(:invoice_response, invoice_data).to_json)
 
-    # Login and navigate to new invoice form
-    login_via_ui
+    # Login sequence copied exactly from authentication_flow_spec.rb
+    visit login_path
+    
+    within 'form' do
+      find('input[type="email"]').set('admin@example.com')
+      find('input[type="password"]').set('password123')
+      click_button 'Sign in'
+    end
+    
+    puts "DEBUG: After login form submission, current_path: #{current_path}"
+    puts "DEBUG: Current page content: #{page.text[0..200]}"
+    
     visit new_invoice_path
+    puts "DEBUG: After visit new_invoice_path, current_path: #{current_path}"
+    puts "DEBUG: Current page content: #{page.text[0..200]}"
 
     expect(page).to have_content('New Invoice')
     
