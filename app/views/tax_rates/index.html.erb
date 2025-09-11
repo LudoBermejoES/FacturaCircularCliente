@@ -5,204 +5,41 @@
   <div class="sm:flex sm:items-center sm:justify-between">
     <div>
       <h1 class="text-2xl font-bold text-gray-900">Tax Rates</h1>
-      <p class="mt-1 text-sm text-gray-600">Manage tax rates and regional variations</p>
+      <p class="mt-1 text-sm text-gray-600">View current tax rates and exemptions (read-only)</p>
     </div>
     
-    <div class="mt-4 sm:mt-0 flex gap-2">
-      <%= link_to tax_calculations_path, 
-          class: "inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50" do %>
-        <svg class="-ml-0.5 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-        </svg>
-        Tax Calculator
-      <% end %>
-      
-      <%= link_to new_tax_rate_path, 
-          class: "inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700" do %>
-        <svg class="-ml-0.5 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-        </svg>
-        New Tax Rate
-      <% end %>
+    <div class="mt-4 sm:mt-0">
+      <div class="text-sm text-amber-600 bg-amber-50 px-3 py-2 rounded-md border border-amber-200">
+        ℹ️ Tax rates are managed by the system and cannot be modified through this interface
+      </div>
     </div>
   </div>
   
-  <!-- Standard Tax Rates -->
+  <!-- Tax Rates -->
   <div class="bg-white shadow rounded-lg">
     <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
-      <h3 class="text-lg font-medium text-gray-900">Standard Tax Rates (IVA)</h3>
-      <p class="mt-1 text-sm text-gray-500">Value Added Tax rates for mainland Spain</p>
+      <h3 class="text-lg font-medium text-gray-900">Current Tax Rates</h3>
+      <p class="mt-1 text-sm text-gray-500">System-managed tax rates for invoice calculations</p>
     </div>
     
     <div class="overflow-hidden">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
-          <tr>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Name
-            </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Rate
-            </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Type
-            </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Status
-            </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Description
-            </th>
-            <th scope="col" class="relative px-6 py-3">
-              <span class="sr-only">Actions</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-          <% (@tax_rates || []).select { |r| r[:type] != 'regional' }.each do |rate| %>
-            <tr>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm font-medium text-gray-900">
-                  <%= rate[:name] %>
-                </div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-900">
-                  <%= format_percentage(rate[:rate]) %>
-                </div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                           <%= rate[:type] == 'standard' ? 'bg-blue-100 text-blue-800' : 
-                               rate[:type] == 'reduced' ? 'bg-green-100 text-green-800' : 
-                               'bg-gray-100 text-gray-800' %>">
-                  <%= rate[:type]&.capitalize %>
-                </span>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <% if rate[:active] %>
-                  <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                    Active
-                  </span>
-                <% else %>
-                  <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                    Inactive
-                  </span>
-                <% end %>
-              </td>
-              <td class="px-6 py-4 text-sm text-gray-500">
-                <%= rate[:description] %>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                <%= link_to "Edit", edit_tax_rate_path(rate[:id]), 
-                    class: "text-indigo-600 hover:text-indigo-900 mr-3" %>
-                <%= link_to "Delete", tax_rate_path(rate[:id]), 
-                    method: :delete,
-                    data: { confirm: "Are you sure?" },
-                    class: "text-red-600 hover:text-red-900" %>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-  </div>
-  
-  <!-- Regional Tax Rates -->
-  <% if @regional_rates && @regional_rates.any? %>
-    <div class="bg-white shadow rounded-lg">
-      <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
-        <h3 class="text-lg font-medium text-gray-900">Regional Tax Rates</h3>
-        <p class="mt-1 text-sm text-gray-500">Special tax rates for Spanish regions (IGIC, IPSI)</p>
-      </div>
-      
-      <div class="overflow-hidden">
+      <% if @tax_rates && @tax_rates.any? %>
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Region
-              </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Tax Type
-              </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Standard Rate
-              </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Reduced Rate
-              </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Super Reduced
-              </th>
-            </tr>
-          </thead>
-          <tbody class="bg-white divide-y divide-gray-200">
-            <tr>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm font-medium text-gray-900">Canary Islands</div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-900">IGIC</div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-900">7%</div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-900">3%</div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-900">0%</div>
-              </td>
-            </tr>
-            <tr>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm font-medium text-gray-900">Ceuta & Melilla</div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-900">IPSI</div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-900">10%</div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-900">4%</div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-900">0.5%</div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  <% end %>
-  
-  <!-- IRPF Retention Rates -->
-  <% if @irpf_rates && @irpf_rates.any? %>
-    <div class="bg-white shadow rounded-lg">
-      <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
-        <h3 class="text-lg font-medium text-gray-900">IRPF Retention Rates</h3>
-        <p class="mt-1 text-sm text-gray-500">Personal income tax retention rates for professionals</p>
-      </div>
-      
-      <div class="overflow-hidden">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
-            <tr>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Professional Type
+                Name
               </th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Rate
               </th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Conditions
+                Type
               </th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-            <% @irpf_rates.each do |rate| %>
+            <% @tax_rates.each do |rate| %>
               <tr>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="text-sm font-medium text-gray-900">
@@ -211,12 +48,57 @@
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="text-sm text-gray-900">
-                    <%= format_percentage(rate[:rate]) %>
+                    <%= number_to_percentage(rate[:rate], precision: 1) %>
+                  </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                    <%= rate[:type]&.humanize %>
+                  </span>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      <% else %>
+        <div class="text-center py-12">
+          <div class="text-sm text-gray-500">No tax rates available</div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+  
+  <!-- Tax Exemptions -->
+  <% if @exemptions && @exemptions.any? %>
+    <div class="bg-white shadow rounded-lg">
+      <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+        <h3 class="text-lg font-medium text-gray-900">Tax Exemptions</h3>
+        <p class="mt-1 text-sm text-gray-500">Available tax exemption categories</p>
+      </div>
+      
+      <div class="overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Name
+              </th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Description
+              </th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <% @exemptions.each do |exemption| %>
+              <tr>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm font-medium text-gray-900">
+                    <%= exemption[:name] %>
                   </div>
                 </td>
                 <td class="px-6 py-4">
                   <div class="text-sm text-gray-500">
-                    <%= rate[:conditions] %>
+                    <%= exemption[:description] %>
                   </div>
                 </td>
               </tr>
@@ -226,4 +108,21 @@
       </div>
     </div>
   <% end %>
+  
+  <!-- Help Section -->
+  <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+    <div class="flex">
+      <div class="flex-shrink-0">
+        <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+        </svg>
+      </div>
+      <div class="ml-3">
+        <h3 class="text-sm font-medium text-blue-800">About Tax Management</h3>
+        <div class="mt-2 text-sm text-blue-700">
+          <p>Tax calculations are performed automatically based on these system rates. For invoice-specific tax calculations, use the tax calculation tools in the invoice details page.</p>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>

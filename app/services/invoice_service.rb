@@ -25,15 +25,7 @@ class InvoiceService < ApiService
       post("/invoices/#{id}/freeze", token: token)
     end
     
-    def unfreeze(id, token:)
-      post("/invoices/#{id}/unfreeze", token: token)
-    end
-    
-    def send_email(id, recipient_email, token:)
-      post("/invoices/#{id}/send_email", token: token, body: { 
-        recipient_email: recipient_email 
-      })
-    end
+    # Note: unfreeze and send_email methods removed - not supported by API
     
     # Status transitions
     def update_status(id, status, comment: nil, token:)
@@ -43,47 +35,27 @@ class InvoiceService < ApiService
       }.compact)
     end
     
-    # Export functions - these return raw content, not JSON
-    def download_pdf(id, token:)
-      download_file("/invoices/#{id}/pdf", token: token)
-    end
+    # Note: download_pdf method removed - not supported by API
     
     def download_facturae(id, token:)
       download_file("/invoices/#{id}/facturae", token: token)
     end
     
-    # Line items management
+    # Line items management - updated to use /lines endpoint
     def add_line_item(invoice_id, params, token:)
-      post("/invoices/#{invoice_id}/invoice_lines", token: token, body: { invoice_line: params })
+      post("/invoices/#{invoice_id}/lines", token: token, body: { invoice_line: params })
     end
     
     def update_line_item(invoice_id, line_id, params, token:)
-      put("/invoices/#{invoice_id}/invoice_lines/#{line_id}", token: token, body: { invoice_line: params })
+      put("/invoices/#{invoice_id}/lines/#{line_id}", token: token, body: { invoice_line: params })
     end
     
     def remove_line_item(invoice_id, line_id, token:)
-      delete("/invoices/#{invoice_id}/invoice_lines/#{line_id}", token: token)
+      # Call ApiService.delete directly to avoid InvoiceService.delete override
+      ApiService.delete("/invoices/#{invoice_id}/lines/#{line_id}", token: token)
     end
     
-    # Tax calculations
-    def calculate_taxes(params, token:)
-      post('/invoices/calculate_taxes', token: token, body: params)
-    end
-    
-    # Workflow history
-    def workflow_history(id, token:)
-      get("/invoices/#{id}/workflow_history", token: token)
-    end
-    
-    # Statistics
-    def statistics(token:, params: {})
-      get('/invoices/statistics', token: token, params: params)
-    end
-    
-    # Dashboard stats
-    def stats(token:)
-      get('/invoices/stats', token: token)
-    end
+    # Note: calculate_taxes, workflow_history, statistics, and stats methods removed - not supported by API
     
     # Recent invoices
     def recent(token:, limit: 5)

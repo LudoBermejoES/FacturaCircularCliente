@@ -2,46 +2,17 @@ class TaxCalculationsController < ApplicationController
   before_action :authenticate_user!
   
   def new
-    @calculation = {
-      base_amount: 0,
-      tax_rate: 21,
-      discount_percentage: 0,
-      retention_percentage: 0
-    }
+    redirect_to invoices_path, alert: "Manual tax calculations are not supported by the API. Use invoice-specific calculations instead."
   end
   
   def create
-    @result = TaxService.calculate(calculation_params, token: current_user_token)
-    
-    respond_to do |format|
-      format.html { render :show }
-      format.json { render json: @result }
-      format.turbo_stream
-    end
-  rescue ApiService::ValidationError => e
-    @calculation = calculation_params
-    respond_to do |format|
-      format.html do
-        flash.now[:alert] = e.errors.join(', ')
-        render :new
-      end
-      format.json { render json: { errors: e.errors }, status: :unprocessable_entity }
-      format.turbo_stream do
-        render turbo_stream: turbo_stream.replace(
-          "calculation_errors",
-          partial: "shared/errors",
-          locals: { errors: e.errors }
-        )
-      end
-    end
-  rescue ApiService::ApiError => e
-    handle_api_error(e)
+    redirect_to invoices_path, alert: "Manual tax calculations are not supported by the API. Use invoice-specific calculations instead."
   end
   
   def invoice
     invoice_id = params[:invoice_id]
     
-    @result = TaxService.calculate_invoice(invoice_id, token: current_user_token)
+    @result = TaxService.calculate(invoice_id, token: current_user_token)
     @invoice = InvoiceService.find(invoice_id, token: current_user_token)
     
     respond_to do |format|
@@ -56,7 +27,7 @@ class TaxCalculationsController < ApplicationController
   def recalculate
     invoice_id = params[:invoice_id]
     
-    @result = TaxService.recalculate_invoice(invoice_id, token: current_user_token)
+    @result = TaxService.recalculate(invoice_id, token: current_user_token)
     @invoice = InvoiceService.find(invoice_id, token: current_user_token)
     
     respond_to do |format|
@@ -69,19 +40,10 @@ class TaxCalculationsController < ApplicationController
   end
   
   def validate
-    if params[:tax_id].present?
-      @validation = TaxService.validate_tax_id(
-        params[:tax_id], 
-        country: params[:country] || 'ES',
-        token: current_user_token
-      )
-    elsif params[:invoice_id].present?
-      @validation = TaxService.validate_invoice_tax(
-        params[:invoice_id],
-        token: current_user_token
-      )
+    if params[:invoice_id].present?
+      @validation = TaxService.validate(params[:invoice_id], token: current_user_token)
     else
-      @validation = { valid: false, errors: ['No tax ID or invoice ID provided'] }
+      @validation = { valid: false, errors: ['Invoice ID is required for tax validation'] }
     end
     
     respond_to do |format|

@@ -2,238 +2,100 @@
 
 <div class="max-w-4xl mx-auto space-y-6">
   <!-- Header -->
-  <div>
+  <div class="text-center">
     <h1 class="text-2xl font-bold text-gray-900">Tax Calculator</h1>
-    <p class="mt-1 text-sm text-gray-600">Calculate taxes for invoices and validate tax IDs</p>
+    <p class="mt-1 text-sm text-gray-600">Tax calculations are invoice-specific</p>
   </div>
   
-  <!-- Calculator Tabs -->
+  <!-- Unsupported Feature Notice -->
+  <div class="bg-amber-50 border border-amber-200 rounded-lg p-6">
+    <div class="flex">
+      <div class="flex-shrink-0">
+        <svg class="h-5 w-5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+        </svg>
+      </div>
+      <div class="ml-3">
+        <h3 class="text-sm font-medium text-amber-800">Manual Tax Calculations Not Supported</h3>
+        <div class="mt-2 text-sm text-amber-700">
+          <p>The API does not support manual tax calculations. Tax calculations are performed automatically for invoices based on their line items and applicable tax rates.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Available Tax Operations -->
   <div class="bg-white shadow rounded-lg">
-    <div class="border-b border-gray-200">
-      <nav class="-mb-px flex" data-controller="tabs">
-        <button type="button"
-                data-tabs-target="tab"
-                data-action="click->tabs#show"
-                data-panel="simple-calculator"
-                class="w-1/3 py-2 px-1 text-center border-b-2 border-indigo-500 font-medium text-sm text-indigo-600">
-          Simple Calculator
-        </button>
-        <button type="button"
-                data-tabs-target="tab"
-                data-action="click->tabs#show"
-                data-panel="advanced-calculator"
-                class="w-1/3 py-2 px-1 text-center border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">
-          Advanced Calculator
-        </button>
-        <button type="button"
-                data-tabs-target="tab"
-                data-action="click->tabs#show"
-                data-panel="tax-validation"
-                class="w-1/3 py-2 px-1 text-center border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">
-          Tax ID Validation
-        </button>
-      </nav>
+    <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+      <h3 class="text-lg font-medium text-gray-900">Available Tax Operations</h3>
+      <p class="mt-1 text-sm text-gray-500">Invoice-specific tax calculations and validations</p>
     </div>
     
-    <!-- Simple Calculator Panel -->
-    <div id="simple-calculator" data-tabs-target="panel" class="p-6">
-      <%= form_with url: tax_calculations_path, 
-                    data: { controller: "tax-calculator", turbo_frame: "calculation_result" },
-                    local: false do |f| %>
-        <div class="space-y-4">
-          <div>
-            <%= f.label :base_amount, "Base Amount (€)", class: "block text-sm font-medium text-gray-700" %>
-            <%= f.number_field :base_amount, 
-                value: 0,
-                step: 0.01,
-                data: { 
-                  tax_calculator_target: "baseAmount",
-                  action: "input->tax-calculator#calculate"
-                },
-                class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
-          </div>
-          
-          <div>
-            <%= f.label :tax_rate, "Tax Rate (%)", class: "block text-sm font-medium text-gray-700" %>
-            <%= f.select :tax_rate,
-                options_for_select([
-                  ['21% - Standard IVA', 21],
-                  ['10% - Reduced IVA', 10],
-                  ['4% - Super Reduced IVA', 4],
-                  ['0% - Exempt', 0],
-                  ['7% - IGIC Standard (Canary Islands)', 7],
-                  ['3% - IGIC Reduced (Canary Islands)', 3]
-                ], 21),
-                {},
-                data: { 
-                  tax_calculator_target: "taxRate",
-                  action: "change->tax-calculator#calculate"
-                },
-                class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
-          </div>
-          
-          <div>
-            <%= f.label :discount_percentage, "Discount (%)", class: "block text-sm font-medium text-gray-700" %>
-            <%= f.number_field :discount_percentage,
-                value: 0,
-                step: 0.01,
-                min: 0,
-                max: 100,
-                data: { 
-                  tax_calculator_target: "discount",
-                  action: "input->tax-calculator#calculate"
-                },
-                class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
-          </div>
-          
-          <!-- Results -->
-          <div class="border-t pt-4 space-y-2" data-tax-calculator-target="results">
-            <div class="flex justify-between text-sm">
-              <span class="text-gray-600">Base Amount:</span>
-              <span class="font-medium" data-tax-calculator-target="baseResult">€0.00</span>
-            </div>
-            <div class="flex justify-between text-sm">
-              <span class="text-gray-600">Discount:</span>
-              <span class="font-medium text-red-600" data-tax-calculator-target="discountResult">-€0.00</span>
-            </div>
-            <div class="flex justify-between text-sm">
-              <span class="text-gray-600">Subtotal:</span>
-              <span class="font-medium" data-tax-calculator-target="subtotalResult">€0.00</span>
-            </div>
-            <div class="flex justify-between text-sm">
-              <span class="text-gray-600">Tax (<span data-tax-calculator-target="taxRateLabel">21%</span>):</span>
-              <span class="font-medium" data-tax-calculator-target="taxResult">€0.00</span>
-            </div>
-            <div class="flex justify-between text-base font-semibold border-t pt-2">
-              <span>Total:</span>
-              <span data-tax-calculator-target="totalResult">€0.00</span>
-            </div>
-          </div>
-          
-          <div class="flex justify-end">
-            <%= f.submit "Calculate", 
-                class: "inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
-          </div>
+    <div class="p-6">
+      <dl class="space-y-6">
+        <div>
+          <dt class="text-sm font-medium text-gray-900">Calculate Invoice Tax</dt>
+          <dd class="mt-1 text-sm text-gray-600">Automatically calculate taxes for a specific invoice based on its line items and applicable rates.</dd>
+          <dd class="mt-2">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              Available in Invoice Details
+            </span>
+          </dd>
         </div>
-      <% end %>
-    </div>
-    
-    <!-- Advanced Calculator Panel -->
-    <div id="advanced-calculator" data-tabs-target="panel" class="p-6 hidden">
-      <%= form_with url: tax_calculations_path,
-                    data: { controller: "advanced-tax-calculator" },
-                    local: false do |f| %>
-        <div class="space-y-4">
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <%= f.label :base_amount, "Base Amount (€)", class: "block text-sm font-medium text-gray-700" %>
-              <%= f.number_field :base_amount,
-                  value: 0,
-                  step: 0.01,
-                  class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
-            </div>
-            
-            <div>
-              <%= f.label :region, "Region", class: "block text-sm font-medium text-gray-700" %>
-              <%= f.select :region,
-                  options_for_select([
-                    ['Mainland Spain', 'mainland'],
-                    ['Canary Islands', 'canary_islands'],
-                    ['Ceuta', 'ceuta'],
-                    ['Melilla', 'melilla']
-                  ]),
-                  {},
-                  class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
-            </div>
-          </div>
-          
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <%= f.label :tax_rate, "Tax Rate (%)", class: "block text-sm font-medium text-gray-700" %>
-              <%= f.number_field :tax_rate,
-                  value: 21,
-                  step: 0.01,
-                  class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
-            </div>
-            
-            <div>
-              <%= f.label :surcharge_percentage, "Equivalence Surcharge (%)", class: "block text-sm font-medium text-gray-700" %>
-              <%= f.number_field :surcharge_percentage,
-                  value: 0,
-                  step: 0.01,
-                  class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
-            </div>
-          </div>
-          
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <%= f.label :discount_percentage, "Discount (%)", class: "block text-sm font-medium text-gray-700" %>
-              <%= f.number_field :discount_percentage,
-                  value: 0,
-                  step: 0.01,
-                  class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
-            </div>
-            
-            <div>
-              <%= f.label :retention_percentage, "IRPF Retention (%)", class: "block text-sm font-medium text-gray-700" %>
-              <%= f.number_field :retention_percentage,
-                  value: 0,
-                  step: 0.01,
-                  class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
-            </div>
-          </div>
-          
-          <div class="flex justify-end">
-            <%= f.submit "Calculate Advanced", 
-                class: "inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700" %>
-          </div>
+        
+        <div>
+          <dt class="text-sm font-medium text-gray-900">Recalculate Invoice Tax</dt>
+          <dd class="mt-1 text-sm text-gray-600">Refresh tax calculations for an invoice after line items have been modified.</dd>
+          <dd class="mt-2">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              Available in Invoice Details
+            </span>
+          </dd>
         </div>
-      <% end %>
-    </div>
-    
-    <!-- Tax ID Validation Panel -->
-    <div id="tax-validation" data-tabs-target="panel" class="p-6 hidden">
-      <%= form_with url: validate_tax_calculations_path,
-                    data: { turbo_frame: "validation_result" },
-                    local: false do |f| %>
-        <div class="space-y-4">
-          <div>
-            <%= f.label :tax_id, "Tax ID (CIF/NIF)", class: "block text-sm font-medium text-gray-700" %>
-            <%= f.text_field :tax_id,
-                placeholder: "e.g., B12345678 or 12345678A",
-                class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
-            <p class="mt-1 text-xs text-gray-500">Enter a Spanish tax identification number</p>
-          </div>
-          
-          <div>
-            <%= f.label :country, "Country", class: "block text-sm font-medium text-gray-700" %>
-            <%= f.select :country,
-                options_for_select([
-                  ['Spain', 'ES'],
-                  ['Portugal', 'PT'],
-                  ['France', 'FR'],
-                  ['Germany', 'DE'],
-                  ['Italy', 'IT']
-                ], 'ES'),
-                {},
-                class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
-          </div>
-          
-          <div class="flex justify-end">
-            <%= f.submit "Validate Tax ID", 
-                class: "inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700" %>
-          </div>
+        
+        <div>
+          <dt class="text-sm font-medium text-gray-900">Validate Invoice Tax</dt>
+          <dd class="mt-1 text-sm text-gray-600">Validate tax compliance for an invoice according to Spanish regulations.</dd>
+          <dd class="mt-2">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              Available in Invoice Details
+            </span>
+          </dd>
         </div>
-      <% end %>
-      
-      <turbo-frame id="validation_result">
-        <!-- Validation results will appear here -->
-      </turbo-frame>
+      </dl>
     </div>
   </div>
   
-  <!-- Calculation Result Frame -->
-  <turbo-frame id="calculation_result">
-    <!-- Calculation results will appear here -->
-  </turbo-frame>
+  <!-- How to Use -->
+  <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+    <div class="flex">
+      <div class="flex-shrink-0">
+        <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+        </svg>
+      </div>
+      <div class="ml-3">
+        <h3 class="text-sm font-medium text-blue-800">How to Calculate Taxes</h3>
+        <div class="mt-2 text-sm text-blue-700">
+          <ol class="list-decimal list-inside space-y-1">
+            <li>Navigate to an invoice in the <%= link_to "Invoices", invoices_path, class: "underline" %> section</li>
+            <li>Open the invoice details page</li>
+            <li>Use the "Calculate Tax", "Recalculate Tax", or "Validate Tax" buttons in the invoice actions</li>
+            <li>Tax calculations will be performed automatically based on the invoice's line items and applicable tax rates</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Quick Access -->
+  <div class="text-center">
+    <%= link_to invoices_path, 
+        class: "inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" do %>
+      <svg class="-ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+      </svg>
+      Go to Invoices
+    <% end %>
+  </div>
 </div>

@@ -1,5 +1,14 @@
 # FacturaCircular Cliente - Rails Web Application
 
+##
+
+Users of API to test:
+
+Manager: manager@example.com / password123 — roles: manager — approve/manage invoices.
+User: user@example.com / password123 — roles: viewer — view invoices.
+Service Account: service@example.com / ServicePass123! — roles: admin — API access with key/secret.
+
+
 ## Project Overview
 
 FacturaCircular Cliente is a **Rails 8 web application** that provides a comprehensive user interface for the FacturaCircular Invoice Management API. This client application enables users to manage invoices, companies, workflows, and all API functionality through an intuitive web browser interface.
@@ -19,7 +28,7 @@ This application serves as the **frontend client** that consumes the FacturaCirc
 ### API Backend
 - **Location**: `/Users/ludo/code/albaranes`
 - **Purpose**: Complete invoice management API with JWT authentication
-- **API Base URL**: `http://localhost:3001/api/v1`
+- **API Base URL**: Inside Docker: `http://albaranes-api:3000/api/v1` (from host: `http://albaranes-api:3000/api/v1`)
 - **Documentation**: 
   - API Endpoints: `/Users/ludo/code/albaranes/docs/plan/08-api-endpoints.md`
   - Authentication: `/Users/ludo/code/albaranes/docs/plan/06-authentication-and-security.md`
@@ -92,7 +101,7 @@ This application serves as the **frontend client** that consumes the FacturaCirc
 ```ruby
 # Service classes for API communication
 class ApiService
-  BASE_URL = 'http://localhost:3001/api/v1'
+  BASE_URL = 'http://albaranes-api:3000/api/v1'
   
   def self.get(endpoint, token:)
     # HTTP client calls to FacturaCircular API
@@ -150,31 +159,119 @@ end
 - `app/javascript/controllers/workflow_controller.js` - Workflow interactions
 - `app/javascript/controllers/search_controller.js` - Search functionality
 
-## Key API Endpoints This Client Will Use
+## External API Endpoints Used by This Client
 
-### Authentication Endpoints
-```
-POST /api/v1/auth/login          # User login (get JWT tokens)
-POST /api/v1/auth/refresh        # Refresh access token
-POST /api/v1/auth/logout         # User logout
-```
+This section documents all external API endpoints consumed by this Rails client application from the FacturaCircular API backend.
 
-### Core Resource Endpoints
-```
-GET    /api/v1/companies         # List companies
-POST   /api/v1/companies         # Create company
-GET    /api/v1/companies/:id     # Show company
-PUT    /api/v1/companies/:id     # Update company
+### 🔐 Authentication Endpoints
 
-GET    /api/v1/invoices          # List invoices  
-POST   /api/v1/invoices          # Create invoice
-GET    /api/v1/invoices/:id      # Show invoice
-PUT    /api/v1/invoices/:id      # Update invoice
-POST   /api/v1/invoices/:id/freeze # Freeze invoice
+| Endpoint | Method | Purpose | Used In |
+|----------|--------|---------|---------|
+| `/auth/login` | POST | User authentication with email/password | Login form, session creation |
+| `/auth/refresh` | POST | Refresh expired JWT access tokens | Automatic token renewal |
+| `/auth/logout` | POST | Invalidate user session | Logout functionality |
+| `/auth/validate` | GET | Validate current JWT token | Session validation, auth checks |
 
-GET    /api/v1/workflow_history  # Workflow history
-PATCH  /api/v1/invoices/:id/status # Status transitions
-```
+### 🏢 Company Management Endpoints
+
+| Endpoint | Method | Purpose | Used In |
+|----------|--------|---------|---------|
+| `/companies` | GET | List all companies with filters | Companies index page |
+| `/companies/:id` | GET | Get specific company details | Company show/edit pages |
+| `/companies` | POST | Create new company | New company form |
+| `/companies/:id` | PUT | Update company information | Edit company form |
+| `/companies/:id` | DELETE | Delete a company | Company deletion |
+| `/companies/search` | GET | Search companies by query | Company search feature |
+| `/companies/:id/addresses` | GET | List company addresses | Address management |
+| `/companies/:id/addresses` | POST | Add address to company | New address form |
+| `/companies/:id/addresses/:id` | PUT | Update company address | Edit address form |
+| `/companies/:id/addresses/:id` | DELETE | Remove company address | Address deletion |
+
+### 📄 Invoice Management Endpoints
+
+| Endpoint | Method | Purpose | Used In |
+|----------|--------|---------|---------|
+| `/invoices` | GET | List invoices with filters | Invoices index, dashboard |
+| `/invoices/:id` | GET | Get invoice details | Invoice show/edit pages |
+| `/invoices` | POST | Create new invoice | New invoice form |
+| `/invoices/:id` | PUT | Update invoice | Edit invoice form |
+| `/invoices/:id` | DELETE | Delete invoice | Invoice deletion |
+| `/invoices/:id/freeze` | POST | Freeze invoice (make immutable) | Invoice freeze action |
+| `/invoices/:id/unfreeze` | POST | Unfreeze invoice | Invoice unfreeze action |
+| `/invoices/:id/send_email` | POST | Email invoice to recipient | Send invoice by email |
+| `/invoices/:id/status` | PATCH | Update invoice status | Status transitions |
+| `/invoices/:id/pdf` | GET | Download invoice as PDF | PDF export |
+| `/invoices/:id/facturae` | GET | Download Facturae XML | Spanish tax compliance export |
+| `/invoices/:id/invoice_lines` | POST | Add line item to invoice | Invoice line management |
+| `/invoices/:id/invoice_lines/:id` | PUT | Update invoice line item | Edit line item |
+| `/invoices/:id/invoice_lines/:id` | DELETE | Remove line item | Delete line item |
+| `/invoices/calculate_taxes` | POST | Calculate taxes for invoice | Tax calculation |
+| `/invoices/:id/workflow_history` | GET | Get workflow history | Workflow tracking |
+| `/invoices/statistics` | GET | Get invoice statistics | Analytics/reporting |
+| `/invoices/stats` | GET | Get dashboard statistics | Dashboard widgets |
+
+### 💰 Tax Management Endpoints
+
+| Endpoint | Method | Purpose | Used In |
+|----------|--------|---------|---------|
+| `/tax_rates` | GET | List all tax rates | Tax rates index |
+| `/tax_rates/:id` | GET | Get specific tax rate | Tax rate details |
+| `/tax_rates` | POST | Create new tax rate | New tax rate form |
+| `/tax_rates/:id` | PUT | Update tax rate | Edit tax rate form |
+| `/tax_rates/:id` | DELETE | Delete tax rate | Tax rate deletion |
+| `/tax_rates/regional` | GET | Get regional tax variations | Regional tax management |
+| `/tax_rates/irpf` | GET | Get IRPF rates (Spanish) | Spanish tax compliance |
+| `/tax_calculations` | POST | Perform tax calculation | Tax calculator |
+| `/invoices/:id/calculate_tax` | POST | Calculate tax for invoice | Invoice tax calculation |
+| `/invoices/:id/recalculate_tax` | POST | Recalculate invoice taxes | Tax recalculation |
+| `/invoices/:id/validate_tax` | POST | Validate invoice tax compliance | Tax validation |
+| `/tax_validations/tax_id` | POST | Validate Spanish tax ID (NIF/CIF) | Tax ID validation |
+| `/tax_exemptions` | GET | List tax exemptions | Tax exemption management |
+| `/tax_exemptions` | POST | Create tax exemption | New exemption form |
+| `/invoices/:id/apply_exemption` | POST | Apply exemption to invoice | Apply tax exemption |
+| `/tax_reports/summary` | GET | Tax summary report | Tax reporting |
+| `/tax_reports/vat` | GET | VAT report | VAT reporting |
+| `/tax_reports/modelo_303` | GET | Spanish Modelo 303 report | Spanish tax forms |
+| `/tax_reports/modelo_347` | GET | Spanish Modelo 347 report | Spanish tax forms |
+
+### ⚙️ Workflow Management Endpoints
+
+| Endpoint | Method | Purpose | Used In |
+|----------|--------|---------|---------|
+| `/invoices/:id/workflow_history` | GET | Get invoice workflow history | Workflow tracking |
+| `/invoices/:id/available_transitions` | GET | Get available status transitions | Status change UI |
+| `/invoices/:id/status` | PATCH | Transition invoice status | Status updates |
+| `/invoices/bulk_status` | POST | Bulk status update | Bulk operations |
+| `/workflow_rules` | GET | List workflow rules | Workflow configuration |
+| `/workflow_rules` | POST | Create workflow rule | New rule form |
+| `/workflow_rules/:id` | PUT | Update workflow rule | Edit rule form |
+| `/workflow_rules/:id` | DELETE | Delete workflow rule | Rule deletion |
+| `/workflow_templates` | GET | List workflow templates | Template management |
+| `/workflow_templates` | POST | Create workflow template | New template form |
+| `/invoices/:id/apply_workflow_template` | POST | Apply template to invoice | Template application |
+
+### 📊 Key Features by Controller
+
+#### TaxCalculationsController
+- **Tax calculation form**: Uses `/tax_calculations` for manual calculations
+- **Invoice tax calculation**: Uses `/invoices/:id/calculate_tax` and `/invoices/:id/recalculate_tax`
+- **Tax validation**: Uses `/tax_validations/tax_id` and `/invoices/:id/validate_tax`
+
+#### TaxRatesController
+- **CRUD operations**: Full management of tax rates
+- **Regional rates**: Special handling for Canary Islands, Ceuta, Melilla
+- **IRPF rates**: Spanish income tax retention rates
+
+### 🔄 API Integration Patterns
+
+All API calls follow these patterns:
+1. **Authentication**: Every request includes `Authorization: Bearer <token>` header
+2. **Error Handling**: 
+   - 401: Triggers token refresh or redirect to login
+   - 422: Shows validation errors in forms
+   - 500: Shows error page with retry option
+3. **Response Format**: JSON for all endpoints except PDF/XML downloads
+4. **Base URL**: `http://albaranes-api:3000/api/v1` (Docker internal)
 
 ### Reference Files for API Integration
 - **Complete API Guide**: `/Users/ludo/code/albaranes/HOW_TO_API.md`
@@ -190,7 +287,7 @@ PATCH  /api/v1/invoices/:id/status # Status transitions
 4. **Follow PLAN.md** for systematic feature implementation
 
 ### Testing Strategy
-- **Manual Testing**: Use API running at `localhost:3001` 
+- **Manual Testing**: Inside Docker use `http://albaranes-api:3000/api/v1`; from host use `http://albaranes-api:3000/api/v1`
 - **Integration Testing**: Test complete user workflows
 - **API Interaction Testing**: Verify HTTP client error handling
 
@@ -273,7 +370,8 @@ cd /Users/ludo/code/facturaCircularCliente
 docker-compose up
 
 # Access points:
-# API: http://localhost:3001/api/v1
+# API (inside Docker): http://albaranes-api:3000/api/v1
+# API (from host):     http://albaranes-api:3000/api/v1
 # Web Client: http://localhost:3002
 ```
 

@@ -29,8 +29,8 @@ class InvoicesController < ApplicationController
       @current_page = response[:meta][:page] if response[:meta]
       @total_pages = response[:meta][:pages] if response[:meta]
       
-      # Load statistics
-      @statistics = InvoiceService.statistics(token: current_token)
+      # Statistics endpoint doesn't exist in API, use empty hash
+      @statistics = {}
     rescue ApiService::ApiError => e
       @invoices = []
       @statistics = {}
@@ -40,7 +40,8 @@ class InvoicesController < ApplicationController
   
   def show
     begin
-      @workflow_history = InvoiceService.workflow_history(@invoice[:id], token: current_token)
+      # Workflow history endpoint doesn't exist in API, use empty array
+      @workflow_history = []
       @company = CompanyService.find(@invoice[:company_id], token: current_token) if @invoice[:company_id]
     rescue ApiService::ApiError => e
       @workflow_history = []

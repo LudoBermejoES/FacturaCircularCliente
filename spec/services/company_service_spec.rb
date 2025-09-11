@@ -4,7 +4,7 @@ RSpec.describe CompanyService, type: :service do
   let(:token) { 'test_access_token' }
   let(:company_id) { 123 }
   let(:address_id) { 456 }
-  let(:base_url) { 'http://localhost:3001/api/v1' }
+  let(:base_url) { 'http://albaranes-api:3000/api/v1' }
 
   describe '.all' do
     context 'when successful' do
@@ -386,7 +386,7 @@ RSpec.describe CompanyService, type: :service do
       end
 
       before do
-        stub_request(:get, "#{base_url}/companies/search")
+        stub_request(:get, "#{base_url}/companies")
           .with(
             headers: { 'Authorization' => "Bearer #{token}" },
             query: { q: query }
@@ -405,7 +405,7 @@ RSpec.describe CompanyService, type: :service do
 
     context 'when no results found' do
       before do
-        stub_request(:get, "#{base_url}/companies/search")
+        stub_request(:get, "#{base_url}/companies")
           .with(
             headers: { 'Authorization' => "Bearer #{token}" },
             query: { q: query }

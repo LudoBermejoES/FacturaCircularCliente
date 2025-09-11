@@ -11,7 +11,9 @@ This test plan covers all implemented features across the 6 completed phases of 
    ```bash
    cd /Users/ludo/code/albaranes
    docker-compose up
-   # API available at http://localhost:3001/api/v1
+   # API available:
+   # - Inside Docker network: http://albaranes-api:3000/api/v1
+   # - From host:            http://albaranes-api:3000/api/v1
    ```
 
 2. **Client Application Running**

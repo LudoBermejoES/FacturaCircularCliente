@@ -1,6 +1,6 @@
 module ApiHelper
   def stub_api_request(method, endpoint, response_body, status = 200)
-    stub_request(method, "#{ENV.fetch('API_BASE_URL', 'http://localhost:3001/api/v1')}#{endpoint}")
+    stub_request(method, "#{ENV.fetch('API_BASE_URL', 'http://albaranes-api:3000/api/v1')}#{endpoint}")
       .to_return(
         status: status,
         body: response_body.to_json,
@@ -9,7 +9,7 @@ module ApiHelper
   end
   
   def stub_api_request_with_query(method, endpoint, query, response_body, status = 200)
-    stub_request(method, "#{ENV.fetch('API_BASE_URL', 'http://localhost:3001/api/v1')}#{endpoint}")
+    stub_request(method, "#{ENV.fetch('API_BASE_URL', 'http://albaranes-api:3000/api/v1')}#{endpoint}")
       .with(query: query)
       .to_return(
         status: status,
@@ -19,7 +19,7 @@ module ApiHelper
   end
   
   def stub_authenticated_request(method, endpoint, token, response_body, status = 200)
-    stub_request(method, "#{ENV.fetch('API_BASE_URL', 'http://localhost:3001/api/v1')}#{endpoint}")
+    stub_request(method, "#{ENV.fetch('API_BASE_URL', 'http://albaranes-api:3000/api/v1')}#{endpoint}")
       .with(headers: { 'Authorization' => "Bearer #{token}" })
       .to_return(
         status: status,

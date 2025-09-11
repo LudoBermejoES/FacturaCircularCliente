@@ -19,8 +19,8 @@ RSpec.describe AuthService do
       end
       
       before do
-        stub_request(:post, 'http://localhost:3001/api/v1/auth/login')
-          .with(body: { email: email, password: password, remember_me: false }.to_json)
+        stub_request(:post, 'http://albaranes-api:3000/api/v1/auth/login')
+          .with(body: { grant_type: 'password', email: email, password: password, remember_me: false }.to_json)
           .to_return(status: 200, body: response_body.to_json)
       end
       
@@ -31,9 +31,9 @@ RSpec.describe AuthService do
       
       it 'sends correct credentials to API' do
         described_class.login(email, password)
-        expect(WebMock).to have_requested(:post, 'http://localhost:3001/api/v1/auth/login')
+        expect(WebMock).to have_requested(:post, 'http://albaranes-api:3000/api/v1/auth/login')
           .with(
-            body: { email: email, password: password, remember_me: false }.to_json,
+            body: { grant_type: 'password', email: email, password: password, remember_me: false }.to_json,
             headers: { 'Content-Type' => 'application/json', 'Accept' => 'application/json' }
           )
       end
@@ -41,9 +41,9 @@ RSpec.describe AuthService do
     
     context 'with invalid credentials' do
       before do
-        stub_request(:post, 'http://localhost:3001/api/v1/auth/login')
+        stub_request(:post, 'http://albaranes-api:3000/api/v1/auth/login')
           .with(
-            body: { email: email, password: password, remember_me: false }.to_json,
+            body: { grant_type: 'password', email: email, password: password, remember_me: false }.to_json,
             headers: { 'Content-Type' => 'application/json', 'Accept' => 'application/json' }
           )
           .to_return(status: 401, body: { error: 'Invalid credentials' }.to_json)
@@ -58,9 +58,9 @@ RSpec.describe AuthService do
     
     context 'with remember me enabled' do
       before do
-        stub_request(:post, 'http://localhost:3001/api/v1/auth/login')
+        stub_request(:post, 'http://albaranes-api:3000/api/v1/auth/login')
           .with(
-            body: { email: email, password: password, remember_me: true }.to_json,
+            body: { grant_type: 'password', email: email, password: password, remember_me: true }.to_json,
             headers: { 'Content-Type' => 'application/json', 'Accept' => 'application/json' }
           )
           .to_return(status: 200, body: { access_token: 'token', refresh_token: 'refresh' }.to_json)
@@ -68,9 +68,9 @@ RSpec.describe AuthService do
       
       it 'includes remember_me in request' do
         described_class.login(email, password, true)
-        expect(WebMock).to have_requested(:post, 'http://localhost:3001/api/v1/auth/login')
+        expect(WebMock).to have_requested(:post, 'http://albaranes-api:3000/api/v1/auth/login')
           .with(
-            body: { email: email, password: password, remember_me: true }.to_json,
+            body: { grant_type: 'password', email: email, password: password, remember_me: true }.to_json,
             headers: { 'Content-Type' => 'application/json', 'Accept' => 'application/json' }
           )
       end
@@ -82,7 +82,7 @@ RSpec.describe AuthService do
     
     context 'when logout is successful' do
       before do
-        stub_request(:post, 'http://localhost:3001/api/v1/auth/logout')
+        stub_request(:post, 'http://albaranes-api:3000/api/v1/auth/logout')
           .with(headers: { 'Authorization' => "Bearer #{token}", 'Content-Type' => 'application/json' })
           .to_return(status: 200, body: { message: 'Logged out successfully' }.to_json)
       end
@@ -95,7 +95,7 @@ RSpec.describe AuthService do
     
     context 'when token is invalid' do
       before do
-        stub_request(:post, 'http://localhost:3001/api/v1/auth/logout')
+        stub_request(:post, 'http://albaranes-api:3000/api/v1/auth/logout')
           .with(headers: { 'Authorization' => "Bearer #{token}", 'Content-Type' => 'application/json' })
           .to_return(status: 401, body: { error: 'Invalid token' }.to_json)
       end
@@ -120,7 +120,7 @@ RSpec.describe AuthService do
       end
       
       before do
-        stub_request(:post, 'http://localhost:3001/api/v1/auth/refresh')
+        stub_request(:post, 'http://albaranes-api:3000/api/v1/auth/refresh')
           .with(
             body: { refresh_token: refresh_token }.to_json,
             headers: { 'Content-Type' => 'application/json', 'Accept' => 'application/json' }
@@ -138,7 +138,7 @@ RSpec.describe AuthService do
       
       it 'sends refresh token in request body' do
         described_class.refresh_token(refresh_token)
-        expect(WebMock).to have_requested(:post, 'http://localhost:3001/api/v1/auth/refresh')
+        expect(WebMock).to have_requested(:post, 'http://albaranes-api:3000/api/v1/auth/refresh')
           .with(
             body: { refresh_token: refresh_token }.to_json,
             headers: { 'Content-Type' => 'application/json', 'Accept' => 'application/json' }
@@ -148,7 +148,7 @@ RSpec.describe AuthService do
     
     context 'when refresh token is expired' do
       before do
-        stub_request(:post, 'http://localhost:3001/api/v1/auth/refresh')
+        stub_request(:post, 'http://albaranes-api:3000/api/v1/auth/refresh')
           .with(
             body: { refresh_token: refresh_token }.to_json,
             headers: { 'Content-Type' => 'application/json', 'Accept' => 'application/json' }
@@ -168,36 +168,33 @@ RSpec.describe AuthService do
     let(:token) { 'test_access_token' }
     
     context 'when token is valid' do
-      let(:response_body) do
-        {
-          valid: true,
-          user: { id: 1, email: 'test@example.com' }
-        }
+      let(:user_response) do
+        { id: 1, email: 'test@example.com', name: 'Test User' }
       end
       
       before do
-        stub_request(:get, 'http://localhost:3001/api/v1/auth/validate')
+        stub_request(:get, 'http://albaranes-api:3000/api/v1/users/profile')
           .with(headers: { 'Authorization' => "Bearer #{token}", 'Accept' => 'application/json' })
-          .to_return(status: 200, body: response_body.to_json)
+          .to_return(status: 200, body: user_response.to_json)
       end
       
-      it 'returns validation result' do
+      it 'returns validation result with user data' do
         result = described_class.validate_token(token)
-        expect(result).to eq(response_body)
+        expect(result[:valid]).to be true
+        expect(result[:user]).to eq(user_response)
       end
     end
     
     context 'when token is invalid' do
       before do
-        stub_request(:get, 'http://localhost:3001/api/v1/auth/validate')
+        stub_request(:get, 'http://albaranes-api:3000/api/v1/users/profile')
           .with(headers: { 'Authorization' => "Bearer #{token}", 'Accept' => 'application/json' })
           .to_return(status: 401, body: { error: 'Invalid token' }.to_json)
       end
       
-      it 'raises AuthenticationError' do
-        expect {
-          described_class.validate_token(token)
-        }.to raise_error(ApiService::AuthenticationError)
+      it 'returns invalid result' do
+        result = described_class.validate_token(token)
+        expect(result[:valid]).to be false
       end
     end
 
@@ -220,7 +217,7 @@ RSpec.describe AuthService do
 
     context 'when unexpected error occurs' do
       before do
-        stub_request(:get, 'http://localhost:3001/api/v1/auth/validate')
+        stub_request(:get, 'http://albaranes-api:3000/api/v1/users/profile')
           .with(headers: { 'Authorization' => "Bearer #{token}", 'Accept' => 'application/json' })
           .to_raise(StandardError.new('Network failure'))
         allow(Rails.logger).to receive(:error)
@@ -241,7 +238,7 @@ RSpec.describe AuthService do
       let(:response_body) { { message: 'Logged out successfully' } }
       
       before do
-        stub_request(:post, 'http://localhost:3001/api/v1/auth/logout')
+        stub_request(:post, 'http://albaranes-api:3000/api/v1/auth/logout')
           .with(headers: { 'Authorization' => "Bearer #{token}", 'Accept' => 'application/json' })
           .to_return(status: 200, body: response_body.to_json)
       end
@@ -254,7 +251,7 @@ RSpec.describe AuthService do
 
     context 'when logout API returns nil' do
       before do
-        stub_request(:post, 'http://localhost:3001/api/v1/auth/logout')
+        stub_request(:post, 'http://albaranes-api:3000/api/v1/auth/logout')
           .to_return(status: 204, body: '')
       end
       
@@ -266,7 +263,7 @@ RSpec.describe AuthService do
 
     context 'when AuthenticationError occurs' do
       before do
-        stub_request(:post, 'http://localhost:3001/api/v1/auth/logout')
+        stub_request(:post, 'http://albaranes-api:3000/api/v1/auth/logout')
           .to_return(status: 401, body: { error: 'Token invalid' }.to_json)
         allow(Rails.logger).to receive(:error)
       end
@@ -281,7 +278,7 @@ RSpec.describe AuthService do
 
     context 'when unexpected error occurs' do
       before do
-        stub_request(:post, 'http://localhost:3001/api/v1/auth/logout')
+        stub_request(:post, 'http://albaranes-api:3000/api/v1/auth/logout')
           .with(
             headers: {
               'Authorization' => "Bearer #{token}",
@@ -307,7 +304,7 @@ RSpec.describe AuthService do
 
     context 'when login response is missing tokens' do
       before do
-        stub_request(:post, 'http://localhost:3001/api/v1/auth/login')
+        stub_request(:post, 'http://albaranes-api:3000/api/v1/auth/login')
           .to_return(status: 200, body: { user: { id: 1 } }.to_json)
         allow(Rails.logger).to receive(:info)
         allow(Rails.logger).to receive(:error)
@@ -324,7 +321,7 @@ RSpec.describe AuthService do
 
     context 'when login response is nil' do
       before do
-        stub_request(:post, 'http://localhost:3001/api/v1/auth/login')
+        stub_request(:post, 'http://albaranes-api:3000/api/v1/auth/login')
           .to_return(status: 204, body: '')
         allow(Rails.logger).to receive(:info)
         allow(Rails.logger).to receive(:error)
@@ -339,7 +336,7 @@ RSpec.describe AuthService do
 
     context 'when access_token is missing' do
       before do
-        stub_request(:post, 'http://localhost:3001/api/v1/auth/login')
+        stub_request(:post, 'http://albaranes-api:3000/api/v1/auth/login')
           .to_return(status: 200, body: { refresh_token: 'token', user: { id: 1 } }.to_json)
         allow(Rails.logger).to receive(:info)
         allow(Rails.logger).to receive(:error)
@@ -356,7 +353,7 @@ RSpec.describe AuthService do
 
     context 'when refresh_token is missing' do
       before do
-        stub_request(:post, 'http://localhost:3001/api/v1/auth/login')
+        stub_request(:post, 'http://albaranes-api:3000/api/v1/auth/login')
           .to_return(status: 200, body: { access_token: 'token', user: { id: 1 } }.to_json)
         allow(Rails.logger).to receive(:info)
         allow(Rails.logger).to receive(:error)
@@ -377,7 +374,7 @@ RSpec.describe AuthService do
 
     context 'when refresh response is missing access_token' do
       before do
-        stub_request(:post, 'http://localhost:3001/api/v1/auth/refresh')
+        stub_request(:post, 'http://albaranes-api:3000/api/v1/auth/refresh')
           .to_return(status: 200, body: { user: { id: 1 } }.to_json)
       end
       
@@ -390,7 +387,7 @@ RSpec.describe AuthService do
 
     context 'when refresh response is nil' do
       before do
-        stub_request(:post, 'http://localhost:3001/api/v1/auth/refresh')
+        stub_request(:post, 'http://albaranes-api:3000/api/v1/auth/refresh')
           .to_return(status: 204, body: '')
       end
       
@@ -403,7 +400,7 @@ RSpec.describe AuthService do
 
     context 'when refresh response omits refresh_token' do
       before do
-        stub_request(:post, 'http://localhost:3001/api/v1/auth/refresh')
+        stub_request(:post, 'http://albaranes-api:3000/api/v1/auth/refresh')
           .to_return(status: 200, body: { access_token: 'new_access_token' }.to_json)
       end
       

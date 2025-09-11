@@ -1,5 +1,6 @@
 services:
   web:
+    container_name: factura-circular-client
     build:
       context: .
       dockerfile: Dockerfile
@@ -13,9 +14,17 @@ services:
     environment:
       RAILS_ENV: development
       RAILS_LOG_TO_STDOUT: "true"
+      API_BASE_URL: ${API_BASE_URL:-http://albaranes-api:3000/api/v1}
     stdin_open: true
     tty: true
+    networks:
+      - factura-shared
 
 volumes:
   bundle_cache:
   node_modules:
+
+networks:
+  factura-shared:
+    external: true
+    name: factura-shared

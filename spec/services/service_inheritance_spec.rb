@@ -11,8 +11,8 @@ RSpec.describe 'Service Inheritance and Class Behavior' do
     it 'ensures services have appropriate class methods' do
       expect(InvoiceService).to respond_to(:all, :find, :create, :update, :delete)
       expect(CompanyService).to respond_to(:all, :find, :create, :update, :delete)
-      expect(TaxService).to respond_to(:rates, :rate, :calculate, :exemptions)
-      expect(WorkflowService).to respond_to(:history, :transition, :rules)
+      expect(TaxService).to respond_to(:rates, :calculate, :exemptions)
+      expect(WorkflowService).to respond_to(:history, :transition, :definitions)
     end
 
     it 'ensures AuthService has authentication methods' do
@@ -38,7 +38,7 @@ RSpec.describe 'Service Inheritance and Class Behavior' do
 
     it 'has BASE_URL constant' do
       expect(ApiService::BASE_URL).to be_a(String)
-      expect(ApiService::BASE_URL).to match(/localhost:3001\/api\/v1$/)
+      expect(ApiService::BASE_URL).to match(/albaranes-api:3000\/api\/v1$/)
     end
   end
 

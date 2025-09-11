@@ -3,6 +3,7 @@ class AuthService < ApiService
     def login(email, password, remember_me = false)
       Rails.logger.info "DEBUG: AuthService.login called with email=#{email}"
       response = post('/auth/login', body: {
+        grant_type: 'password',
         email: email,
         password: password,
         remember_me: remember_me
@@ -56,11 +57,12 @@ class AuthService < ApiService
     def validate_token(token)
       return { valid: false } if token.blank?
       
-      response = get('/auth/validate', token: token)
-      response || { valid: false }
+      # Use profile endpoint to validate token since /auth/validate doesn't exist
+      response = get('/users/profile', token: token)
+      { valid: true, user: response }
     rescue ApiService::AuthenticationError => e
       Rails.logger.error "Token validation failed: #{e.message}"
-      raise e
+      { valid: false }
     rescue => e
       Rails.logger.error "Token validation error: #{e.message}"
       { valid: false }

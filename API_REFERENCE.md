@@ -6,7 +6,7 @@ This document provides quick access to the most commonly used API endpoints whil
 
 - **Complete API Guide**: `/Users/ludo/code/albaranes/HOW_TO_API.md`
 - **Swagger Documentation**: `/Users/ludo/code/albaranes/swagger/v1/swagger.yaml`
-- **Live API Docs**: http://localhost:3001/api-docs (when API server running)
+- **Live API Docs**: Inside Docker: http://albaranes-api:3000/api-docs; from host: http://albaranes-api:3000/api-docs
 
 ## 🔑 Authentication Endpoints
 
@@ -311,15 +311,19 @@ Accept: application/json
 
 ### Testing with curl
 ```bash
+# Set base URL
+# Inside Docker: export API_BASE_URL=http://albaranes-api:3000/api/v1
+# From host:     export API_BASE_URL=http://albaranes-api:3000/api/v1
+
 # Login and get token
-TOKEN=$(curl -s -X POST http://localhost:3001/api/v1/auth/login \
+TOKEN=$(curl -s -X POST "$API_BASE_URL/auth/login" \
   -H "Content-Type: application/json" \
   -d '{"grant_type":"password","email":"admin@example.com","password":"password123"}' \
   | jq -r .access_token)
 
 # Use token for API calls
 curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:3001/api/v1/companies
+  "$API_BASE_URL/companies"
 ```
 
 ### JSON:API Format

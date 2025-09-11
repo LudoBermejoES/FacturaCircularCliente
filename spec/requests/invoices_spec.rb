@@ -9,26 +9,26 @@ RSpec.describe 'Invoices', type: :request do
   # HTTP stubs and authentication mocking handled by RequestHelper
   
   before do
+    # Setup authentication session
+    allow_any_instance_of(ApplicationController).to receive(:logged_in?).and_return(true)
+    allow_any_instance_of(ApplicationController).to receive(:current_token).and_return(token)
+    allow_any_instance_of(ApplicationController).to receive(:current_user_token).and_return(token)
+    allow_any_instance_of(ApplicationController).to receive(:current_user).and_return(user)
+    
     # Mock InvoiceService methods to use the test's invoice data
     allow(InvoiceService).to receive(:all).with(any_args).and_return({ 
       invoices: [invoice], total: 1, meta: { page: 1, pages: 1, total: 1 }
     })
-    allow(InvoiceService).to receive(:statistics).with(any_args).and_return({
-      total_count: 1, total_value: 1500.00, status_counts: { draft: 1 }
-    })
-    allow(InvoiceService).to receive(:stats).with(any_args).and_return({
-      total_invoices: 45, draft_count: 12, sent_count: 18, paid_count: 15,
-      total_amount: 1500.00, pending_amount: 500.00
-    })
+    # Note: statistics and stats methods removed from InvoiceService
     allow(InvoiceService).to receive(:recent).with(any_args).and_return([invoice])
     allow(InvoiceService).to receive(:find).with(any_args).and_return(invoice)
-    allow(InvoiceService).to receive(:workflow_history).with(any_args).and_return([])
+    # Note: workflow_history method removed from InvoiceService
     allow(InvoiceService).to receive(:create).with(any_args).and_return(invoice)
     allow(InvoiceService).to receive(:update).with(any_args).and_return(invoice)
     allow(InvoiceService).to receive(:delete).with(any_args).and_return(true)
     allow(InvoiceService).to receive(:freeze).with(any_args).and_return({ frozen: true, message: 'Invoice frozen' })
-    allow(InvoiceService).to receive(:send_email).with(any_args).and_return({ sent: true, message: 'Email sent' })
-    allow(InvoiceService).to receive(:download_pdf).with(any_args).and_return('%PDF-1.4 fake pdf content')
+    # Note: send_email method removed from InvoiceService
+    # Note: download_pdf method removed from InvoiceService
     allow(InvoiceService).to receive(:download_facturae).with(any_args).and_return('<?xml version="1.0"?><Facturae></Facturae>')
 
     # Mock CompanyService for invoice forms that need company data
@@ -46,12 +46,6 @@ RSpec.describe 'Invoices', type: :request do
       expect(response.body).to include(invoice[:invoice_number])
     end
 
-    it 'shows statistics' do
-      get invoices_path
-      expect(response).to have_http_status(:ok)
-      expect(response.body).to include('1,500')
-      expect(response.body).to include('Total')  
-    end
   end
 
   describe 'GET /invoices/new' do
@@ -167,28 +161,7 @@ RSpec.describe 'Invoices', type: :request do
     end
   end
 
-  describe 'POST /invoices/:id/send_email' do
-    let(:recipient_email) { 'client@example.com' }
 
-
-    it 'sends invoice email' do
-      post send_email_invoice_path(invoice[:id]), params: { recipient_email: recipient_email }
-      expect(response).to redirect_to(invoice_path(invoice[:id]))
-      follow_redirect!
-      expect(response.body).to include('Email sent')
-    end
-  end
-
-  describe 'GET /invoices/:id/pdf' do
-    let(:pdf_content) { '%PDF-1.4 fake pdf content' }
-
-    it 'downloads PDF' do
-      get pdf_invoice_path(invoice[:id])
-      expect(response).to have_http_status(:ok)
-      expect(response.content_type).to eq('application/pdf')
-      expect(response.body).to eq(pdf_content)
-    end
-  end
 
   describe 'GET /invoices/:id/facturae' do
     let(:xml_content) { '<?xml version="1.0"?><Facturae></Facturae>' }

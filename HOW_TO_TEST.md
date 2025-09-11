@@ -134,7 +134,7 @@ esac
 # Run tests with proper environment
 docker-compose exec \
   -e RAILS_ENV=test \
-  -e API_BASE_URL=http://localhost:3001/api/v1 \
+  -e API_BASE_URL=http://albaranes-api:3000/api/v1 \
   web bundle exec rspec $TEST_PATH
 EOF
 
@@ -172,7 +172,7 @@ sudo apt-get install chromium-chromedriver  # Ubuntu
 cp .env.example .env.test
 
 # Edit .env.test
-API_BASE_URL=http://localhost:3001/api/v1
+API_BASE_URL=http://albaranes-api:3000/api/v1
 ```
 
 ### 3. Run Tests
@@ -368,7 +368,7 @@ jobs:
       - name: Run tests
         env:
           RAILS_ENV: test
-          API_BASE_URL: http://localhost:3001/api/v1
+          API_BASE_URL: http://albaranes-api:3000/api/v1
         run: |
           bundle exec rspec --format progress --format RspecJunitFormatter --out rspec.xml
       

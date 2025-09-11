@@ -7,7 +7,7 @@ This Rails web application serves as the **client interface** for the FacturaCir
 ## Architecture
 
 - **Frontend**: Rails 8 web application with Tailwind CSS and Hotwire
-- **Backend Communication**: HTTP client consuming FacturaCircular API at `http://localhost:3001/api/v1`
+- **Backend Communication**: HTTP client consuming FacturaCircular API at `http://albaranes-api:3000/api/v1` (inside Docker network)
 - **Authentication**: JWT token management with secure session handling
 - **Real-time Updates**: Turbo Streams for live updates and notifications
 
@@ -20,7 +20,7 @@ Before implementing any feature, developers should reference these comprehensive
    - **Location**: `/Users/ludo/code/albaranes/swagger/v1/swagger.yaml`
    - **Purpose**: Complete API specification with 69 documented endpoints
    - **Usage**: Reference for exact request/response formats, validation rules, and error codes
-   - **Access**: Available at http://localhost:3001/api-docs when API server is running
+   - **Access**: Available at http://albaranes-api:3000/api-docs when API server is running
 
 2. **Complete API Usage Guide**
    - **Location**: `/Users/ludo/code/albaranes/HOW_TO_API.md`
@@ -82,7 +82,7 @@ Before implementing any feature, developers should reference these comprehensive
 **Step 1**: Always start with Swagger docs to understand the endpoint structure
 **Step 2**: Use HOW_TO_API.md examples as implementation templates  
 **Step 3**: Reference detailed docs for business logic understanding
-**Step 4**: Test against live API at http://localhost:3001/api/v1
+**Step 4**: Test against live API at http://albaranes-api:3000/api/v1 (inside Docker). From host, use http://albaranes-api:3000/api/v1
 
 ### 📊 API Coverage Verification
 The client should implement web interfaces for all 69 documented API endpoints:
@@ -392,7 +392,7 @@ app/
 ### HTTP Client Implementation
 ```ruby
 class ApiService
-  BASE_URL = 'http://localhost:3001/api/v1'
+  BASE_URL = 'http://albaranes-api:3000/api/v1'
   
   private
   

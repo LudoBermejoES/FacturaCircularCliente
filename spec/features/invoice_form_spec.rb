@@ -8,10 +8,10 @@ RSpec.feature 'Invoice Form Interactions', type: :feature, js: true do
 
   before do
     # Mock all API endpoints for feature tests
-    stub_request(:post, 'http://localhost:3001/api/v1/auth/login')
+    stub_request(:post, 'http://albaranes-api:3000/api/v1/auth/login')
       .to_return(status: 200, body: auth_response.to_json)
     
-    stub_request(:get, 'http://localhost:3001/api/v1/auth/validate')
+    stub_request(:get, 'http://albaranes-api:3000/api/v1/auth/validate')
       .to_return(status: 200, body: { valid: true }.to_json)
       
     # Mock the session/authentication state directly for feature tests
@@ -20,33 +20,27 @@ RSpec.feature 'Invoice Form Interactions', type: :feature, js: true do
     allow_any_instance_of(ApplicationController).to receive(:logged_in?).and_return(true)
     allow_any_instance_of(ApplicationController).to receive(:current_token).and_return(token)
     
-    # Mock dashboard data calls (needed after login redirect)
-    stub_request(:get, 'http://localhost:3001/api/v1/invoices/stats')
-      .to_return(status: 200, body: {
-        total_invoices: 25,
-        total_amount: 50000.00,
-        pending_amount: 15000.00
-      }.to_json)
+    # Note: dashboard stats data and endpoint removed from API
     
-    stub_request(:get, 'http://localhost:3001/api/v1/invoices')
+    stub_request(:get, 'http://albaranes-api:3000/api/v1/invoices')
       .with(query: { limit: '5', status: 'recent' })
       .to_return(status: 200, body: { invoices: [], total: 0 }.to_json)
     
     # Mock company data for form dropdowns - allow any query params
-    stub_request(:get, %r{http://localhost:3001/api/v1/companies})
+    stub_request(:get, %r{http://albaranes-api:3000/api/v1/companies})
       .to_return(status: 200, body: { 
         companies: [company, build(:company_response, name: 'Another Company')], 
         total: 2 
       }.to_json)
     
     # Mock invoice creation/update endpoints
-    stub_request(:post, 'http://localhost:3001/api/v1/invoices')
+    stub_request(:post, 'http://albaranes-api:3000/api/v1/invoices')
       .to_return(status: 201, body: build(:invoice_response).to_json)
     
-    stub_request(:get, %r{http://localhost:3001/api/v1/invoices/\d+})
+    stub_request(:get, %r{http://albaranes-api:3000/api/v1/invoices/\d+})
       .to_return(status: 200, body: build(:invoice_response).to_json)
     
-    stub_request(:put, %r{http://localhost:3001/api/v1/invoices/\d+})
+    stub_request(:put, %r{http://albaranes-api:3000/api/v1/invoices/\d+})
       .to_return(status: 200, body: build(:invoice_response).to_json)
   end
 
@@ -64,7 +58,7 @@ RSpec.feature 'Invoice Form Interactions', type: :feature, js: true do
     }
 
     # Mock invoice creation
-    stub_request(:post, 'http://localhost:3001/api/v1/invoices')
+    stub_request(:post, 'http://albaranes-api:3000/api/v1/invoices')
       .with(body: invoice_data.to_json)
       .to_return(status: 201, body: build(:invoice_response, invoice_data).to_json)
 
@@ -232,11 +226,11 @@ RSpec.feature 'Invoice Form Interactions', type: :feature, js: true do
     )
 
     # Mock fetching existing invoice
-    stub_request(:get, "http://localhost:3001/api/v1/invoices/123")
+    stub_request(:get, "http://albaranes-api:3000/api/v1/invoices/123")
       .to_return(status: 200, body: existing_invoice.to_json)
 
     # Mock update
-    stub_request(:put, "http://localhost:3001/api/v1/invoices/123")
+    stub_request(:put, "http://albaranes-api:3000/api/v1/invoices/123")
       .to_return(status: 200, body: existing_invoice.to_json)
 
     visit edit_invoice_path(123)

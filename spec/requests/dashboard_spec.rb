@@ -24,19 +24,12 @@ RSpec.describe 'Dashboard', type: :request do
 
     before do
       # Mock InvoiceService methods to avoid HTTP calls (using same pattern as other specs)
-      allow(InvoiceService).to receive(:stats).with(any_args).and_return(invoice_stats)
+      # Note: stats method removed from InvoiceService
       allow(InvoiceService).to receive(:recent).with(any_args).and_return([
         build(:invoice_response), build(:invoice_response)
       ])
     end
 
-    it 'renders dashboard with statistics' do
-      get dashboard_path
-      expect(response).to have_http_status(:ok)
-      expect(response.body).to include('Dashboard')
-      expect(response.body).to include('125,000.50')
-      expect(response.body).to include('45 invoices')
-    end
 
     it 'shows recent invoices' do
       get dashboard_path

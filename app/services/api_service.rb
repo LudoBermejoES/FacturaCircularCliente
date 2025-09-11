@@ -3,7 +3,7 @@ require 'httparty'
 class ApiService
   include HTTParty
   
-  BASE_URL = ENV.fetch('API_BASE_URL', 'http://localhost:3001/api/v1')
+  BASE_URL = ENV.fetch('API_BASE_URL', 'http://albaranes-api:3000/api/v1')
   
   class ApiError < StandardError; end
   class AuthenticationError < ApiError; end

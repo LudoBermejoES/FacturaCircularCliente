@@ -3,7 +3,7 @@ require 'rails_helper'
 RSpec.describe ApiService do
   let(:token) { 'test_token' }
   let(:endpoint) { '/test' }
-  let(:base_url) { 'http://localhost:3001/api/v1' }
+  let(:base_url) { 'http://albaranes-api:3000/api/v1' }
   
   describe '.get' do
     context 'when request is successful' do

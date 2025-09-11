@@ -32,7 +32,7 @@ class WorkflowsController < ApplicationController
       end
       format.turbo_stream do
         @invoice = InvoiceService.find(@invoice[:id], token: current_user_token)
-        @history = WorkflowService.history(@invoice[:id], token: current_user_token)
+        @history = WorkflowService.history(token: current_user_token, params: { invoice_id: @invoice[:id] })
         @available_transitions = WorkflowService.available_transitions(
           @invoice[:id], 
           token: current_user_token
@@ -58,26 +58,7 @@ class WorkflowsController < ApplicationController
   end
   
   def bulk_transition
-    invoice_ids = params[:invoice_ids] || []
-    
-    if invoice_ids.empty?
-      redirect_to invoices_path, alert: "No invoices selected"
-      return
-    end
-    
-    result = WorkflowService.bulk_transition(
-      invoice_ids: invoice_ids,
-      status: params[:status],
-      comment: params[:comment],
-      token: current_user_token
-    )
-    
-    redirect_to invoices_path, 
-                notice: "#{result[:updated_count]} invoices updated to #{params[:status]}"
-  rescue ApiService::ValidationError => e
-    redirect_to invoices_path, alert: e.errors.join(', ')
-  rescue ApiService::ApiError => e
-    handle_api_error(e, redirect_path: invoices_path)
+    redirect_to invoices_path, alert: "Bulk operations are not supported by the API"
   end
   
   private
@@ -91,7 +72,7 @@ class WorkflowsController < ApplicationController
   end
   
   def load_history
-    @history = WorkflowService.history(@invoice[:id], token: current_user_token)
+    @history = WorkflowService.history(token: current_user_token, params: { invoice_id: @invoice[:id] })
   rescue ApiService::ApiError => e
     @history = []
     Rails.logger.error "Failed to load workflow history: #{e.message}"

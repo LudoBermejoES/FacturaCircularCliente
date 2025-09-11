@@ -37,9 +37,9 @@ class CompanyService < ApiService
       delete("/companies/#{company_id}/addresses/#{address_id}", token: token)
     end
     
-    # Search companies
+    # Search companies - uses standard index with query param since /companies/search doesn't exist
     def search(query, token:)
-      get('/companies/search', token: token, params: { q: query })
+      get('/companies', token: token, params: { q: query })
     end
   end
 end

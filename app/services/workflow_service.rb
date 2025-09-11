@@ -1,10 +1,12 @@
 class WorkflowService < ApiService
-  def self.history(invoice_id, token:)
-    get("/invoices/#{invoice_id}/workflow_history", token: token)
+  # Workflow endpoints that actually exist in the API
+  
+  def self.history(token:, params: {})
+    get('/workflow_history', token: token, params: params)
   end
   
   def self.available_transitions(invoice_id, token:)
-    get("/invoices/#{invoice_id}/available_transitions", token: token)
+    get("/invoices/#{invoice_id}/workflow/available_transitions", token: token)
   end
   
   def self.transition(invoice_id, status:, comment: nil, token:)
@@ -16,43 +18,23 @@ class WorkflowService < ApiService
     patch("/invoices/#{invoice_id}/status", body: body, token: token)
   end
   
-  def self.bulk_transition(invoice_ids:, status:, comment: nil, token:)
-    body = {
-      invoice_ids: invoice_ids,
-      status: status,
-      comment: comment
-    }.compact
-    
-    post("/invoices/bulk_status", body: body, token: token)
+  def self.definitions(token:)
+    get('/workflow_definitions', token: token)
   end
   
-  def self.rules(token:)
-    get("/workflow_rules", token: token)
+  def self.definition_states(definition_id, token:)
+    get("/workflow_definitions/#{definition_id}/states", token: token)
   end
   
-  def self.create_rule(params, token:)
-    post("/workflow_rules", body: params, token: token)
+  def self.definition_transitions(definition_id, token:)
+    get("/workflow_definitions/#{definition_id}/transitions", token: token)
   end
   
-  def self.update_rule(id, params, token:)
-    put("/workflow_rules/#{id}", body: params, token: token)
-  end
-  
-  def self.delete_rule(id, token:)
-    delete("/workflow_rules/#{id}", token: token)
-  end
-  
-  def self.templates(token:)
-    get("/workflow_templates", token: token)
-  end
-  
-  def self.create_template(params, token:)
-    post("/workflow_templates", body: params, token: token)
-  end
-  
-  def self.apply_template(invoice_id, template_id, token:)
-    post("/invoices/#{invoice_id}/apply_workflow_template", 
-         body: { template_id: template_id }, 
-         token: token)
-  end
+  # Note: The following methods were removed as they don't exist in the API:
+  # - bulk_transition (bulk status updates)
+  # - rules, create_rule, update_rule, delete_rule (workflow rules CRUD)
+  # - templates, create_template, apply_template (workflow templates)
+  # 
+  # The API uses workflow_definitions instead of rules/templates.
+  # Bulk operations are not supported by the API.
 end

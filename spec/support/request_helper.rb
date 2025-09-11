@@ -18,7 +18,7 @@ module RequestHelper
     invoice = build(:invoice_response)
     
     # Authentication endpoints
-    stub_request(:post, "http://localhost:3001/api/v1/auth/login")
+    stub_request(:post, "http://albaranes-api:3000/api/v1/auth/login")
       .to_return(
         status: 200,
         body: {
@@ -29,14 +29,14 @@ module RequestHelper
         headers: { 'Content-Type' => 'application/json' }
       )
     
-    stub_request(:get, "http://localhost:3001/api/v1/auth/validate")
+    stub_request(:get, "http://albaranes-api:3000/api/v1/auth/validate")
       .to_return(
         status: 200, 
         body: { valid: true }.to_json,
         headers: { 'Content-Type' => 'application/json' }
       )
       
-    stub_request(:post, "http://localhost:3001/api/v1/auth/logout")
+    stub_request(:post, "http://albaranes-api:3000/api/v1/auth/logout")
       .to_return(
         status: 200,
         body: { message: 'Logged out successfully' }.to_json,
@@ -44,35 +44,35 @@ module RequestHelper
       )
     
     # Company endpoints
-    stub_request(:get, "http://localhost:3001/api/v1/companies")
+    stub_request(:get, "http://albaranes-api:3000/api/v1/companies")
       .to_return(
         status: 200,
         body: { companies: [company], total: 1, meta: { page: 1, pages: 1, total: 1 } }.to_json,
         headers: { 'Content-Type' => 'application/json' }
       )
       
-    stub_request(:get, %r{http://localhost:3001/api/v1/companies/\d+})
+    stub_request(:get, %r{http://albaranes-api:3000/api/v1/companies/\d+})
       .to_return(
         status: 200,
         body: company.to_json,
         headers: { 'Content-Type' => 'application/json' }
       )
       
-    stub_request(:post, "http://localhost:3001/api/v1/companies")
+    stub_request(:post, "http://albaranes-api:3000/api/v1/companies")
       .to_return(
         status: 201,
         body: company.to_json,
         headers: { 'Content-Type' => 'application/json' }
       )
       
-    stub_request(:put, %r{http://localhost:3001/api/v1/companies/\d+})
+    stub_request(:put, %r{http://albaranes-api:3000/api/v1/companies/\d+})
       .to_return(
         status: 200,
         body: company.to_json,
         headers: { 'Content-Type' => 'application/json' }
       )
       
-    stub_request(:delete, %r{http://localhost:3001/api/v1/companies/\d+})
+    stub_request(:delete, %r{http://albaranes-api:3000/api/v1/companies/\d+})
       .to_return(
         status: 200,
         body: { message: 'Company deleted successfully' }.to_json,
@@ -80,21 +80,21 @@ module RequestHelper
       )
     
     # Invoice endpoints
-    stub_request(:get, "http://localhost:3001/api/v1/invoices")
+    stub_request(:get, "http://albaranes-api:3000/api/v1/invoices")
       .to_return(
         status: 200,
         body: { invoices: [invoice], total: 1, meta: { page: 1, pages: 1, total: 1 } }.to_json,
         headers: { 'Content-Type' => 'application/json' }
       )
       
-    stub_request(:get, "http://localhost:3001/api/v1/invoices/statistics")
+    stub_request(:get, "http://albaranes-api:3000/api/v1/invoices/statistics")
       .to_return(
         status: 200,
         body: { total_count: 1, total_value: 1000.00, status_counts: { draft: 1 } }.to_json,
         headers: { 'Content-Type' => 'application/json' }
       )
       
-    stub_request(:get, "http://localhost:3001/api/v1/invoices/stats")
+    stub_request(:get, "http://albaranes-api:3000/api/v1/invoices/stats")
       .to_return(
         status: 200,
         body: {
@@ -108,56 +108,56 @@ module RequestHelper
         headers: { 'Content-Type' => 'application/json' }
       )
       
-    stub_request(:get, %r{http://localhost:3001/api/v1/invoices/\d+})
+    stub_request(:get, %r{http://albaranes-api:3000/api/v1/invoices/\d+})
       .to_return(
         status: 200,
         body: invoice.to_json,
         headers: { 'Content-Type' => 'application/json' }
       )
       
-    stub_request(:post, "http://localhost:3001/api/v1/invoices")
+    stub_request(:post, "http://albaranes-api:3000/api/v1/invoices")
       .to_return(
         status: 201,
         body: invoice.to_json,
         headers: { 'Content-Type' => 'application/json' }
       )
       
-    stub_request(:put, %r{http://localhost:3001/api/v1/invoices/\d+})
+    stub_request(:put, %r{http://albaranes-api:3000/api/v1/invoices/\d+})
       .to_return(
         status: 200,
         body: invoice.to_json,
         headers: { 'Content-Type' => 'application/json' }
       )
       
-    stub_request(:delete, %r{http://localhost:3001/api/v1/invoices/\d+})
+    stub_request(:delete, %r{http://albaranes-api:3000/api/v1/invoices/\d+})
       .to_return(
         status: 200,
         body: { message: 'Invoice deleted successfully' }.to_json,
         headers: { 'Content-Type' => 'application/json' }
       )
       
-    stub_request(:post, %r{http://localhost:3001/api/v1/invoices/\d+/freeze})
+    stub_request(:post, %r{http://albaranes-api:3000/api/v1/invoices/\d+/freeze})
       .to_return(
         status: 200,
         body: { frozen: true, message: 'Invoice frozen' }.to_json,
         headers: { 'Content-Type' => 'application/json' }
       )
       
-    stub_request(:post, %r{http://localhost:3001/api/v1/invoices/\d+/send_email})
+    stub_request(:post, %r{http://albaranes-api:3000/api/v1/invoices/\d+/send_email})
       .to_return(
         status: 200,
         body: { sent: true, message: 'Email sent' }.to_json,
         headers: { 'Content-Type' => 'application/json' }
       )
       
-    stub_request(:get, %r{http://localhost:3001/api/v1/invoices/\d+/pdf})
+    stub_request(:get, %r{http://albaranes-api:3000/api/v1/invoices/\d+/pdf})
       .to_return(
         status: 200,
         body: '%PDF-1.4 fake pdf content',
         headers: { 'Content-Type' => 'application/pdf' }
       )
       
-    stub_request(:get, %r{http://localhost:3001/api/v1/invoices/\d+/facturae})
+    stub_request(:get, %r{http://albaranes-api:3000/api/v1/invoices/\d+/facturae})
       .to_return(
         status: 200,
         body: '<?xml version="1.0"?><Facturae></Facturae>',
