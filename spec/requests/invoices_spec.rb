@@ -66,7 +66,8 @@ RSpec.describe 'Invoices', type: :request do
     let(:invoice_params) do
       {
         invoice_number: 'INV-001',
-        company_id: company[:id],
+        seller_party_id: company[:id],
+        buyer_party_id: company[:id],
         invoice_lines_attributes: [
           {
             description: 'Service',
@@ -99,11 +100,12 @@ RSpec.describe 'Invoices', type: :request do
         allow(InvoiceService).to receive(:create).and_raise(
           ApiService::ValidationError.new("Validation failed", {
             invoice_number: ["can't be blank"],
-            company_id: ["can't be blank"]
+            seller_party_id: ["can't be blank"],
+            buyer_party_id: ["can't be blank"]
           })
         )
         
-        post invoices_path, params: { invoice: { invoice_number: '', company_id: nil } }
+        post invoices_path, params: { invoice: { invoice_number: '', seller_party_id: nil, buyer_party_id: nil } }
         expect(response).to have_http_status(:unprocessable_entity)
         expect(response.body).to include("New Invoice")
         expect(response.body).to include("form")

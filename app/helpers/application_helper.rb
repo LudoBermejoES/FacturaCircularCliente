@@ -135,4 +135,26 @@ module ApplicationHelper
       </svg>'
     end.html_safe
   end
+  
+  # Helper to add error styling to form fields
+  def field_class(field_name, base_classes, errors = nil)
+    classes = base_classes
+    
+    if errors && errors[field_name.to_s]
+      # Add error styling: red border and red focus ring
+      classes = classes.gsub('border-gray-300', 'border-red-300')
+      classes = classes.gsub('focus:border-indigo-500', 'focus:border-red-500')
+      classes = classes.gsub('focus:ring-indigo-500', 'focus:ring-red-500')
+    else
+      # Ensure default styling
+      unless classes.include?('border-')
+        classes += ' border-gray-300'
+      end
+      unless classes.include?('focus:border-')
+        classes += ' focus:border-indigo-500'
+      end
+    end
+    
+    classes
+  end
 end

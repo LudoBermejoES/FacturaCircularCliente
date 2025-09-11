@@ -9,9 +9,6 @@
         <p class="mt-1 text-sm text-gray-600"><%= @company[:legal_name] %></p>
       <% end %>
       <div class="mt-2 flex items-center space-x-3">
-        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <%= @company[:company_type] == 'supplier' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800' %>">
-          <%= @company[:company_type]&.capitalize || 'Customer' %>
-        </span>
         <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
           Active
         </span>
@@ -49,10 +46,6 @@
             <div>
               <dt class="text-sm font-medium text-gray-500">Tax ID</dt>
               <dd class="mt-1 text-sm text-gray-900"><%= @company[:tax_id] || '-' %></dd>
-            </div>
-            <div>
-              <dt class="text-sm font-medium text-gray-500">Company Type</dt>
-              <dd class="mt-1 text-sm text-gray-900"><%= @company[:company_type]&.capitalize || 'Customer' %></dd>
             </div>
             <div>
               <dt class="text-sm font-medium text-gray-500">Email</dt>

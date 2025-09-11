@@ -26,37 +26,15 @@ RSpec.feature 'Invoice Form Interactions', type: :feature, js: true do
       .with(query: { limit: '5', status: 'recent' })
       .to_return(status: 200, body: { invoices: [], total: 0 }.to_json)
     
-    # Mock company data for form dropdowns - allow any query params
-    stub_request(:get, %r{http://albaranes-api:3000/api/v1/companies})
-      .to_return(status: 200, body: {
-        data: [
-          {
-            id: 1,
-            type: 'companies',
-            attributes: {
-              corporate_name: 'Test Company',
-              trade_name: 'Test Company',
-              tax_identification_number: 'B12345678',
-              email: 'test@company.com',
-              telephone: '123456789',
-              web_address: 'https://test.com'
-            }
-          },
-          {
-            id: 2,
-            type: 'companies',
-            attributes: {
-              corporate_name: 'Another Company',
-              trade_name: 'Another Company',
-              tax_identification_number: 'B98765432',
-              email: 'info@another.com',
-              telephone: '987654321',
-              web_address: 'https://another.com'
-            }
-          }
-        ],
-        meta: { total: 2, page: 1, pages: 1 }
-      }.to_json)
+    # Mock CompanyService.all method directly since feature tests use service mocking
+    allow(CompanyService).to receive(:all).with(any_args).and_return({ 
+      companies: [
+        { id: 1, name: 'Test Company' },
+        { id: 2, name: 'Another Company' }
+      ], 
+      total: 2, 
+      meta: { page: 1, pages: 1, total: 2 }
+    })
     
     # Mock invoice creation/update endpoints
     stub_request(:post, 'http://albaranes-api:3000/api/v1/invoices')
@@ -72,7 +50,8 @@ RSpec.feature 'Invoice Form Interactions', type: :feature, js: true do
   scenario 'User creates a new invoice with single line item' do
     invoice_data = {
       invoice_number: 'INV-2024-001',
-      company_id: company[:id],
+      seller_party_id: company[:id],
+      buyer_party_id: company[:id],
       issue_date: Date.current.strftime('%Y-%m-%d'),
       invoice_lines_attributes: [{
         description: 'Web Development Services',
@@ -94,7 +73,8 @@ RSpec.feature 'Invoice Form Interactions', type: :feature, js: true do
     
     # Fill in basic invoice information (using actual field names from the page)
     fill_in 'Invoice number', with: 'INV-2024-001'
-    select 'Test Company', from: 'Customer'
+    select 'Test Company', from: 'From (Seller)'
+    select 'Test Company', from: 'To (Customer)'
     fill_in 'Invoice Date', with: Date.current.strftime('%Y-%m-%d')
     
     # Add a line item first since form starts empty
@@ -126,7 +106,8 @@ RSpec.feature 'Invoice Form Interactions', type: :feature, js: true do
     
     # Fill basic info
     fill_in 'Invoice number', with: 'INV-2024-002' 
-    select 'Test Company', from: 'Customer'
+    select 'Test Company', from: 'From (Seller)'
+    select 'Test Company', from: 'To (Customer)'
     
     # Form starts with 1 default line item, fill it first
     within(first('tbody .line-item')) do
@@ -161,7 +142,8 @@ RSpec.feature 'Invoice Form Interactions', type: :feature, js: true do
     visit new_invoice_path
     
     fill_in 'Invoice number', with: 'INV-2024-003'
-    select 'Test Company', from: 'Customer'
+    select 'Test Company', from: 'From (Seller)'
+    select 'Test Company', from: 'To (Customer)'
     
     # Form starts with 1 line item, add 2 more for total of 3
     click_button 'Add Line'
@@ -198,7 +180,8 @@ RSpec.feature 'Invoice Form Interactions', type: :feature, js: true do
     visit new_invoice_path
     
     fill_in 'Invoice number', with: 'INV-DISCOUNT'
-    select 'Test Company', from: 'Customer'
+    select 'Test Company', from: 'From (Seller)'
+    select 'Test Company', from: 'To (Customer)'
     
     # Fill line item with discount
     within(first('tbody .line-item')) do
@@ -219,7 +202,8 @@ RSpec.feature 'Invoice Form Interactions', type: :feature, js: true do
     
     # Fill minimal required data (current form accepts this)
     fill_in 'Invoice number', with: 'MIN-001'
-    select 'Test Company', from: 'Customer' 
+    select 'Test Company', from: 'From (Seller)'
+    select 'Test Company', from: 'To (Customer)' 
     
     # Fill one line item with minimal data
     within(first('tbody .line-item')) do
@@ -264,7 +248,8 @@ RSpec.feature 'Invoice Form Interactions', type: :feature, js: true do
     
     # Verify form is pre-populated
     expect(page).to have_field('Invoice number', with: 'INV-EXISTING')
-    expect(page).to have_select('Customer', options: ['Select a customer', 'Test Company', 'Another Company'])
+    expect(page).to have_select('From (Seller)', options: ['Select seller company', 'Test Company', 'Another Company'])
+    expect(page).to have_select('To (Customer)', options: ['Select customer company', 'Test Company', 'Another Company'])
     # For form inputs, we need to check by placeholders or actual field contents
     within first('.line-item') do
       expect(find('input[placeholder="Item description"]').value).to eq('Original Service')
@@ -291,7 +276,8 @@ RSpec.feature 'Invoice Form Interactions', type: :feature, js: true do
     
     # Fill form with edge case data (negative price)
     fill_in 'Invoice number', with: 'EDGE-001'
-    select 'Test Company', from: 'Customer'
+    select 'Test Company', from: 'From (Seller)'
+    select 'Test Company', from: 'To (Customer)'
     
     # Fill line item with negative price (currently allowed by client)
     within(first('tbody .line-item')) do

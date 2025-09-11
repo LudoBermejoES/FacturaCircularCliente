@@ -28,6 +28,9 @@ gem "httparty", "~> 0.22.0"
 # JWT token handling
 gem "jwt", "~> 2.7"
 
+# Postal code validation by country
+gem "validates_zipcode", "~> 0.5.2"
+
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 

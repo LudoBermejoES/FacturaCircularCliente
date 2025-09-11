@@ -46,8 +46,7 @@ class CompaniesController < ApplicationController
       legal_name: '',
       email: '',
       phone: '',
-      website: '',
-      company_type: 'customer'
+      website: ''
     }
   end
   
@@ -56,8 +55,13 @@ class CompaniesController < ApplicationController
       Rails.logger.info "DEBUG: CompaniesController#create starting"
       response = CompanyService.create(company_params, token: current_token)
       Rails.logger.info "DEBUG: CompanyService.create returned: #{response.inspect}"
-      redirect_to company_path(response[:id]), notice: 'Company was successfully created.'
-      Rails.logger.info "DEBUG: Redirect to company_path(#{response[:id]}) initiated"
+      
+      # Extract ID from JSON API format response
+      company_id = response.dig(:data, :id) || response[:id]
+      Rails.logger.info "DEBUG: Extracted company_id: #{company_id}"
+      
+      redirect_to company_path(company_id), notice: 'Company was successfully created.'
+      Rails.logger.info "DEBUG: Redirect to company_path(#{company_id}) initiated"
     rescue ApiService::ValidationError => e
       Rails.logger.info "DEBUG: ValidationError caught: #{e.message}, errors: #{e.errors}"
       @company = company_params
@@ -117,7 +121,7 @@ class CompaniesController < ApplicationController
   def company_params
     params.require(:company).permit(
       :name, :legal_name, :tax_id, :email, :phone, :website,
-      :company_type, :description, :notes,
+      :description, :notes,
       :default_payment_terms, :default_payment_method,
       :bank_account, :swift_bic
     )

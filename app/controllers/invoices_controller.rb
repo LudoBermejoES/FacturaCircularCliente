@@ -56,7 +56,8 @@ class InvoicesController < ApplicationController
       date: Date.today.to_s,
       due_date: (Date.today + 30).to_s,
       status: 'draft',
-      company_id: params[:company_id],
+      seller_party_id: params[:seller_party_id],
+      buyer_party_id: params[:buyer_party_id],
       invoice_lines: [build_empty_line_item],
       notes: '',
       internal_notes: ''
@@ -82,9 +83,13 @@ class InvoicesController < ApplicationController
       Rails.logger.info "DEBUG: ValidationError errors: #{e.errors.inspect}"
       @invoice = invoice_params
       @invoice[:invoice_lines] = params[:invoice][:invoice_lines]&.values || [build_empty_line_item]
-      @errors = e.errors
+      
+      # Parse API errors into a format the view can understand
+      @errors = parse_validation_errors(e.errors)
+      Rails.logger.info "DEBUG: Parsed errors: #{@errors.inspect}"
+      
       load_companies
-      flash.now[:alert] = 'There were errors creating the invoice.'
+      flash.now[:alert] = 'Please fix the errors below.'
       render :new, status: :unprocessable_entity
     rescue ApiService::ApiError => e
       Rails.logger.info "DEBUG: ApiError caught: #{e.message}"
@@ -113,10 +118,11 @@ class InvoicesController < ApplicationController
       InvoiceService.update(@invoice[:id], invoice_params_with_lines, token: current_token)
       redirect_to invoice_path(@invoice[:id]), notice: 'Invoice updated successfully'
     rescue ApiService::ValidationError => e
-      @errors = e.errors
+      # Parse API errors into a format the view can understand
+      @errors = parse_validation_errors(e.errors)
       @invoice[:invoice_lines] = params[:invoice][:invoice_lines]&.values || @invoice[:invoice_lines]
       load_companies
-      flash.now[:alert] = 'There were errors updating the invoice.'
+      flash.now[:alert] = 'Please fix the errors below.'
       render :edit, status: :unprocessable_entity
     rescue ApiService::ApiError => e
       @invoice[:invoice_lines] = params[:invoice][:invoice_lines]&.values || @invoice[:invoice_lines]
@@ -190,7 +196,10 @@ class InvoicesController < ApplicationController
   def load_companies
     begin
       response = CompanyService.all(token: current_token, params: { per_page: 100 })
-      @companies = response[:companies] || []
+      all_companies = response[:companies] || []
+      
+      # All companies available for both seller and buyer roles
+      @companies = all_companies
     rescue ApiService::ApiError => e
       @companies = []
       flash.now[:alert] = "Error loading companies: #{e.message}"
@@ -200,7 +209,7 @@ class InvoicesController < ApplicationController
   def invoice_params
     params.require(:invoice).permit(
       :invoice_number, :invoice_type, :date, :due_date, :status,
-      :company_id, :notes, :internal_notes, :payment_method,
+      :seller_party_id, :buyer_party_id, :notes, :internal_notes, :payment_method,
       :payment_terms, :currency, :exchange_rate,
       :discount_percentage, :discount_amount,
       invoice_lines_attributes: [:description, :quantity, :unit_price, :tax_rate, :discount_percentage, :product_code]
@@ -240,5 +249,35 @@ class InvoicesController < ApplicationController
       discount_percentage: 0.0,
       product_code: ''
     }
+  end
+  
+  # Parse API validation errors into a format the view can understand
+  # API errors come in format: [{status: "422", source: {pointer: "/data/attributes/invoice_number"}, title: "Validation Error", detail: "Invoice number can't be blank", code: "VALIDATION_ERROR"}]
+  # We need to convert to: {"invoice_number" => ["can't be blank"]}
+  def parse_validation_errors(api_errors)
+    errors = {}
+    
+    return errors unless api_errors.is_a?(Array)
+    
+    api_errors.each do |error|
+      next unless error.is_a?(Hash) && error[:source] && error[:source][:pointer] && error[:detail]
+      
+      # Extract field name from pointer like "/data/attributes/invoice_number"
+      pointer = error[:source][:pointer]
+      if pointer.match(%r{/data/attributes/(.+)})
+        field_name = $1
+        message = error[:detail]
+        
+        # Remove field name from the beginning of the message if it's there
+        # "Invoice number can't be blank" -> "can't be blank"
+        field_label = field_name.humanize.downcase
+        message = message.gsub(/^#{Regexp.escape(field_label)}\s+/i, '')
+        
+        errors[field_name] ||= []
+        errors[field_name] << message
+      end
+    end
+    
+    errors
   end
 end

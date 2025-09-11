@@ -15,8 +15,7 @@ class CompanyService < ApiService
             tax_id: attributes[:tax_identification_number],
             email: attributes[:email],
             phone: attributes[:telephone],
-            website: attributes[:web_address],
-            company_type: 'customer' # Default since this isn't in the API response
+            website: attributes[:web_address]
           }
         end
       end
@@ -40,8 +39,7 @@ class CompanyService < ApiService
           tax_id: attributes[:tax_identification_number],
           email: attributes[:email],
           phone: attributes[:telephone],
-          website: attributes[:web_address],
-          company_type: 'customer' # Default since this isn't in the API response
+          website: attributes[:web_address]
         }
       else
         response

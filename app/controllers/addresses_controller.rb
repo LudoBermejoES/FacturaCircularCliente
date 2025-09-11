@@ -4,6 +4,15 @@ class AddressesController < ApplicationController
 
   # POST /companies/:company_id/addresses
   def create
+    # Validate postal code before sending to API
+    validation_result = AddressValidator.validate_params(address_params)
+    
+    unless validation_result[:valid]
+      flash[:error] = "Validation failed: #{validation_result[:errors].join(', ')}"
+      redirect_to company_path(@company[:id])
+      return
+    end
+
     result = CompanyService.create_address(@company[:id], address_params, token: current_token)
     
     if result[:errors]
@@ -23,6 +32,15 @@ class AddressesController < ApplicationController
 
   # PATCH/PUT /companies/:company_id/addresses/:id
   def update
+    # Validate postal code before sending to API
+    validation_result = AddressValidator.validate_params(address_params)
+    
+    unless validation_result[:valid]
+      flash[:error] = "Validation failed: #{validation_result[:errors].join(', ')}"
+      redirect_to company_path(@company[:id])
+      return
+    end
+
     result = CompanyService.update_address(@company[:id], params[:id], address_params, token: current_token)
     
     if result[:errors]

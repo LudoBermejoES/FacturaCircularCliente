@@ -24,30 +24,38 @@ SimpleCov.start 'rails' do
   add_group 'JavaScript', 'app/javascript'
 end
 
-# Configure VCR for API recording
-VCR.configure do |config|
-  config.cassette_library_dir = 'spec/cassettes'
-  config.hook_into :webmock
-  config.configure_rspec_metadata!
-  config.ignore_localhost = true
-  
-  # Filter sensitive data
-  config.filter_sensitive_data('<JWT_TOKEN>') do |interaction|
-    if interaction.request.headers['Authorization']
-      interaction.request.headers['Authorization'].first
+# Configure VCR for API recording - only in test environment
+if Rails.env.test?
+  VCR.configure do |config|
+    config.cassette_library_dir = 'spec/cassettes'
+    config.hook_into :webmock
+    config.configure_rspec_metadata!
+    config.ignore_localhost = true
+    
+    # Filter sensitive data
+    config.filter_sensitive_data('<JWT_TOKEN>') do |interaction|
+      if interaction.request.headers['Authorization']
+        interaction.request.headers['Authorization'].first
+      end
+    end
+    
+    config.filter_sensitive_data('<API_KEY>') do |interaction|
+      ENV['API_KEY']
     end
   end
-  
-  config.filter_sensitive_data('<API_KEY>') do |interaction|
-    ENV['API_KEY']
-  end
-end
 
-# Configure WebMock
-WebMock.disable_net_connect!(
-  allow_localhost: true,
-  allow: ['chromedriver.storage.googleapis.com']
-)
+  # Configure WebMock - only in test environment
+  WebMock.disable_net_connect!(
+    allow_localhost: true,
+    allow: [
+      'chromedriver.storage.googleapis.com',
+      'localhost',
+      '127.0.0.1',
+      /localhost/,
+      /127\.0\.0\.1/
+    ]
+  )
+end
 
 # Requires supporting ruby files with custom matchers and macros, etc, in
 # spec/support/ and its subdirectories. Files matching `spec/**/*_spec.rb` are
@@ -97,6 +105,6 @@ RSpec.configure do |config|
   end
   
   config.after(:each) do
-    WebMock.reset!
+    WebMock.reset! if Rails.env.test?
   end
 end

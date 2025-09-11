@@ -55,6 +55,23 @@ RSpec.describe 'Companies', type: :request do
       expect(response.body).to include('Company was successfully created')
     end
 
+    it 'handles JSON API format response' do
+      # Test with JSON API format response (like the real API returns)
+      json_api_response = {
+        data: {
+          id: "123",
+          type: "companies",
+          attributes: company.except(:id)
+        }
+      }
+      allow(CompanyService).to receive(:create).and_return(json_api_response)
+      
+      post companies_path, params: { company: company_params }
+      expect(response).to redirect_to(company_path("123"))
+      follow_redirect!
+      expect(response.body).to include('Company was successfully created')
+    end
+
     context 'with invalid data' do
       it 'renders form with errors' do
         # Override the global mock to raise validation error

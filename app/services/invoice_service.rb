@@ -9,11 +9,15 @@ class InvoiceService < ApiService
     end
     
     def create(params, token:)
-      post('/invoices', token: token, body: params)
+      # Convert to JSON API format
+      json_api_params = format_for_api(params)
+      post('/invoices', token: token, body: json_api_params)
     end
     
     def update(id, params, token:)
-      put("/invoices/#{id}", token: token, body: params)
+      # Convert to JSON API format
+      json_api_params = format_for_api(params)
+      put("/invoices/#{id}", token: token, body: json_api_params)
     end
     
     def delete(id, token:)
@@ -29,10 +33,18 @@ class InvoiceService < ApiService
     
     # Status transitions
     def update_status(id, status, comment: nil, token:)
-      patch("/invoices/#{id}/status", token: token, body: { 
-        status: status,
-        comment: comment 
-      }.compact)
+      body = {
+        data: {
+          type: 'invoices',
+          attributes: {
+            status: status
+          }
+        }
+      }
+      
+      body[:data][:attributes][:comment] = comment if comment.present?
+      
+      patch("/invoices/#{id}/status", token: token, body: body)
     end
     
     # Note: download_pdf method removed - not supported by API
@@ -89,6 +101,43 @@ class InvoiceService < ApiService
       end
     rescue HTTParty::Error => e
       raise ApiService::ApiError, "Network error: #{e.message}"
+    end
+    
+    # Convert flat hash to JSON API format
+    def format_for_api(params)
+      # Don't modify original params, work with a copy
+      params_copy = params.dup
+      
+      # Extract relationships
+      seller_party_id = params_copy.delete(:seller_party_id)
+      buyer_party_id = params_copy.delete(:buyer_party_id)
+      
+      # Build JSON API structure
+      json_api_params = {
+        data: {
+          type: 'invoices',
+          attributes: params_copy
+        }
+      }
+      
+      # Add relationships if present
+      if seller_party_id || buyer_party_id
+        json_api_params[:data][:relationships] = {}
+        
+        if seller_party_id
+          json_api_params[:data][:relationships][:seller_party] = {
+            data: { type: 'companies', id: seller_party_id.to_s }
+          }
+        end
+        
+        if buyer_party_id
+          json_api_params[:data][:relationships][:buyer_party] = {
+            data: { type: 'companies', id: buyer_party_id.to_s }
+          }
+        end
+      end
+      
+      json_api_params
     end
   end
 end

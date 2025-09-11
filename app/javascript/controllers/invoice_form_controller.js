@@ -65,10 +65,13 @@ export default class extends Controller {
     const quantity = parseFloat(lineItem.querySelector('input[name*="[quantity]"]')?.value) || 0
     const unitPrice = parseFloat(lineItem.querySelector('input[name*="[unit_price]"]')?.value) || 0
     const discount = parseFloat(lineItem.querySelector('input[name*="[discount_percentage]"]')?.value) || 0
+    const taxRate = parseFloat(lineItem.querySelector('input[name*="[tax_rate]"]')?.value) || 0
     
     const subtotal = quantity * unitPrice
     const discountAmount = subtotal * (discount / 100)
-    const lineTotal = subtotal - discountAmount
+    const lineNet = subtotal - discountAmount
+    const lineTax = lineNet * (taxRate / 100)
+    const lineTotal = lineNet + lineTax
     
     const totalElement = lineItem.querySelector('.line-total')
     if (totalElement) {

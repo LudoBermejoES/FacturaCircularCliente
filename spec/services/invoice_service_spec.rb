@@ -103,9 +103,31 @@ RSpec.describe InvoiceService do
     end
     
     before do
+      # Expected JSON API format
+      expected_body = {
+        data: {
+          type: 'invoices',
+          attributes: {
+            invoice_number: 'INV-001',
+            status: 'draft',
+            invoice_lines_attributes: [
+              { description: 'Service', quantity: 10, unit_price: 100, tax_rate: 21 }
+            ]
+          },
+          relationships: {
+            seller_party: {
+              data: { type: 'companies', id: '1' }
+            },
+            buyer_party: {
+              data: { type: 'companies', id: '2' }
+            }
+          }
+        }
+      }
+      
       stub_request(:post, 'http://albaranes-api:3000/api/v1/invoices')
         .with(
-          body: invoice_params.to_json,
+          body: expected_body.to_json,
           headers: { 'Authorization' => "Bearer #{token}" }
         )
         .to_return(status: 201, body: response_body.to_json)
@@ -122,9 +144,19 @@ RSpec.describe InvoiceService do
     let(:update_params) { { status: 'sent' } }
     
     before do
+      # Expected JSON API format
+      expected_body = {
+        data: {
+          type: 'invoices',
+          attributes: {
+            status: 'sent'
+          }
+        }
+      }
+      
       stub_request(:put, "http://albaranes-api:3000/api/v1/invoices/#{invoice_id}")
         .with(
-          body: update_params.to_json,
+          body: expected_body.to_json,
           headers: { 'Authorization' => "Bearer #{token}" }
         )
         .to_return(status: 200, body: { id: invoice_id, status: 'sent' }.to_json)
@@ -172,10 +204,21 @@ RSpec.describe InvoiceService do
     let(:comment) { 'Looks good' }
     
     before do
+      # Expected JSON API format
+      expected_body = {
+        data: {
+          type: 'invoices',
+          attributes: {
+            status: status,
+            comment: comment
+          }
+        }
+      }
+      
       stub_request(:patch, "http://albaranes-api:3000/api/v1/invoices/#{invoice_id}/status")
         .with(
           headers: { 'Authorization' => "Bearer #{token}" },
-          body: { status: status, comment: comment }.to_json
+          body: expected_body.to_json
         )
         .to_return(status: 200, body: { id: invoice_id, status: status }.to_json)
     end

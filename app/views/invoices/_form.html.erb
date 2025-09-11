@@ -40,8 +40,13 @@
         <div>
           <%= form.label :invoice_number, class: "block text-sm font-medium text-gray-700" %>
           <%= form.text_field :invoice_number, value: invoice[:invoice_number],
-              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+              class: field_class("invoice_number", "mt-1 block w-full rounded-md shadow-sm focus:ring-indigo-500 sm:text-sm", @errors),
               placeholder: "INV-001" %>
+          <% if @errors && @errors["invoice_number"] %>
+            <% @errors["invoice_number"].each do |error| %>
+              <p class="mt-1 text-sm text-red-600"><%= error %></p>
+            <% end %>
+          <% end %>
         </div>
         
         <div>
@@ -72,13 +77,25 @@
         </div>
         
         <div>
-          <%= form.label :company_id, "Customer", class: "block text-sm font-medium text-gray-700" %>
-          <%= form.select :company_id,
+          <%= form.label :seller_party_id, "From (Seller)", class: "block text-sm font-medium text-gray-700" %>
+          <%= form.select :seller_party_id,
               options_for_select(
                 @companies.map { |c| [c[:name], c[:id]] },
-                invoice[:company_id]
+                invoice[:seller_party_id]
               ),
-              { include_blank: 'Select a customer' },
+              { include_blank: 'Select seller company' },
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+              required: true %>
+        </div>
+        
+        <div>
+          <%= form.label :buyer_party_id, "To (Customer)", class: "block text-sm font-medium text-gray-700" %>
+          <%= form.select :buyer_party_id,
+              options_for_select(
+                @companies.map { |c| [c[:name], c[:id]] },
+                invoice[:buyer_party_id]
+              ),
+              { include_blank: 'Select customer company' },
               class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
               data: { action: "change->invoice-form#updateCompany" },
               required: true %>
