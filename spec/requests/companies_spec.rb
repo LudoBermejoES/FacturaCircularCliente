@@ -94,7 +94,8 @@ RSpec.describe 'Companies', type: :request do
     it 'shows company details' do
       get company_path(company[:id])
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include(company[:name])
+      # Company name might contain special characters that get HTML escaped
+      expect(response.body).to include(CGI.escapeHTML(company[:name]))
       expect(response.body).to include(company[:tax_id])
     end
   end
@@ -104,7 +105,8 @@ RSpec.describe 'Companies', type: :request do
       get edit_company_path(company[:id])
       expect(response).to have_http_status(:ok)
       expect(response.body).to include('Edit Company')
-      expect(response.body).to include(company[:name])
+      # Company name might contain special characters that get HTML escaped
+      expect(response.body).to include(CGI.escapeHTML(company[:name]))
     end
   end
 

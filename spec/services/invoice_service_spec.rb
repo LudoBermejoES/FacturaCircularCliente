@@ -83,7 +83,8 @@ RSpec.describe InvoiceService do
   describe '.create' do
     let(:invoice_params) do
       {
-        company_id: 1,
+        seller_party_id: 1,
+        buyer_party_id: 2,
         invoice_type: 'standard',
         date: Date.current.to_s,
         due_date: 30.days.from_now.to_s,
@@ -96,20 +97,21 @@ RSpec.describe InvoiceService do
     let(:response_body) do
       {
         id: 1,
-        invoice_number: 'INV-001',
+        invoice_number: 'FC-2025-0001',
         status: 'draft',
         total: 1210.00
       }
     end
     
     before do
-      # Expected JSON API format
+      # Expected JSON API format - matching what the service actually sends
       expected_body = {
         data: {
           type: 'invoices',
           attributes: {
-            invoice_number: 'INV-001',
-            status: 'draft',
+            invoice_type: 'standard',
+            date: Date.current.to_s,
+            due_date: 30.days.from_now.to_s,
             invoice_lines_attributes: [
               { description: 'Service', quantity: 10, unit_price: 100, tax_rate: 21 }
             ]

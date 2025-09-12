@@ -51,8 +51,11 @@ if Rails.env.test?
       'chromedriver.storage.googleapis.com',
       'localhost',
       '127.0.0.1',
+      '0.0.0.0',
       /localhost/,
-      /127\.0\.0\.1/
+      /127\.0\.0\.1/,
+      /0\.0\.0\.0/,
+      /__identify__/  # Allow Capybara's internal identify endpoint
     ]
   )
 end

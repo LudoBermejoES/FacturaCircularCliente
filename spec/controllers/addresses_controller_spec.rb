@@ -26,8 +26,8 @@ RSpec.describe AddressesController, type: :controller do
     allow(controller).to receive(:current_user).and_return(user)
     allow(controller).to receive(:current_token).and_return(token)
     
-    # Mock CompanyService.find for all tests
-    allow(CompanyService).to receive(:find).and_return(company)
+    # Mock CompanyService.find for all tests - use string ID since controller passes string
+    allow(CompanyService).to receive(:find).with(company_id.to_s, token: token).and_return(company)
   end
 
   describe 'POST #create' do
@@ -89,7 +89,7 @@ RSpec.describe AddressesController, type: :controller do
 
     context 'when company not found' do
       before do
-        allow(CompanyService).to receive(:find).with(company_id, token: token)
+        allow(CompanyService).to receive(:find).with(company_id.to_s, token: token)
           .and_raise(ApiService::ApiError.new('Company not found'))
       end
 
@@ -116,9 +116,12 @@ RSpec.describe AddressesController, type: :controller do
     end
 
     context 'when successful' do
+      let(:updated_params_as_strings) do
+        updated_params.stringify_keys.merge('is_default' => 'false')
+      end
+
       before do
-        allow(CompanyService).to receive(:find).with(company_id.to_s, token: token).and_return(company)
-        allow(CompanyService).to receive(:update_address).with(company_id.to_s, address_id.to_s, updated_params, token: token)
+        allow(CompanyService).to receive(:update_address).with(company_id.to_s, address_id.to_s, updated_params_as_strings, token: token)
           .and_return({ success: true })
       end
 
@@ -127,14 +130,17 @@ RSpec.describe AddressesController, type: :controller do
         
         expect(response).to redirect_to(company_path(company_id.to_s))
         expect(flash[:notice]).to eq('Address updated successfully')
-        expect(CompanyService).to have_received(:update_address).with(company_id.to_s, address_id.to_s, updated_params, token: token)
+        expect(CompanyService).to have_received(:update_address).with(company_id.to_s, address_id.to_s, updated_params_as_strings, token: token)
       end
     end
 
     context 'when validation fails' do
+      let(:updated_params_as_strings) do
+        updated_params.stringify_keys.merge('is_default' => 'false')
+      end
+
       before do
-        allow(CompanyService).to receive(:find).with(company_id.to_s, token: token).and_return(company)
-        allow(CompanyService).to receive(:update_address).with(company_id.to_s, address_id.to_s, updated_params, token: token)
+        allow(CompanyService).to receive(:update_address).with(company_id.to_s, address_id.to_s, updated_params_as_strings, token: token)
           .and_raise(ApiService::ValidationError.new('Validation failed', { town: ['is required'] }))
       end
 
@@ -147,9 +153,12 @@ RSpec.describe AddressesController, type: :controller do
     end
 
     context 'when API error occurs' do
+      let(:updated_params_as_strings) do
+        updated_params.stringify_keys.merge('is_default' => 'false')
+      end
+
       before do
-        allow(CompanyService).to receive(:find).with(company_id.to_s, token: token).and_return(company)
-        allow(CompanyService).to receive(:update_address).with(company_id.to_s, address_id.to_s, updated_params, token: token)
+        allow(CompanyService).to receive(:update_address).with(company_id.to_s, address_id.to_s, updated_params_as_strings, token: token)
           .and_raise(ApiService::ApiError.new('Address not found'))
       end
 
@@ -162,9 +171,12 @@ RSpec.describe AddressesController, type: :controller do
     end
 
     context 'when update returns errors' do
+      let(:updated_params_as_strings) do
+        updated_params.stringify_keys.merge('is_default' => 'false')
+      end
+
       before do
-        allow(CompanyService).to receive(:find).with(company_id.to_s, token: token).and_return(company)
-        allow(CompanyService).to receive(:update_address).with(company_id.to_s, address_id.to_s, updated_params, token: token)
+        allow(CompanyService).to receive(:update_address).with(company_id.to_s, address_id.to_s, updated_params_as_strings, token: token)
           .and_return({ errors: 'Update failed' })
       end
 
@@ -180,7 +192,6 @@ RSpec.describe AddressesController, type: :controller do
   describe 'DELETE #destroy' do
     context 'when successful' do
       before do
-        allow(CompanyService).to receive(:find).with(company_id.to_s, token: token).and_return(company)
         allow(CompanyService).to receive(:destroy_address).with(company_id.to_s, address_id.to_s, token: token)
           .and_return({ success: true })
       end
@@ -196,7 +207,6 @@ RSpec.describe AddressesController, type: :controller do
 
     context 'when API error occurs' do
       before do
-        allow(CompanyService).to receive(:find).with(company_id.to_s, token: token).and_return(company)
         allow(CompanyService).to receive(:destroy_address).with(company_id.to_s, address_id.to_s, token: token)
           .and_raise(ApiService::ApiError.new('Cannot delete address'))
       end
@@ -211,7 +221,6 @@ RSpec.describe AddressesController, type: :controller do
 
     context 'when delete returns errors' do
       before do
-        allow(CompanyService).to receive(:find).with(company_id.to_s, token: token).and_return(company)
         allow(CompanyService).to receive(:destroy_address).with(company_id.to_s, address_id.to_s, token: token)
           .and_return({ errors: 'Delete failed' })
       end
@@ -228,7 +237,6 @@ RSpec.describe AddressesController, type: :controller do
   describe 'parameter handling' do
     context 'with invalid parameters' do
       it 'filters out unpermitted parameters' do
-        allow(CompanyService).to receive(:find).with(company_id.to_s, token: token).and_return(company)
         allow(CompanyService).to receive(:create_address).and_return({ success: true })
 
         post :create, params: { 
@@ -240,16 +248,15 @@ RSpec.describe AddressesController, type: :controller do
         }
         
         expect(CompanyService).to have_received(:create_address) do |company_id, params, options|
-          expect(params.keys).to match_array([:address, :post_code, :town, :province, :country_code, :address_type, :is_default])
-          expect(params[:unauthorized_field]).to be_nil
-          expect(params[:malicious_script]).to be_nil
+          expect(params.keys).to match_array(['address', 'post_code', 'town', 'province', 'country_code', 'address_type', 'is_default'])
+          expect(params['unauthorized_field']).to be_nil
+          expect(params['malicious_script']).to be_nil
         end
       end
     end
 
     context 'with missing required parameters' do
       it 'handles missing address parameter gracefully' do
-        allow(CompanyService).to receive(:find).with(company_id.to_s, token: token).and_return(company)
         
         expect {
           post :create, params: { company_id: company_id }
@@ -262,23 +269,31 @@ RSpec.describe AddressesController, type: :controller do
     context 'when user is not authenticated' do
       before do
         allow(controller).to receive(:logged_in?).and_return(false)
-        allow(controller).to receive(:authenticate_user!).and_call_original
-        allow(controller).to receive(:redirect_to)
+        allow(controller).to receive(:authenticate_user!) do
+          controller.redirect_to '/login'
+        end
+        # Stub the service calls so they don't try to make real HTTP requests
+        allow(CompanyService).to receive(:create_address).and_return({})
+        allow(CompanyService).to receive(:update_address).and_return({})
+        allow(CompanyService).to receive(:destroy_address).and_return({})
       end
 
       it 'redirects to login for create action' do
         post :create, params: { company_id: company_id, address: address_params }
         expect(controller).to have_received(:authenticate_user!)
+        expect(response).to redirect_to('/login')
       end
 
       it 'redirects to login for update action' do
         patch :update, params: { company_id: company_id, id: address_id, address: address_params }
         expect(controller).to have_received(:authenticate_user!)
+        expect(response).to redirect_to('/login')
       end
 
       it 'redirects to login for destroy action' do
         delete :destroy, params: { company_id: company_id, id: address_id }
         expect(controller).to have_received(:authenticate_user!)
+        expect(response).to redirect_to('/login')
       end
     end
   end
@@ -286,21 +301,20 @@ RSpec.describe AddressesController, type: :controller do
   describe 'error handling edge cases' do
     context 'when network errors occur' do
       before do
-        allow(CompanyService).to receive(:find).with(company_id.to_s, token: token).and_return(company)
         allow(CompanyService).to receive(:create_address)
-          .and_raise(Net::TimeoutError.new('Request timeout'))
+          .and_raise(Timeout::Error.new('Request timeout'))
       end
 
       it 'handles network timeouts gracefully' do
-        expect {
-          post :create, params: { company_id: company_id, address: address_params }
-        }.to raise_error(Net::TimeoutError)
+        post :create, params: { company_id: company_id, address: address_params }
+        
+        expect(response).to redirect_to(company_path(company_id.to_s))
+        expect(flash[:error]).to eq('Network timeout - please try again')
       end
     end
 
     context 'when unexpected errors occur' do
       before do
-        allow(CompanyService).to receive(:find).with(company_id.to_s, token: token).and_return(company)
         allow(CompanyService).to receive(:create_address)
           .and_raise(StandardError.new('Unexpected error'))
       end

@@ -20,6 +20,17 @@ Rails.application.routes.draw do
   # Companies
   resources :companies do
     resources :addresses, only: [:create, :update, :destroy]
+    
+    # Invoice Series management
+    resources :invoice_series do
+      member do
+        post :activate
+        post :deactivate
+        get :statistics
+        get :compliance
+        post :rollover
+      end
+    end
   end
   
   # Invoices

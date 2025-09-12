@@ -210,6 +210,25 @@
         </div>
       <% end %>
 
+      <!-- Invoice Series -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
+          <h3 class="text-lg font-medium text-gray-900">Invoice Series</h3>
+          <%= link_to "Manage Series", company_invoice_series_index_path(@company[:id]), 
+              class: "text-sm font-medium text-indigo-600 hover:text-indigo-500" %>
+        </div>
+        <div class="border-t border-gray-200 px-4 py-5 sm:px-6">
+          <p class="text-sm text-gray-500 mb-4">Configure invoice numbering series for this company</p>
+          <%= link_to company_invoice_series_index_path(@company[:id]), 
+              class: "inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" do %>
+            <svg class="-ml-1 mr-2 h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0 0 20.25 18V6A2.25 2.25 0 0 0 18 3.75H6A2.25 2.25 0 0 0 3.75 6v12A2.25 2.25 0 0 0 6 20.25Z" />
+            </svg>
+            View Invoice Series
+          <% end %>
+        </div>
+      </div>
+
       <!-- Recent Invoices -->
       <div class="bg-white shadow rounded-lg">
         <div class="px-4 py-5 sm:px-6">

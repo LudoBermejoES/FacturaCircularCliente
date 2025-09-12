@@ -1,0 +1,10 @@
+<% breadcrumb ["Companies", companies_path], [@company[:name], company_path(@company[:id])], ["Invoice Series", company_invoice_series_index_path(@company[:id])], "New" %>
+
+<div class="max-w-4xl mx-auto">
+  <div class="bg-white shadow rounded-lg">
+    <div class="px-4 py-5 sm:p-6">
+      <h1 class="text-2xl font-bold text-gray-900 mb-6">New Invoice Series</h1>
+      <%= render 'form' %>
+    </div>
+  </div>
+</div>

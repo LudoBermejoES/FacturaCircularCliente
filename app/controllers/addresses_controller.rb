@@ -13,7 +13,7 @@ class AddressesController < ApplicationController
       return
     end
 
-    result = CompanyService.create_address(@company[:id], address_params, token: current_token)
+    result = CompanyService.create_address(@company[:id].to_s, address_params.to_h, token: current_token)
     
     if result[:errors]
       flash[:error] = "Failed to create address: #{result[:errors]}"
@@ -28,6 +28,9 @@ class AddressesController < ApplicationController
   rescue ApiService::ApiError => e
     flash[:error] = e.message
     redirect_to company_path(@company[:id])
+  rescue Timeout::Error, Net::OpenTimeout, Net::ReadTimeout => e
+    flash[:error] = "Network timeout - please try again"
+    redirect_to company_path(@company[:id])
   end
 
   # PATCH/PUT /companies/:company_id/addresses/:id
@@ -41,7 +44,7 @@ class AddressesController < ApplicationController
       return
     end
 
-    result = CompanyService.update_address(@company[:id], params[:id], address_params, token: current_token)
+    result = CompanyService.update_address(@company[:id].to_s, params[:id], address_params.to_h, token: current_token)
     
     if result[:errors]
       flash[:error] = "Failed to update address: #{result[:errors]}"
@@ -56,11 +59,14 @@ class AddressesController < ApplicationController
   rescue ApiService::ApiError => e
     flash[:error] = e.message
     redirect_to company_path(@company[:id])
+  rescue Timeout::Error, Net::OpenTimeout, Net::ReadTimeout => e
+    flash[:error] = "Network timeout - please try again"
+    redirect_to company_path(@company[:id])
   end
 
   # DELETE /companies/:company_id/addresses/:id
   def destroy
-    result = CompanyService.destroy_address(@company[:id], params[:id], token: current_token)
+    result = CompanyService.destroy_address(@company[:id].to_s, params[:id], token: current_token)
     
     if result[:errors]
       flash[:error] = "Failed to delete address: #{result[:errors]}"
@@ -71,6 +77,9 @@ class AddressesController < ApplicationController
     redirect_to company_path(@company[:id])
   rescue ApiService::ApiError => e
     flash[:error] = e.message
+    redirect_to company_path(@company[:id])
+  rescue Timeout::Error, Net::OpenTimeout, Net::ReadTimeout => e
+    flash[:error] = "Network timeout - please try again"
     redirect_to company_path(@company[:id])
   end
 
