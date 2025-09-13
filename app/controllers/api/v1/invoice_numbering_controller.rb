@@ -26,7 +26,7 @@ class Api::V1::InvoiceNumberingController < ApplicationController
           title: 'API Error',
           detail: e.message
         }]
-      }, status: :unprocessable_entity
+      }, status: :unprocessable_content
       
     rescue => e
       Rails.logger.error "Error fetching next available numbers: #{e.message}"

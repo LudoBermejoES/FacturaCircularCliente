@@ -8,6 +8,7 @@ class InvoiceNumberingService < ApiService
       }
       
       response = get('/invoice_numbering/next_available', token: token, params: params)
+      return {} unless response
       response.dig(:data, :attributes) || {}
     end
     
