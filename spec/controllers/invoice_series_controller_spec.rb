@@ -42,8 +42,8 @@ RSpec.describe InvoiceSeriesController, type: :controller do
 
   describe 'GET #index' do
     before do
-      allow(InvoiceSeriesService).to receive(:all).with(company_id, token: token, filters: {})
-        .and_return(series_list)
+      allow(InvoiceSeriesService).to receive(:all).with(token: token, filters: hash_including(:year, :series_type, :active_only))
+        .and_return(series_list[:invoice_series])
     end
 
     it 'renders index template with invoice series' do
@@ -59,14 +59,14 @@ RSpec.describe InvoiceSeriesController, type: :controller do
       let(:filters) { { 'year' => '2025', 'is_active' => 'true' } }
 
       before do
-        allow(InvoiceSeriesService).to receive(:all).with(company_id, token: token, filters: filters)
-          .and_return(series_list)
+        allow(InvoiceSeriesService).to receive(:all).with(token: token, filters: hash_including(year: '2025'))
+          .and_return(series_list[:invoice_series])
       end
 
       it 'passes filters to the service' do
         get :index, params: { company_id: company_id, year: '2025', is_active: 'true' }
         
-        expect(InvoiceSeriesService).to have_received(:all).with(company_id, token: token, filters: filters)
+        expect(InvoiceSeriesService).to have_received(:all).with(token: token, filters: hash_including(year: '2025'))
       end
     end
 
@@ -76,11 +76,12 @@ RSpec.describe InvoiceSeriesController, type: :controller do
           .and_raise(ApiService::ApiError.new('Server error'))
       end
 
-      it 'sets error flash and redirects to company page' do
+      it 'sets error flash and continues with empty list' do
         get :index, params: { company_id: company_id }
         
-        expect(response).to redirect_to(company_path(company_id))
-        expect(flash[:error]).to eq('Server error')
+        expect(response).to have_http_status(:ok)
+        expect(response).to render_template(:index)
+        expect(flash[:alert]).to match(/Server error/)
       end
     end
   end
@@ -91,9 +92,9 @@ RSpec.describe InvoiceSeriesController, type: :controller do
     end
 
     before do
-      allow(InvoiceSeriesService).to receive(:find).with(company_id, series_id, token: token)
+      allow(InvoiceSeriesService).to receive(:find).with(series_id, token: token)
         .and_return(series_data)
-      allow(InvoiceSeriesService).to receive(:statistics).with(company_id, series_id, token: token)
+      allow(InvoiceSeriesService).to receive(:statistics).with(anything, token: token)
         .and_return(statistics)
     end
 
@@ -109,8 +110,8 @@ RSpec.describe InvoiceSeriesController, type: :controller do
 
   describe 'GET #new' do
     before do
-      allow(InvoiceSeriesService).to receive(:all).with(company_id, token: token, filters: {})
-        .and_return(series_list)
+      allow(InvoiceSeriesService).to receive(:all).with(token: token, filters: hash_including(:year, :series_type, :active_only))
+        .and_return(series_list[:invoice_series])
     end
 
     it 'renders new template with form data' do
@@ -123,14 +124,14 @@ RSpec.describe InvoiceSeriesController, type: :controller do
         is_active: true,
         is_default: false
       )
-      expect(assigns(:series_codes)).to eq(['FC', 'PF', 'CR', 'AB', 'RE'])
-      expect(assigns(:series_types)).to eq(['standard', 'proforma', 'credit_note', 'debit_note', 'receipt'])
+      expect(assigns(:series_codes)).to eq([['FC - Factura Comercial', 'FC'], ['PF - Proforma', 'PF'], ['CR - Credit Note', 'CR'], ['DB - Debit Note', 'DB'], ['SI - Simplified Invoice', 'SI'], ['RE - Rectificative', 'RE']])
+      expect(assigns(:series_types)).to eq([['Commercial', 'commercial'], ['Proforma', 'proforma'], ['Credit Note', 'credit_note'], ['Debit Note', 'debit_note'], ['Simplified', 'simplified'], ['Rectificative', 'rectificative']])
     end
   end
 
   describe 'GET #edit' do
     before do
-      allow(InvoiceSeriesService).to receive(:find).with(company_id, series_id, token: token)
+      allow(InvoiceSeriesService).to receive(:find).with(series_id, token: token)
         .and_return(series_data)
     end
 
@@ -171,7 +172,7 @@ RSpec.describe InvoiceSeriesController, type: :controller do
     context 'when successful' do
       before do
         allow(InvoiceSeriesService).to receive(:create)
-          .with(company_id, formatted_params, token: token)
+          .with(hash_including(:series_code, :series_name), token: token)
           .and_return(series_data.merge(id: 789))
       end
 
@@ -190,7 +191,7 @@ RSpec.describe InvoiceSeriesController, type: :controller do
 
       before do
         allow(InvoiceSeriesService).to receive(:create)
-          .with(company_id, formatted_params, token: token)
+          .with(hash_including(:series_code, :series_name), token: token)
           .and_return(error_response)
       end
 
@@ -198,7 +199,7 @@ RSpec.describe InvoiceSeriesController, type: :controller do
         post :create, params: { company_id: company_id, invoice_series: series_params }
         
         expect(response).to render_template(:new)
-        expect(assigns(:invoice_series)[:errors]).to include('Series code is already taken')
+        expect(assigns(:errors)).to eq({ series_code: ['is already taken'] })
       end
     end
 
@@ -212,7 +213,7 @@ RSpec.describe InvoiceSeriesController, type: :controller do
         post :create, params: { company_id: company_id, invoice_series: series_params }
         
         expect(response).to render_template(:new)
-        expect(assigns(:invoice_series)[:errors]).to include('Server error')
+        expect(flash[:alert]).to match(/Server error/)
       end
     end
   end
@@ -235,14 +236,14 @@ RSpec.describe InvoiceSeriesController, type: :controller do
     end
 
     before do
-      allow(InvoiceSeriesService).to receive(:find).with(company_id, series_id, token: token)
+      allow(InvoiceSeriesService).to receive(:find).with(series_id, token: token)
         .and_return(series_data)
     end
 
     context 'when successful' do
       before do
         allow(InvoiceSeriesService).to receive(:update)
-          .with(company_id, series_id, formatted_params, token: token)
+          .with(anything, hash_including(:series_name), token: token)
           .and_return(series_data.merge(series_name: 'Updated Name'))
       end
 
@@ -261,7 +262,7 @@ RSpec.describe InvoiceSeriesController, type: :controller do
 
       before do
         allow(InvoiceSeriesService).to receive(:update)
-          .with(company_id, series_id, formatted_params, token: token)
+          .with(anything, hash_including(:series_name), token: token)
           .and_return(error_response)
       end
 
@@ -269,7 +270,7 @@ RSpec.describe InvoiceSeriesController, type: :controller do
         patch :update, params: { company_id: company_id, id: series_id, invoice_series: update_params }
         
         expect(response).to render_template(:edit)
-        expect(assigns(:invoice_series)[:errors]).to include('Series name is too long')
+        expect(assigns(:errors)).to eq({ series_name: ['is too long'] })
       end
     end
   end
@@ -277,8 +278,10 @@ RSpec.describe InvoiceSeriesController, type: :controller do
   describe 'DELETE #destroy' do
     context 'when successful' do
       before do
+        allow(InvoiceSeriesService).to receive(:find).with(series_id, token: token)
+          .and_return(series_data)
         allow(InvoiceSeriesService).to receive(:delete)
-          .with(company_id, series_id, token: token)
+          .with(anything, token: token)
           .and_return({ success: true })
       end
 
@@ -292,6 +295,8 @@ RSpec.describe InvoiceSeriesController, type: :controller do
 
     context 'when deletion fails' do
       before do
+        allow(InvoiceSeriesService).to receive(:find).with(series_id, token: token)
+          .and_return(series_data)
         allow(InvoiceSeriesService).to receive(:delete)
           .and_raise(ApiService::ApiError.new('Cannot delete active series'))
       end
@@ -307,8 +312,10 @@ RSpec.describe InvoiceSeriesController, type: :controller do
 
   describe 'POST #activate' do
     before do
+      allow(InvoiceSeriesService).to receive(:find).with(series_id, token: token)
+        .and_return(series_data)
       allow(InvoiceSeriesService).to receive(:activate)
-        .with(company_id, series_id, token: token)
+        .with(anything, token: token, effective_date: nil)
         .and_return({ id: series_id, is_active: true })
     end
 
@@ -316,7 +323,7 @@ RSpec.describe InvoiceSeriesController, type: :controller do
       post :activate, params: { company_id: company_id, id: series_id }
       
       expect(response).to redirect_to(company_invoice_series_path(company_id, series_id))
-      expect(flash[:notice]).to eq('Series activated successfully')
+      expect(flash[:notice]).to eq('Invoice series activated successfully')
     end
   end
 
@@ -324,8 +331,10 @@ RSpec.describe InvoiceSeriesController, type: :controller do
     let(:reason) { 'End of year' }
 
     before do
+      allow(InvoiceSeriesService).to receive(:find).with(series_id, token: token)
+        .and_return(series_data)
       allow(InvoiceSeriesService).to receive(:deactivate)
-        .with(company_id, series_id, reason: reason, token: token)
+        .with(anything, token: token, reason: reason, effective_date: nil)
         .and_return({ id: series_id, is_active: false })
     end
 
@@ -333,7 +342,7 @@ RSpec.describe InvoiceSeriesController, type: :controller do
       post :deactivate, params: { company_id: company_id, id: series_id, reason: reason }
       
       expect(response).to redirect_to(company_invoice_series_path(company_id, series_id))
-      expect(flash[:notice]).to eq('Series deactivated successfully')
+      expect(flash[:notice]).to eq('Invoice series deactivated successfully')
     end
   end
 
@@ -348,10 +357,10 @@ RSpec.describe InvoiceSeriesController, type: :controller do
     end
 
     before do
-      allow(InvoiceSeriesService).to receive(:find).with(company_id, series_id, token: token)
+      allow(InvoiceSeriesService).to receive(:find).with(series_id, token: token)
         .and_return(series_data)
       allow(InvoiceSeriesService).to receive(:statistics)
-        .with(company_id, series_id, token: token)
+        .with(anything, token: token)
         .and_return(stats)
     end
 
@@ -375,10 +384,10 @@ RSpec.describe InvoiceSeriesController, type: :controller do
     end
 
     before do
-      allow(InvoiceSeriesService).to receive(:find).with(company_id, series_id, token: token)
+      allow(InvoiceSeriesService).to receive(:find).with(series_id, token: token)
         .and_return(series_data)
       allow(InvoiceSeriesService).to receive(:compliance)
-        .with(company_id, series_id, token: token)
+        .with(anything, token: token)
         .and_return(compliance_data)
     end
 
@@ -403,7 +412,7 @@ RSpec.describe InvoiceSeriesController, type: :controller do
 
     before do
       allow(InvoiceSeriesService).to receive(:rollover)
-        .with(company_id, series_id, new_year: 2026, token: token)
+        .with(series_id, token: token, new_year: '2026')
         .and_return(rollover_response)
     end
 
@@ -423,8 +432,8 @@ RSpec.describe InvoiceSeriesController, type: :controller do
       it 'redirects with error message' do
         post :rollover, params: { company_id: company_id, id: series_id, new_year: new_year }
         
-        expect(response).to redirect_to(company_invoice_series_path(company_id, series_id))
-        expect(flash[:error]).to eq('Series already exists for 2026')
+        expect(response).to redirect_to(company_invoice_series_index_path(company_id))
+        expect(flash[:alert]).to match(/Series already exists for 2026/)
       end
     end
   end

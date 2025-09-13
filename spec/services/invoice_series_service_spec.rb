@@ -292,13 +292,12 @@ RSpec.describe InvoiceSeriesService, type: :service do
   end
 
   describe '.rollover' do
-    let(:from_year) { 2025 }
-    let(:to_year) { 2026 }
+    let(:new_year) { '2026' }
     let(:response_body) do
       {
         data: {
-          old_series: { id: series_id, year: from_year, is_active: false },
-          new_series: { id: 999, year: to_year, is_active: true, current_number: 0 },
+          old_series: { id: series_id, year: 2025, is_active: false },
+          new_series: { id: 999, year: 2026, is_active: true, current_number: 0 },
           message: 'Series rolled over successfully'
         }
       }
@@ -306,11 +305,10 @@ RSpec.describe InvoiceSeriesService, type: :service do
 
     before do
       expected_body = {
-        from_year: from_year,
-        to_year: to_year
+        new_year: new_year
       }
 
-      stub_request(:post, "http://albaranes-api:3000/api/v1/invoice_series/rollover")
+      stub_request(:post, "http://albaranes-api:3000/api/v1/invoice_series/#{series_id}/rollover")
         .with(
           headers: { 'Authorization' => "Bearer #{token}" },
           body: expected_body.to_json
@@ -319,7 +317,7 @@ RSpec.describe InvoiceSeriesService, type: :service do
     end
 
     it 'rolls over series to new year' do
-      result = described_class.rollover(token: token, from_year: from_year, to_year: to_year)
+      result = described_class.rollover(series_id, token: token, new_year: new_year)
       expect(result).to eq(response_body[:data])
     end
   end

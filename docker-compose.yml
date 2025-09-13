@@ -11,12 +11,40 @@ services:
       - node_modules:/rails/node_modules
     ports:
       - "3002:3000"
+      - "3003:3001"  # Test server port
     environment:
       RAILS_ENV: development
       RAILS_LOG_TO_STDOUT: "true"
       API_BASE_URL: ${API_BASE_URL:-http://albaranes-api:3000/api/v1}
+      SELENIUM_HOST: selenium
+      SELENIUM_PORT: 4444
+      HUB_URL: http://selenium:4444/wd/hub
+      TEST_APP_HOST: http://web:3001
     stdin_open: true
     tty: true
+    depends_on:
+      - selenium
+    networks:
+      - factura-shared
+  
+  selenium:
+    container_name: factura-circular-selenium
+    # For Intel/AMD processors:
+    # image: selenium/standalone-chrome:latest
+    # For Apple Silicon (M1/M2):
+    image: seleniarm/standalone-chromium:latest
+    shm_size: 2gb
+    ports:
+      - "4444:4444"  # Selenium Grid
+      - "7900:7900"  # noVNC for debugging
+    environment:
+      - SE_NODE_MAX_SESSIONS=5
+      - SE_NODE_SESSION_TIMEOUT=300
+      - SE_VNC_NO_PASSWORD=1
+      - SE_SCREEN_WIDTH=1920
+      - SE_SCREEN_HEIGHT=1080
+      - SE_NODE_OVERRIDE_MAX_SESSIONS=true
+      - SE_NODE_MAX_INSTANCES=5
     networks:
       - factura-shared
 

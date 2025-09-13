@@ -51,4 +51,6 @@ Rails.application.configure do
   config.hosts << "localhost"
   config.hosts << "127.0.0.1"
   config.hosts << "localhost:3002"
+  config.hosts << "0.0.0.0"
+  config.hosts << "web"
 end

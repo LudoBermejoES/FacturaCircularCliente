@@ -11,6 +11,7 @@ require 'simplecov'
 require 'factory_bot_rails'
 require 'shoulda-matchers'
 require 'faker'
+require 'rails-controller-testing'
 
 # Start SimpleCov for code coverage
 SimpleCov.start 'rails' do
@@ -52,10 +53,16 @@ if Rails.env.test?
       'localhost',
       '127.0.0.1',
       '0.0.0.0',
+      /0\.0\.0\.0:\d+/,  # Allow Capybara's server on any port
+      'selenium',          # Selenium container hostname
+      'web',              # Web container hostname
       /localhost/,
       /127\.0\.0\.1/,
       /0\.0\.0\.0/,
-      /__identify__/  # Allow Capybara's internal identify endpoint
+      /selenium/,         # Any selenium-related host
+      /4444/,            # Selenium Grid port
+      /3001/,            # Test server port
+      /__identify__/     # Allow Capybara's internal identify endpoint
     ]
   )
 end
@@ -101,6 +108,13 @@ RSpec.configure do |config|
   
   # Include FactoryBot methods
   config.include FactoryBot::Syntax::Methods
+  
+  # Include controller testing helpers
+  [:controller, :view, :request].each do |type|
+    config.include ::Rails::Controller::Testing::TestProcess, type: type
+    config.include ::Rails::Controller::Testing::TemplateAssertions, type: type
+    config.include ::Rails::Controller::Testing::Integration, type: type
+  end
   
   # Clean up test data
   config.before(:suite) do

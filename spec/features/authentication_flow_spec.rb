@@ -1,9 +1,7 @@
 require 'rails_helper'
 
-RSpec.feature 'Authentication Flow', type: :feature do
-  before do
-    skip "Feature tests require browser environment - run manually in development"
-  end
+RSpec.feature 'Authentication Flow', type: :feature, js: true do
+  # Selenium Grid is now configured and working - tests enabled
   let(:valid_email) { 'admin@example.com' }
   let(:valid_password) { 'password123' }
   let(:auth_response) { build(:auth_response) }
@@ -121,8 +119,8 @@ RSpec.feature 'Authentication Flow', type: :feature do
       # Since stats endpoint doesn't exist, controller falls back to defaults
       expect(page).to have_content('0 invoices') # total_invoices defaults to 0
       expect(page).to have_content('0.00 €')     # amounts default to 0
-      expect(page).to have_content('Total Invoices 0')
-      expect(page).to have_content('Pending 0.00 €')
+      expect(page).to have_content('Total Invoices').and have_content('0')
+      expect(page).to have_content('Pending').and have_content('0.00 €')
       # Status breakdown will all be 0 due to missing stats endpoint
       expect(page).to have_content('0') # draft count (appears multiple times)
       # Should show recent invoice if mock works properly

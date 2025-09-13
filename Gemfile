@@ -68,6 +68,9 @@ group :test do
   # Use system testing [https://guides.rubyonrails.org/testing.html#system-testing]
   gem "capybara"
   gem "selenium-webdriver"
+  
+  # Controller testing helpers for render_template and assigns
+  gem "rails-controller-testing"
 end
 
 gem "rspec-rails", "~> 8.0", group: :test

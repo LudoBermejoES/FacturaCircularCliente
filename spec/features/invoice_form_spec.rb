@@ -1,9 +1,7 @@
 require 'rails_helper'
 
 RSpec.feature 'Invoice Form Interactions', type: :feature, js: true do
-  before do
-    skip "Feature tests require browser environment - run manually in development"
-  end
+  # Selenium Grid is now configured and working - tests enabled
   let(:user) { build(:user_response) }
   let(:token) { 'test_access_token' }
   let(:company) { build(:company_response, name: 'Test Company', tax_id: 'B12345678') }
