@@ -84,8 +84,24 @@ class ApplicationController < ActionController::Base
     @current_user ||= {
       id: session[:user_id],
       email: session[:user_email],
-      name: session[:user_name]
+      name: session[:user_name],
+      company_id: session[:company_id],
+      companies: session[:companies] || []
     }
+  end
+  
+  def current_company_id
+    session[:company_id]
+  end
+  
+  def current_company
+    return nil unless current_company_id
+    
+    @current_company ||= session[:companies]&.find { |c| c['id'] == current_company_id || c[:id] == current_company_id }
+  end
+  
+  def user_companies
+    session[:companies] || []
   end
   
   def valid_token?
@@ -144,12 +160,54 @@ class ApplicationController < ActionController::Base
     session[:user_id] = nil
     session[:user_email] = nil
     session[:user_name] = nil
+    session[:company_id] = nil
+    session[:companies] = nil
     @current_token = nil
     @current_user = nil
+    @current_company = nil
     @token_valid_cache = nil
   end
   
-  helper_method :current_user, :logged_in?, :user_signed_in?
+  # Permission helpers
+  def current_user_role
+    return nil unless current_company_id && user_companies.present?
+    
+    company = user_companies.find { |c| (c['id'] || c[:id]) == current_company_id }
+    company ? (company['role'] || company[:role]) : nil
+  end
+  
+  def can?(action, resource = nil)
+    role = current_user_role
+    return false unless role
+    
+    case role
+    when 'owner'
+      true # Owners can do everything
+    when 'admin'
+      # Admins can do most things except manage owners
+      ![:manage_owners, :delete_company].include?(action)
+    when 'manager'
+      [:view, :create, :edit, :approve, :manage_invoices, :manage_workflows].include?(action)
+    when 'accountant'
+      [:view, :create, :edit, :manage_invoices, :export, :generate_reports].include?(action)
+    when 'reviewer'
+      [:view, :review, :approve].include?(action)
+    when 'submitter'
+      [:view, :create, :submit].include?(action)
+    when 'viewer'
+      [:view].include?(action)
+    else
+      false
+    end
+  end
+  
+  def ensure_can!(action, resource = nil)
+    unless can?(action, resource)
+      redirect_to dashboard_path, alert: 'You do not have permission to perform this action.'
+    end
+  end
+  
+  helper_method :current_user, :logged_in?, :user_signed_in?, :current_company, :current_company_id, :user_companies, :current_user_role, :can?
   
   def log_action_execution
     Rails.logger.info "AROUND_ACTION: Starting #{controller_name}##{action_name}"

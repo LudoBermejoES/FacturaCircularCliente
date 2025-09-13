@@ -20,14 +20,21 @@ class SessionsController < ApplicationController
     
     auth_response = AuthService.login(
       params[:email],
-      params[:password]
+      params[:password],
+      params[:company_id] # Optional company_id if user wants to select on login
     )
     
     Rails.logger.info "DEBUG: AuthService returned: #{auth_response ? 'SUCCESS' : 'FAILURE'}"
     
     if auth_response
       store_session(auth_response)
-      redirect_to dashboard_path, notice: 'Successfully logged in!'
+      
+      # If user has multiple companies but no default was selected, show company selector
+      if auth_response[:companies]&.size.to_i > 1 && auth_response[:company_id].nil?
+        redirect_to select_company_path, notice: 'Please select a company to continue'
+      else
+        redirect_to dashboard_path, notice: 'Successfully logged in!'
+      end
     else
       flash.now[:alert] = 'Invalid email or password'
       render :new, status: :unprocessable_entity
@@ -61,6 +68,8 @@ class SessionsController < ApplicationController
     session[:user_id] = auth_response[:user][:id] if auth_response[:user]
     session[:user_email] = auth_response[:user][:email] if auth_response[:user]
     session[:user_name] = auth_response[:user][:name] if auth_response[:user]
+    session[:company_id] = auth_response[:company_id]
+    session[:companies] = auth_response[:companies]
   end
   
   def clear_session

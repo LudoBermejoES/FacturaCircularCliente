@@ -1,6 +1,8 @@
 class InvoicesController < ApplicationController
   before_action :set_invoice, only: [:show, :edit, :update, :destroy, :freeze, :send_email, :download_pdf, :download_facturae]
   before_action :load_companies, only: [:new, :create, :edit, :update]
+  before_action :check_permission_to_create, only: [:new, :create]
+  before_action :check_permission_to_edit, only: [:edit, :update, :destroy]
   
   def index
     @page = params[:page] || 1
@@ -238,6 +240,18 @@ class InvoicesController < ApplicationController
     end
     
     processed_params
+  end
+  
+  def check_permission_to_create
+    unless can?(:create, :invoices)
+      redirect_to dashboard_path, alert: "You don't have permission to create invoices."
+    end
+  end
+  
+  def check_permission_to_edit
+    unless can?(:edit, :invoices)
+      redirect_to dashboard_path, alert: "You don't have permission to edit invoices."
+    end
   end
   
   def build_empty_line_item

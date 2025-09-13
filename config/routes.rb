@@ -14,12 +14,19 @@ Rails.application.routes.draw do
   post   'login',  to: 'sessions#create'
   delete 'logout', to: 'sessions#destroy', as: :logout
   
+  # Company selection/switching
+  get  'select_company', to: 'companies#select', as: :select_company
+  post 'switch_company', to: 'companies#switch', as: :switch_company
+  
   # Dashboard
   get 'dashboard', to: 'dashboard#index', as: :dashboard
   
   # Companies
   resources :companies do
     resources :addresses, only: [:create, :update, :destroy]
+    
+    # User management within companies
+    resources :users, controller: 'user_companies', only: [:index, :new, :create, :edit, :update, :destroy]
     
     # Invoice Series management
     resources :invoice_series do

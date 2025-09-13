@@ -1,20 +1,26 @@
 class AuthService < ApiService
   class << self
-    def login(email, password, remember_me = false)
-      Rails.logger.info "DEBUG: AuthService.login called with email=#{email}"
+    def login(email, password, company_id = nil, remember_me = false)
+      Rails.logger.info "DEBUG: AuthService.login called with email=#{email}, company_id=#{company_id}"
       response = post('/auth/login', body: {
         grant_type: 'password',
         email: email,
         password: password,
+        company_id: company_id,
         remember_me: remember_me
       })
       Rails.logger.info "DEBUG: AuthService.login got response: #{response.inspect}"
       
       if response && response[:access_token] && response[:refresh_token]
+        # Extract user/client information from the response
+        client_info = response[:client] || response[:user]
+        
         result = {
           access_token: response[:access_token],
           refresh_token: response[:refresh_token],
-          user: response[:user]
+          user: client_info,
+          company_id: client_info&.[](:company_id),
+          companies: client_info&.[](:companies) || []
         }
         Rails.logger.info "DEBUG: AuthService.login returning: #{result.inspect}"
         result
@@ -66,6 +72,35 @@ class AuthService < ApiService
     rescue => e
       Rails.logger.error "Token validation error: #{e.message}"
       { valid: false }
+    end
+    
+    def switch_company(token, company_id)
+      Rails.logger.info "DEBUG: AuthService.switch_company called with company_id=#{company_id}"
+      response = post('/auth/switch_company', token: token, body: {
+        company_id: company_id
+      })
+      
+      if response && response[:access_token]
+        client_info = response[:client] || response[:user]
+        {
+          access_token: response[:access_token],
+          refresh_token: response[:refresh_token] || token,
+          user: client_info,
+          company_id: client_info&.[](:company_id),
+          companies: client_info&.[](:companies) || []
+        }
+      else
+        raise ApiService::AuthenticationError, 'Failed to switch company'
+      end
+    end
+    
+    def user_companies(token)
+      Rails.logger.info "DEBUG: AuthService.user_companies called"
+      response = get('/auth/companies', token: token)
+      response || []
+    rescue => e
+      Rails.logger.error "Failed to fetch user companies: #{e.message}"
+      []
     end
   end
 end

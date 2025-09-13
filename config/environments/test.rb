@@ -47,10 +47,5 @@ Rails.application.configure do
   # Raise error when a before_action's only/except options reference missing actions.
   config.action_controller.raise_on_missing_callback_actions = true
   
-  # Allow test hosts for RSpec and Capybara
-  config.hosts << "localhost"
-  config.hosts << "127.0.0.1"
-  config.hosts << "localhost:3002"
-  config.hosts << "0.0.0.0"
-  config.hosts << "web"
+  # Host configuration moved to config/application.rb for proper initialization timing
 end

@@ -61,11 +61,11 @@ Capybara.default_driver = :rack_test
 # Configure Capybara settings
 Capybara.configure do |config|
   config.default_max_wait_time = 10
-  config.server = :puma, { Silent: true }
+  config.server = :puma, { Silent: true, Threads: "0:1" }
   
   # Allow external connections in Docker
   config.server_host = '0.0.0.0'
-  config.server_port = ENV['CAPYBARA_PORT']&.to_i || 3001
+  config.server_port = ENV['CAPYBARA_PORT']&.to_i || 3005  # Use port 3005 to avoid conflicts with dev server
   
   # Set app host for remote browser if provided
   if ENV['TEST_APP_HOST'].present?
@@ -83,8 +83,9 @@ RSpec.configure do |config|
     
     # Set the host that the remote browser will connect to
     if ENV['HUB_URL'].present?
-      # In Docker, use the container name
+      # Use the fixed Capybara port (3005)
       Capybara.app_host = "http://web:#{Capybara.server_port}"
+      puts "🔗 Setting Capybara.app_host to: #{Capybara.app_host}"
     end
   end
   

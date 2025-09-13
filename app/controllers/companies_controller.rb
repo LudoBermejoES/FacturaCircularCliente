@@ -1,5 +1,32 @@
 class CompaniesController < ApplicationController
   before_action :set_company, only: [:show, :edit, :update, :destroy]
+  skip_before_action :authenticate_user!, only: [:select, :switch]
+  before_action :ensure_logged_in, only: [:select, :switch]
+  
+  def select
+    Rails.logger.info "DEBUG: CompaniesController#select called"
+    @companies = user_companies
+    
+    if @companies.empty?
+      Rails.logger.error "DEBUG: User has no companies!"
+      redirect_to login_path, alert: 'No companies found for your account'
+    elsif @companies.size == 1
+      # Auto-select if only one company
+      switch_to_company(@companies.first['id'] || @companies.first[:id])
+    end
+  end
+  
+  def switch
+    Rails.logger.info "DEBUG: CompaniesController#switch called with params: #{params.inspect}"
+    company_id = params[:company_id]
+    
+    if company_id.blank?
+      redirect_to select_company_path, alert: 'Please select a company'
+      return
+    end
+    
+    switch_to_company(company_id.to_i)
+  end
   
   def index
     @page = params[:page] || 1
@@ -125,5 +152,37 @@ class CompaniesController < ApplicationController
       :default_payment_terms, :default_payment_method,
       :bank_account, :swift_bic
     )
+  end
+  
+  def ensure_logged_in
+    unless current_token.present?
+      redirect_to login_path, alert: 'Please sign in to continue'
+    end
+  end
+  
+  def switch_to_company(company_id)
+    begin
+      auth_response = AuthService.switch_company(current_token, company_id)
+      
+      if auth_response
+        # Update session with new token and company info
+        session[:access_token] = auth_response[:access_token]
+        session[:refresh_token] = auth_response[:refresh_token] if auth_response[:refresh_token]
+        session[:company_id] = auth_response[:company_id]
+        session[:companies] = auth_response[:companies] if auth_response[:companies]
+        
+        company_name = auth_response[:user]&.[](:company_name) || 
+                       user_companies.find { |c| (c['id'] || c[:id]) == company_id }&.[]('name') ||
+                       user_companies.find { |c| (c['id'] || c[:id]) == company_id }&.[](:name) ||
+                       'the selected company'
+        
+        redirect_to dashboard_path, notice: "Successfully switched to #{company_name}"
+      else
+        redirect_to select_company_path, alert: 'Failed to switch company'
+      end
+    rescue => e
+      Rails.logger.error "Company switch error: #{e.message}"
+      redirect_to select_company_path, alert: 'An error occurred while switching companies'
+    end
   end
 end

@@ -1,0 +1,86 @@
+<% content_for :title, "Invite User - #{@company['name'] || @company[:name]}" %>
+
+<div class="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
+  <div class="md:flex md:items-center md:justify-between">
+    <div class="min-w-0 flex-1">
+      <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">
+        Invite User to <%= @company['name'] || @company[:name] %>
+      </h2>
+    </div>
+  </div>
+
+  <div class="mt-8">
+    <%= form_with url: company_users_path(current_company_id), method: :post, local: true do |f| %>
+      <% if @errors.present? %>
+        <div class="rounded-md bg-red-50 p-4 mb-6">
+          <div class="flex">
+            <div class="ml-3">
+              <h3 class="text-sm font-medium text-red-800">There were errors with your submission</h3>
+              <div class="mt-2 text-sm text-red-700">
+                <ul role="list" class="list-disc space-y-1 pl-5">
+                  <% @errors.each do |field, messages| %>
+                    <% Array(messages).each do |message| %>
+                      <li><%= field.to_s.humanize %> <%= message %></li>
+                    <% end %>
+                  <% end %>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+
+      <div class="space-y-6 bg-white px-4 py-5 sm:p-6">
+        <div>
+          <label for="email" class="block text-sm font-medium leading-6 text-gray-900">Email address</label>
+          <div class="mt-2">
+            <%= text_field_tag :email, params[:email], 
+                type: "email",
+                required: true,
+                placeholder: "user@example.com",
+                class: "block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" %>
+          </div>
+          <p class="mt-2 text-sm text-gray-500">
+            The user will receive an invitation email to join this company.
+          </p>
+        </div>
+
+        <div>
+          <label for="role" class="block text-sm font-medium leading-6 text-gray-900">Role</label>
+          <div class="mt-2">
+            <%= select_tag :role, 
+                options_for_select(@available_roles.map { |r| [r.humanize, r] }, params[:role]),
+                required: true,
+                class: "block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" %>
+          </div>
+          <p class="mt-2 text-sm text-gray-500">
+            Select the role this user will have in the company.
+          </p>
+        </div>
+
+        <div class="mt-6 border-t border-gray-200 pt-6">
+          <h3 class="text-sm font-medium text-gray-900">Role Permissions</h3>
+          <div class="mt-2 text-sm text-gray-500">
+            <ul class="list-disc pl-5 space-y-1">
+              <li><strong>Owner:</strong> Full control over the company and all users</li>
+              <li><strong>Admin:</strong> Can manage most aspects except owners</li>
+              <li><strong>Manager:</strong> Can manage invoices and approve workflows</li>
+              <li><strong>Accountant:</strong> Can manage invoices and generate reports</li>
+              <li><strong>Reviewer:</strong> Can review and approve invoices</li>
+              <li><strong>Submitter:</strong> Can create and submit invoices</li>
+              <li><strong>Viewer:</strong> Can only view invoices and reports</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-gray-50 px-4 py-3 text-right sm:px-6">
+        <%= link_to "Cancel", company_users_path(current_company_id), 
+            class: "inline-flex justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 mr-3" %>
+        
+        <%= f.submit "Send Invitation", 
+            class: "inline-flex justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600" %>
+      </div>
+    <% end %>
+  </div>
+</div>
