@@ -26,7 +26,7 @@ gem "bcrypt", "~> 3.1.7"
 gem "httparty", "~> 0.22.0"
 
 # JWT token handling
-gem "jwt", "~> 2.7"
+gem "jwt", "~> 3.1"
 
 # Postal code validation by country
 gem "validates_zipcode", "~> 0.5.2"
