@@ -68,6 +68,13 @@ Rails.application.routes.draw do
     end
   end
   
+  # Invoice Numbering API endpoints (for AJAX calls)
+  namespace :api do
+    namespace :v1 do
+      get 'invoice_numbering/next_available', to: 'invoice_numbering#next_available'
+    end
+  end
+  
   # Root path
   root "dashboard#index"
 end

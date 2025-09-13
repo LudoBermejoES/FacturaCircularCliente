@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["lineItems", "lineItemTemplate", "subtotal", "tax", "total", "addButton"]
+  static targets = ["lineItems", "lineItemTemplate", "subtotal", "tax", "total", "addButton", "seriesSelect", "invoiceNumber"]
   static values = { 
     lineIndex: Number,
     taxRate: { type: Number, default: 21 }
@@ -125,5 +125,127 @@ export default class extends Controller {
     // Here you could fetch company details and update payment terms, etc.
     // For now, we'll just log it
     console.log('Company selected:', companyId)
+  }
+
+  async onSeriesChange(event) {
+    const seriesId = event.target.value
+    if (!seriesId) {
+      this.clearInvoiceNumber()
+      return
+    }
+
+    try {
+      // Get the selected option to extract series data
+      const selectedOption = event.target.selectedOptions[0]
+      const seriesText = selectedOption.text
+      const seriesCode = seriesText.split(' - ')[0] // Extract series code from "FC - Factura Comercial"
+      
+      // Get current year (you might want to make this configurable)
+      const currentYear = new Date().getFullYear()
+      
+      // Show loading state
+      this.showLoadingState()
+      
+      // Fetch next available number from API
+      const nextNumber = await this.fetchNextAvailableNumber(seriesCode, currentYear)
+      
+      if (nextNumber) {
+        this.updateInvoiceNumber(nextNumber, seriesCode)
+      } else {
+        this.showErrorState("Unable to generate invoice number")
+      }
+      
+    } catch (error) {
+      console.error('Error fetching next available number:', error)
+      this.showErrorState("Error generating invoice number")
+    }
+  }
+
+  async fetchNextAvailableNumber(seriesCode, year) {
+    // First try to determine series type from code
+    const seriesType = this.getSeriesTypeFromCode(seriesCode)
+    
+    // Make API call to the client's local API endpoint
+    const params = new URLSearchParams({
+      series_type: seriesType,
+      year: year
+    })
+    
+    // Get CSRF token for Rails
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+    
+    const response = await fetch(`/api/v1/invoice_numbering/next_available?${params}`, {
+      headers: {
+        'X-CSRF-Token': csrfToken,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    
+    const data = await response.json()
+    
+    // Find the next number for the selected series
+    if (data.data && data.data.attributes && data.data.attributes.available_numbers) {
+      const availableNumbers = data.data.attributes.available_numbers
+      // available_numbers is an object with series codes as keys
+      const seriesNumbers = availableNumbers[seriesCode]
+      if (seriesNumbers && seriesNumbers.length > 0) {
+        // Return the sequence number from the first (and usually only) entry
+        return seriesNumbers[0].sequence_number
+      }
+    }
+    
+    return null
+  }
+
+  getSeriesTypeFromCode(seriesCode) {
+    // Map series codes to types based on common patterns
+    const codeMapping = {
+      'FC': 'commercial',
+      'PF': 'proforma', 
+      'CR': 'credit_note',
+      'DB': 'debit_note',
+      'SI': 'simplified',
+      'RE': 'rectificative'
+    }
+    
+    return codeMapping[seriesCode] || 'commercial'
+  }
+
+  updateInvoiceNumber(nextNumber, seriesCode) {
+    if (this.hasInvoiceNumberTarget) {
+      const formattedNumber = `${seriesCode}-${String(nextNumber).padStart(4, '0')}`
+      this.invoiceNumberTarget.value = formattedNumber
+      this.invoiceNumberTarget.classList.remove('border-red-300', 'text-red-900', 'bg-red-50')
+      this.invoiceNumberTarget.classList.add('bg-gray-50')
+    }
+  }
+
+  clearInvoiceNumber() {
+    if (this.hasInvoiceNumberTarget) {
+      this.invoiceNumberTarget.value = ''
+      this.invoiceNumberTarget.placeholder = 'Select a series first'
+    }
+  }
+
+  showLoadingState() {
+    if (this.hasInvoiceNumberTarget) {
+      this.invoiceNumberTarget.value = ''
+      this.invoiceNumberTarget.placeholder = 'Generating number...'
+      this.invoiceNumberTarget.classList.add('animate-pulse')
+    }
+  }
+
+  showErrorState(message) {
+    if (this.hasInvoiceNumberTarget) {
+      this.invoiceNumberTarget.value = ''
+      this.invoiceNumberTarget.placeholder = message
+      this.invoiceNumberTarget.classList.remove('animate-pulse', 'bg-gray-50')
+      this.invoiceNumberTarget.classList.add('border-red-300', 'text-red-900', 'bg-red-50')
+    }
   }
 }

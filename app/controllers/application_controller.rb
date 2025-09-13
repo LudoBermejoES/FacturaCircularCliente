@@ -207,7 +207,7 @@ class ApplicationController < ActionController::Base
     end
   end
   
-  helper_method :current_user, :logged_in?, :user_signed_in?, :current_company, :current_company_id, :user_companies, :current_user_role, :can?
+  helper_method :current_user, :logged_in?, :user_signed_in?, :current_company, :current_company_id, :user_companies, :current_user_role, :can?, :current_token
   
   def log_action_execution
     Rails.logger.info "AROUND_ACTION: Starting #{controller_name}##{action_name}"

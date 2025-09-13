@@ -2,12 +2,16 @@ class TaxRatesController < ApplicationController
   before_action :authenticate_user!
   
   def index
-    @tax_rates = TaxService.rates(token: current_user_token)
-    @exemptions = TaxService.exemptions(token: current_user_token)
+    rates_response = TaxService.rates(token: current_user_token)
+    exemptions_response = TaxService.exemptions(token: current_user_token)
+    
+    # Extract data from JSON API format
+    @tax_rates = rates_response.dig('data')&.map { |rate| rate['attributes'] } || []
+    @exemptions = exemptions_response.dig('data')&.map { |exemption| exemption['attributes'] } || []
     
     respond_to do |format|
       format.html
-      format.json { render json: @tax_rates }
+      format.json { render json: { tax_rates: @tax_rates, exemptions: @exemptions } }
     end
   rescue ApiService::ApiError => e
     redirect_to root_path, alert: "Unable to load tax rates: #{e.message}"

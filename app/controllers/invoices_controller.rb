@@ -1,6 +1,7 @@
 class InvoicesController < ApplicationController
   before_action :set_invoice, only: [:show, :edit, :update, :destroy, :freeze, :send_email, :download_pdf, :download_facturae]
   before_action :load_companies, only: [:new, :create, :edit, :update]
+  before_action :load_invoice_series, only: [:new, :create, :edit, :update]
   before_action :check_permission_to_create, only: [:new, :create]
   before_action :check_permission_to_edit, only: [:edit, :update, :destroy]
   
@@ -91,6 +92,7 @@ class InvoicesController < ApplicationController
       Rails.logger.info "DEBUG: Parsed errors: #{@errors.inspect}"
       
       load_companies
+      load_invoice_series
       flash.now[:alert] = 'Please fix the errors below.'
       render :new, status: :unprocessable_entity
     rescue ApiService::ApiError => e
@@ -98,6 +100,7 @@ class InvoicesController < ApplicationController
       @invoice = invoice_params
       @invoice[:invoice_lines] = params[:invoice][:invoice_lines]&.values || [build_empty_line_item]
       load_companies
+      load_invoice_series
       flash.now[:alert] = "Error creating invoice: #{e.message}"
       render :new, status: :unprocessable_entity
     rescue => e
@@ -124,11 +127,13 @@ class InvoicesController < ApplicationController
       @errors = parse_validation_errors(e.errors)
       @invoice[:invoice_lines] = params[:invoice][:invoice_lines]&.values || @invoice[:invoice_lines]
       load_companies
+      load_invoice_series
       flash.now[:alert] = 'Please fix the errors below.'
       render :edit, status: :unprocessable_entity
     rescue ApiService::ApiError => e
       @invoice[:invoice_lines] = params[:invoice][:invoice_lines]&.values || @invoice[:invoice_lines]
       load_companies
+      load_invoice_series
       flash.now[:alert] = "Error updating invoice: #{e.message}"
       render :edit, status: :unprocessable_entity
     end
@@ -207,10 +212,27 @@ class InvoicesController < ApplicationController
       flash.now[:alert] = "Error loading companies: #{e.message}"
     end
   end
+
+  def load_invoice_series
+    begin
+      # Load active invoice series for current year
+      @invoice_series = InvoiceSeriesService.all(
+        token: current_token,
+        filters: { 
+          year: Date.current.year,
+          active_only: true
+        }
+      )
+    rescue ApiService::ApiError => e
+      @invoice_series = []
+      Rails.logger.warn "Error loading invoice series: #{e.message}"
+      # Don't show error to user as this might be called during error states
+    end
+  end
   
   def invoice_params
     params.require(:invoice).permit(
-      :invoice_number, :invoice_type, :date, :due_date, :status,
+      :invoice_number, :invoice_series_id, :invoice_type, :date, :due_date, :status,
       :seller_party_id, :buyer_party_id, :notes, :internal_notes, :payment_method,
       :payment_terms, :currency, :exchange_rate,
       :discount_percentage, :discount_amount,

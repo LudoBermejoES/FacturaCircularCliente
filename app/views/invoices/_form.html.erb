@@ -38,10 +38,34 @@
       
       <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
         <div>
-          <%= form.label :invoice_number, class: "block text-sm font-medium text-gray-700" %>
+          <%= form.label :invoice_series_id, "Invoice Series", class: "block text-sm font-medium text-gray-700" %>
+          <%= form.select :invoice_series_id,
+              options_for_select(
+                (@invoice_series || []).map { |series| ["#{series[:series_code]} - #{series[:series_name]}", series[:id]] },
+                invoice[:invoice_series_id]
+              ),
+              { include_blank: 'Select invoice series' },
+              class: field_class("invoice_series_id", "mt-1 block w-full rounded-md shadow-sm focus:ring-indigo-500 sm:text-sm", @errors),
+              data: { 
+                action: "change->invoice-form#onSeriesChange",
+                "invoice-form-target": "seriesSelect"
+              },
+              required: true %>
+          <% if @errors && @errors["invoice_series_id"] %>
+            <% @errors["invoice_series_id"].each do |error| %>
+              <p class="mt-1 text-sm text-red-600"><%= error %></p>
+            <% end %>
+          <% end %>
+        </div>
+        
+        <div>
+          <%= form.label :invoice_number, "Invoice Number", class: "block text-sm font-medium text-gray-700" %>
           <%= form.text_field :invoice_number, value: invoice[:invoice_number],
-              class: field_class("invoice_number", "mt-1 block w-full rounded-md shadow-sm focus:ring-indigo-500 sm:text-sm", @errors),
-              placeholder: "INV-001" %>
+              class: field_class("invoice_number", "mt-1 block w-full rounded-md bg-gray-50 shadow-sm sm:text-sm", @errors),
+              placeholder: "Will be auto-generated",
+              readonly: true,
+              data: { "invoice-form-target": "invoiceNumber" } %>
+          <p class="mt-1 text-xs text-gray-500">Number will be automatically assigned when you select a series</p>
           <% if @errors && @errors["invoice_number"] %>
             <% @errors["invoice_number"].each do |error| %>
               <p class="mt-1 text-sm text-red-600"><%= error %></p>
