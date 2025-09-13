@@ -80,7 +80,7 @@ class InvoicesController < ApplicationController
       Rails.logger.info "DEBUG: Calling InvoiceService.create"
       response = InvoiceService.create(invoice_params_with_lines, token: current_token)
       Rails.logger.info "DEBUG: InvoiceService.create returned: #{response.inspect}"
-      redirect_to invoice_path(response[:id]), notice: 'Invoice created successfully'
+      redirect_to invoice_path(response[:data][:id]), notice: 'Invoice created successfully'
     rescue ApiService::ValidationError => e
       Rails.logger.info "DEBUG: ValidationError caught: #{e.message}"
       Rails.logger.info "DEBUG: ValidationError errors: #{e.errors.inspect}"
