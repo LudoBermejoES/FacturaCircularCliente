@@ -123,7 +123,7 @@ GEM
     globalid (1.2.1)
       activesupport (>= 6.1)
     hashdiff (1.2.1)
-    httparty (0.22.0)
+    httparty (0.23.1)
       csv
       mini_mime (>= 1.0.0)
       multi_xml (>= 0.5.2)
@@ -193,6 +193,8 @@ GEM
     nokogiri (1.18.9-aarch64-linux-gnu)
       racc (~> 1.4)
     nokogiri (1.18.9-arm64-darwin)
+      racc (~> 1.4)
+    nokogiri (1.18.9-x86_64-linux-gnu)
       racc (~> 1.4)
     ostruct (0.6.3)
     parallel (1.27.0)
@@ -329,6 +331,7 @@ GEM
     simplecov_json_formatter (0.1.4)
     sqlite3 (2.7.3-aarch64-linux-gnu)
     sqlite3 (2.7.3-arm64-darwin)
+    sqlite3 (2.7.3-x86_64-linux-gnu)
     sshkit (1.24.0)
       base64
       logger
@@ -344,9 +347,11 @@ GEM
       tailwindcss-ruby (~> 4.0)
     tailwindcss-ruby (4.1.12-aarch64-linux-gnu)
     tailwindcss-ruby (4.1.12-arm64-darwin)
+    tailwindcss-ruby (4.1.12-x86_64-linux-gnu)
     thor (1.4.0)
     thruster (0.1.15-aarch64-linux)
     thruster (0.1.15-arm64-darwin)
+    thruster (0.1.15-x86_64-linux)
     timeout (0.4.3)
     turbo-rails (2.0.16)
       actionpack (>= 7.1.0)
@@ -383,6 +388,7 @@ GEM
 PLATFORMS
   aarch64-linux-gnu
   arm64-darwin-24
+  x86_64-linux
 
 DEPENDENCIES
   bcrypt (~> 3.1.7)
@@ -392,7 +398,7 @@ DEPENDENCIES
   debug
   factory_bot_rails (~> 6.5)
   faker (~> 3.5)
-  httparty (~> 0.22.0)
+  httparty (~> 0.23.1)
   importmap-rails
   jbuilder
   jwt (~> 2.7)
