@@ -15,6 +15,23 @@ RSpec.describe 'Invoices', type: :request do
     allow_any_instance_of(ApplicationController).to receive(:current_user_token).and_return(token)
     allow_any_instance_of(ApplicationController).to receive(:current_user).and_return(user)
     
+    # Mock user role and permissions for invoice management (same as feature tests)
+    allow_any_instance_of(ApplicationController).to receive(:current_company_id).and_return(company[:id])
+    allow_any_instance_of(ApplicationController).to receive(:user_companies).and_return([
+      { id: company[:id], name: company[:name], role: 'manager' }
+    ])
+    allow_any_instance_of(ApplicationController).to receive(:current_user_role).and_return('manager')
+    
+    # Mock all can? calls with default permissions (manager can do most things)
+    allow_any_instance_of(ApplicationController).to receive(:can?) do |_, action, resource|
+      case action
+      when :view, :create, :edit, :approve, :manage_invoices, :manage_workflows
+        true
+      else
+        false
+      end
+    end
+    
     # Mock InvoiceService methods to use the test's invoice data
     allow(InvoiceService).to receive(:all).with(any_args).and_return({ 
       invoices: [invoice], total: 1, meta: { page: 1, pages: 1, total: 1 }

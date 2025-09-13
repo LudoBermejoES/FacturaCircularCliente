@@ -20,20 +20,31 @@ RSpec.describe AuthService do
       
       before do
         stub_request(:post, 'http://albaranes-api:3000/api/v1/auth/login')
-          .with(body: { grant_type: 'password', email: email, password: password, remember_me: false }.to_json)
+          .with(body: { grant_type: 'password', email: email, password: password, company_id: nil, remember_me: false }.to_json)
           .to_return(status: 200, body: response_body.to_json)
       end
       
       it 'returns tokens and user data' do
         result = described_class.login(email, password)
-        expect(result).to eq(response_body.deep_symbolize_keys)
+        expected_result = {
+          access_token: 'test_access_token',
+          refresh_token: 'test_refresh_token',
+          user: { 
+            id: 1, 
+            email: 'test@example.com', 
+            name: 'Test User' 
+          },
+          company_id: nil,
+          companies: []
+        }
+        expect(result).to eq(expected_result)
       end
       
       it 'sends correct credentials to API' do
         described_class.login(email, password)
         expect(WebMock).to have_requested(:post, 'http://albaranes-api:3000/api/v1/auth/login')
           .with(
-            body: { grant_type: 'password', email: email, password: password, remember_me: false }.to_json,
+            body: { grant_type: 'password', email: email, password: password, company_id: nil, remember_me: false }.to_json,
             headers: { 'Content-Type' => 'application/json', 'Accept' => 'application/json' }
           )
       end

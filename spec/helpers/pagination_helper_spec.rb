@@ -250,13 +250,13 @@ RSpec.describe PaginationHelper, type: :helper do
         
         expect {
           helper.page_entries_info(invalid_collection)
-        }.to raise_error
+        }.to raise_error(RSpec::Mocks::MockExpectationError)
       end
 
       it 'raises error with nil collection in page_entries_info' do
         expect {
           helper.page_entries_info(nil)
-        }.to raise_error
+        }.to raise_error(NoMethodError)
       end
     end
   end

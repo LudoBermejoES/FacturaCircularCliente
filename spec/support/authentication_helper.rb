@@ -11,11 +11,11 @@ module AuthenticationHelper
   def generate_jwt_token(user)
     {
       access_token: JWT.encode(
-        { user_id: user[:id], exp: 1.hour.from_now.to_i },
+        { sub: user[:id], exp: 1.hour.from_now.to_i },
         Rails.application.secret_key_base
       ),
       refresh_token: JWT.encode(
-        { user_id: user[:id], exp: 7.days.from_now.to_i },
+        { sub: user[:id], exp: 7.days.from_now.to_i },
         Rails.application.secret_key_base
       )
     }

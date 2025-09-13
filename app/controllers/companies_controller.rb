@@ -47,6 +47,9 @@ class CompaniesController < ApplicationController
       @total_count = response[:meta] ? response[:meta][:total] : response[:total]
       @current_page = response[:meta][:page] if response[:meta]
       @total_pages = response[:meta][:pages] if response[:meta]
+      
+      # Debug: log the company data to see what's being loaded
+      Rails.logger.info "DEBUG: Loaded companies: #{@companies.inspect}"
     rescue ApiService::AuthenticationError => e
       clear_session
       redirect_to login_path, alert: 'Please sign in to continue'
@@ -162,6 +165,7 @@ class CompaniesController < ApplicationController
   
   def switch_to_company(company_id)
     begin
+      Rails.logger.info "DEBUG: switch_to_company called with company_id=#{company_id} (#{company_id.class})"
       auth_response = AuthService.switch_company(current_token, company_id)
       
       if auth_response
@@ -171,11 +175,23 @@ class CompaniesController < ApplicationController
         session[:company_id] = auth_response[:company_id]
         session[:companies] = auth_response[:companies] if auth_response[:companies]
         
-        company_name = auth_response[:user]&.[](:company_name) || 
-                       user_companies.find { |c| (c['id'] || c[:id]) == company_id }&.[]('name') ||
-                       user_companies.find { |c| (c['id'] || c[:id]) == company_id }&.[](:name) ||
-                       'the selected company'
+        # Get the company name by making a fresh API call to get the correct name
+        company_name = 'the selected company' # default fallback
         
+        begin
+          company_details = CompanyService.find(company_id, token: auth_response[:access_token])
+          company_name = company_details[:name] || company_details['name'] || company_name
+          Rails.logger.info "DEBUG: Fetched company details: #{company_details.inspect}"
+        rescue => e
+          Rails.logger.info "DEBUG: Failed to fetch company details: #{e.message}"
+          # Fallback to auth response or session data
+          company_name = auth_response[:user]&.[](:company_name) || 
+                         user_companies.find { |c| (c['id'] || c[:id]).to_s == company_id.to_s }&.[]('name') ||
+                         user_companies.find { |c| (c['id'] || c[:id]).to_s == company_id.to_s }&.[](:name) ||
+                         company_name
+        end
+        
+        Rails.logger.info "DEBUG: Final company_name = #{company_name}"
         redirect_to dashboard_path, notice: "Successfully switched to #{company_name}"
       else
         redirect_to select_company_path, alert: 'Failed to switch company'

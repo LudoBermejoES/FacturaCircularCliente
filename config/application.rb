@@ -36,12 +36,5 @@ module FacturaCircularCliente
     # config.time_zone = "Central Time (US & Canada)"
     # config.eager_load_paths << Rails.root.join("extras")
     
-    # Configure hosts for test environment - must happen before middleware loading
-    config.before_initialize do
-      if Rails.env.test?
-        Rails.logger&.info("Disabling host authorization for test environment")
-        config.hosts.clear  # Completely disable host authorization in tests
-      end
-    end
   end
 end

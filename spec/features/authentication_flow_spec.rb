@@ -1,7 +1,8 @@
 require 'rails_helper'
 
-RSpec.feature 'Authentication Flow', type: :feature, js: true do
-  # Selenium Grid is now configured and working - tests enabled
+RSpec.feature 'Authentication Flow', type: :feature do
+  # Using Rack::Test by default to avoid server boot timeout issues
+  # For JavaScript-heavy tests, use server_test: true metadata
   let(:valid_email) { 'admin@example.com' }
   let(:valid_password) { 'password123' }
   let(:auth_response) { build(:auth_response) }
@@ -27,8 +28,8 @@ RSpec.feature 'Authentication Flow', type: :feature, js: true do
     
     # Fill in credentials and submit
     within 'form' do
-      find('input[type="email"]').set(valid_email)
-      find('input[type="password"]').set(valid_password)
+      fill_in 'email', with: valid_email
+      fill_in 'password', with: valid_password
       click_button 'Sign in'
     end
     

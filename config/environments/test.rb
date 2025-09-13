@@ -9,11 +9,8 @@ Rails.application.configure do
   # While tests run files are not watched, reloading is not necessary.
   config.enable_reloading = false
 
-  # Eager loading loads your entire application. When running a single test locally,
-  # this is usually not necessary, and can slow down your test suite. However, it's
-  # recommended that you enable it in continuous integration systems to ensure eager
-  # loading is working properly before deploying your code.
-  config.eager_load = ENV["CI"].present?
+  # Disable eager loading for faster test boot (especially in Capybara)
+  config.eager_load = false
 
   # Configure public file server for tests with cache-control for performance.
   config.public_file_server.headers = { "cache-control" => "public, max-age=3600" }
@@ -47,5 +44,17 @@ Rails.application.configure do
   # Raise error when a before_action's only/except options reference missing actions.
   config.action_controller.raise_on_missing_callback_actions = true
   
-  # Host configuration moved to config/application.rb for proper initialization timing
+  # Allow test hosts for RSpec and Capybara (including dynamic ports)
+  config.hosts << "localhost"
+  config.hosts << "127.0.0.1"
+  config.hosts << "0.0.0.0"
+  config.hosts << "web"
+  config.hosts << "www.example.com"  # For Rack::Test default host
+  config.hosts << "example.com"      # Additional test host
+  
+  # Allow any port on these hosts for dynamic port allocation
+  config.hosts << /\Alocalhost:\d+\z/
+  config.hosts << /\A127\.0\.0\.1:\d+\z/  
+  config.hosts << /\A0\.0\.0\.0:\d+\z/
+  config.hosts << /\Aweb:\d+\z/
 end

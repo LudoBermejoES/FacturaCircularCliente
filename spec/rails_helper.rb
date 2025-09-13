@@ -31,7 +31,21 @@ if Rails.env.test?
     config.cassette_library_dir = 'spec/cassettes'
     config.hook_into :webmock
     config.configure_rspec_metadata!
-    config.ignore_localhost = true
+    # Ignore internal Docker container requests
+    config.ignore_request do |request|
+      uri = URI(request.uri)
+      # Ignore Selenium Grid and internal web requests
+      uri.host == 'selenium' || 
+      uri.host == 'web' || 
+      uri.host == 'localhost' ||
+      uri.host == '127.0.0.1' ||
+      uri.host == '0.0.0.0' ||
+      uri.port == 4444 || # Selenium Grid port
+      uri.port == 3005 || # Capybara test server
+      uri.port == 3001 || # Alternative test port
+      uri.port == 3000 || # Main app port
+      request.uri.match?(/localhost|127\.0\.0\.1|0\.0\.0\.0|selenium|web/)
+    end
     
     # Filter sensitive data
     config.filter_sensitive_data('<JWT_TOKEN>') do |interaction|

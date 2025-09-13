@@ -2,11 +2,37 @@
 
 ##
 
-Users of API to test:
+## Available Test Users
 
-Manager: manager@example.com / password123 — roles: manager — approve/manage invoices.
-User: user@example.com / password123 — roles: viewer — view invoices.
-Service Account: service@example.com / ServicePass123! — roles: admin — API access with key/secret.
+The following users are created by the seed data and available for testing:
+
+### 🔧 **Admin User**
+- **Email**: `admin@example.com`
+- **Password**: `password123`
+- **Role**: `admin`
+- **Permissions**: `manage_all`
+- **Access**: Full system administration
+
+### 👥 **Manager User**
+- **Email**: `manager@example.com`
+- **Password**: `password123`
+- **Role**: `manager`
+- **Permissions**: `manage_invoices`, `approve_invoices`
+- **Access**: Invoice management and approval workflows
+
+### 👤 **Regular User**
+- **Email**: `user@example.com`
+- **Password**: `password123`
+- **Role**: `viewer`
+- **Permissions**: `view_invoices`
+- **Access**: Read-only access to invoices
+
+### 🔐 **Service Account**
+- **Email**: `service@example.com`
+- **Password**: `ServicePass123!`
+- **Type**: `service_account`
+- **Role**: `admin`
+- **Access**: API access with generated API key/secret for programmatic integration
 
 
 ## Project Overview

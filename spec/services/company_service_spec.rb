@@ -573,7 +573,7 @@ RSpec.describe CompanyService, type: :service do
     context 'when token is nil' do
       it 'raises ArgumentError for all methods' do
         expect { CompanyService.all(token: nil) }
-          .to raise_error
+          .to raise_error(ApiService::AuthenticationError, 'Authentication failed. Please login again.')
       end
     end
 
@@ -585,7 +585,7 @@ RSpec.describe CompanyService, type: :service do
 
       it 'raises NetworkError' do
         expect { CompanyService.all(token: token) }
-          .to raise_error
+          .to raise_error(ApiService::ApiError, 'Unexpected error: Net::ReadTimeout with "Exception from WebMock"')
       end
     end
 
