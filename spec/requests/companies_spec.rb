@@ -1,6 +1,7 @@
 require 'rails_helper'
 
 RSpec.describe 'Companies', type: :request do
+  include RequestHelper
   let(:user) { build(:user_response) }
   let(:token) { 'test_access_token' }
   let(:company) { build(:company_response) }

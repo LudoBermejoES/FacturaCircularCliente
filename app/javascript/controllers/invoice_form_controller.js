@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["lineItems", "lineItemTemplate", "subtotal", "tax", "total", "addButton", "seriesSelect", "invoiceNumber"]
+  static targets = ["lineItems", "lineItemTemplate", "subtotal", "tax", "total", "addButton", "seriesSelect", "invoiceNumber", "contactField", "contactSelect"]
   static values = { 
     lineIndex: Number,
     taxRate: { type: Number, default: 21 }
@@ -118,13 +118,92 @@ export default class extends Controller {
     }
   }
 
-  updateCompany(event) {
+  async updateCompany(event) {
     const companyId = event.target.value
-    if (!companyId) return
     
-    // Here you could fetch company details and update payment terms, etc.
-    // For now, we'll just log it
-    console.log('Company selected:', companyId)
+    if (!companyId) {
+      this.hideContactField()
+      return
+    }
+    
+    // Load company contacts
+    try {
+      await this.loadCompanyContacts(companyId)
+      this.showContactField()
+    } catch (error) {
+      console.error('Error loading company contacts:', error)
+      this.hideContactField()
+    }
+  }
+
+  async loadCompanyContacts(companyId) {
+    // Get CSRF token for Rails
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+    
+    const response = await fetch(`/api/v1/companies/${companyId}/contacts`, {
+      headers: {
+        'X-CSRF-Token': csrfToken,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    
+    const data = await response.json()
+    
+    // Update the contact select dropdown
+    if (this.hasContactSelectTarget) {
+      this.updateContactOptions(data.contacts || [])
+    }
+  }
+
+  updateContactOptions(contacts) {
+    const selectElement = this.contactSelectTarget
+    
+    // Clear existing options except the first (blank option)
+    while (selectElement.children.length > 1) {
+      selectElement.removeChild(selectElement.lastChild)
+    }
+    
+    // Add new contact options
+    contacts.forEach(contact => {
+      const option = document.createElement('option')
+      option.value = contact.id
+      option.textContent = contact.name
+      selectElement.appendChild(option)
+    })
+  }
+
+  showContactField() {
+    if (this.hasContactFieldTarget) {
+      this.contactFieldTarget.style.display = 'block'
+    }
+  }
+
+  hideContactField() {
+    if (this.hasContactFieldTarget) {
+      this.contactFieldTarget.style.display = 'none'
+    }
+    
+    // Clear the contact selection
+    if (this.hasContactSelectTarget) {
+      this.contactSelectTarget.value = ''
+    }
+  }
+
+  openContactModal(event) {
+    event.preventDefault()
+    const companyId = document.querySelector('select[name="invoice[buyer_party_id]"]')?.value
+    
+    if (companyId) {
+      // Open the company contacts management page in a new tab
+      window.open(`/companies/${companyId}/company_contacts`, '_blank')
+    } else {
+      alert('Please select a company first')
+    }
   }
 
   async onSeriesChange(event) {

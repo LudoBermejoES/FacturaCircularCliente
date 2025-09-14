@@ -93,6 +93,20 @@ FactoryBot.define do
     initialize_with { attributes }
   end
   
+  factory :company_contact_response, class: Hash do
+    id { Faker::Number.number(digits: 3) }
+    name { Faker::Name.first_name }
+    first_surname { Faker::Name.last_name }
+    second_surname { Faker::Name.last_name }
+    email { Faker::Internet.email }
+    telephone { Faker::PhoneNumber.phone_number }
+    contact_details { Faker::Job.title }
+    is_active { [true, false].sample }
+    full_name { "#{name} #{first_surname} #{second_surname}".strip }
+    
+    initialize_with { attributes }
+  end
+  
   factory :tax_calculation_response, class: Hash do
     subtotal { Faker::Commerce.price(range: 100..1000) }
     tax_amount { subtotal * 0.21 }

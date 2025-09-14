@@ -125,6 +125,28 @@
               required: true %>
         </div>
         
+        <div data-invoice-form-target="contactField" style="<%= 'display: none;' unless invoice[:buyer_party_id].present? %>">
+          <%= form.label :buyer_company_contact_id, "Contact Person", class: "block text-sm font-medium text-gray-700" %>
+          <%= form.select :buyer_company_contact_id,
+              options_for_select(
+                begin
+                  if invoice[:buyer_party_id].present? && @company_contacts && @company_contacts[invoice[:buyer_party_id].to_s]
+                    @company_contacts[invoice[:buyer_party_id].to_s].map { |c| [c[:full_name] || c[:name], c[:id]] }
+                  else
+                    []
+                  end
+                end,
+                invoice[:buyer_company_contact_id]
+              ),
+              { include_blank: 'Select contact person (optional)' },
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+              data: { "invoice-form-target": "contactSelect" } %>
+          <p class="mt-1 text-xs text-gray-500">
+            Optional: Select a specific contact person for this invoice.
+            <a href="#" class="text-indigo-600 hover:text-indigo-500" data-action="click->invoice-form#openContactModal">Manage contacts</a>
+          </p>
+        </div>
+        
         <div>
           <%= form.label :date, "Invoice Date", class: "block text-sm font-medium text-gray-700" %>
           <%= form.date_field :date, value: invoice[:date],

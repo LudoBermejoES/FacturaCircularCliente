@@ -1,0 +1,154 @@
+<% breadcrumb ["Companies", companies_path], [@company[:name], company_path(@company[:id])], ["Contacts", company_company_contacts_path(@company[:id])], "Edit Contact" %>
+
+<div class="space-y-6">
+  <!-- Header -->
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900">Edit Contact</h1>
+    <p class="mt-1 text-sm text-gray-600">
+      Update contact information for <%= @company[:name] %>
+    </p>
+  </div>
+
+  <!-- Form -->
+  <div class="bg-white shadow rounded-lg">
+    <div class="px-4 py-5 sm:px-6">
+      <h3 class="text-lg font-medium text-gray-900">Contact Information</h3>
+    </div>
+    <div class="border-t border-gray-200 px-4 py-5 sm:px-6">
+      <%= form_with url: company_company_contact_path(@company[:id], @contact[:id]), 
+          method: :patch, 
+          scope: :company_contact, 
+          local: true, 
+          class: "space-y-6" do |form| %>
+        
+        <!-- Error Messages -->
+        <% if @errors && @errors.any? %>
+          <div class="rounded-md bg-red-50 p-4">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                </svg>
+              </div>
+              <div class="ml-3">
+                <h3 class="text-sm font-medium text-red-800">
+                  There were errors with your submission:
+                </h3>
+                <div class="mt-2 text-sm text-red-700">
+                  <ul class="list-disc list-inside space-y-1">
+                    <% @errors.each do |field, messages| %>
+                      <% Array(messages).each do |message| %>
+                        <li><%= field.humanize %> <%= message %></li>
+                      <% end %>
+                    <% end %>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% end %>
+
+        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <!-- First Name / Name -->
+          <div>
+            <%= form.label :name, "First Name *", class: "block text-sm font-medium text-gray-700" %>
+            <%= form.text_field :name, 
+                value: @contact[:name],
+                class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                placeholder: "Enter first name",
+                required: true %>
+          </div>
+
+          <!-- First Surname -->
+          <div>
+            <%= form.label :first_surname, "First Surname", class: "block text-sm font-medium text-gray-700" %>
+            <%= form.text_field :first_surname, 
+                value: @contact[:first_surname],
+                class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                placeholder: "Enter first surname" %>
+          </div>
+
+          <!-- Second Surname -->
+          <div>
+            <%= form.label :second_surname, "Second Surname", class: "block text-sm font-medium text-gray-700" %>
+            <%= form.text_field :second_surname, 
+                value: @contact[:second_surname],
+                class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                placeholder: "Enter second surname" %>
+          </div>
+
+          <!-- Email -->
+          <div>
+            <%= form.label :email, "Email Address", class: "block text-sm font-medium text-gray-700" %>
+            <%= form.email_field :email, 
+                value: @contact[:email],
+                class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                placeholder: "contact@example.com" %>
+          </div>
+
+          <!-- Telephone -->
+          <div class="sm:col-span-2">
+            <%= form.label :telephone, "Phone Number", class: "block text-sm font-medium text-gray-700" %>
+            <%= form.tel_field :telephone, 
+                value: @contact[:telephone],
+                class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                placeholder: "+34 911 234 567" %>
+          </div>
+
+          <!-- Contact Details -->
+          <div class="sm:col-span-2">
+            <%= form.label :contact_details, "Additional Details", class: "block text-sm font-medium text-gray-700" %>
+            <%= form.text_area :contact_details, 
+                rows: 3,
+                value: @contact[:contact_details],
+                class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                placeholder: "Any additional information about this contact..." %>
+            <p class="mt-2 text-sm text-gray-500">
+              Optional additional information like position, department, or special notes.
+            </p>
+          </div>
+        </div>
+
+        <!-- Status Information -->
+        <div class="bg-gray-50 px-4 py-3 rounded-md">
+          <div class="flex items-center">
+            <div class="flex-shrink-0">
+              <% if @contact[:is_active] %>
+                <div class="h-2 w-2 bg-green-400 rounded-full"></div>
+              <% else %>
+                <div class="h-2 w-2 bg-gray-400 rounded-full"></div>
+              <% end %>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm text-gray-700">
+                Status: 
+                <% if @contact[:is_active] %>
+                  <span class="font-medium text-green-800">Active</span>
+                <% else %>
+                  <span class="font-medium text-gray-800">Inactive</span>
+                <% end %>
+              </p>
+              <p class="text-xs text-gray-500 mt-1">
+                <% if @contact[:is_active] %>
+                  This contact can be selected when creating invoices.
+                <% else %>
+                  This contact is deactivated and won't appear in invoice forms.
+                <% end %>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+          <%= link_to company_company_contacts_path(@company[:id]), 
+              class: "px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" do %>
+            Cancel
+          <% end %>
+          <%= form.submit "Update Contact", 
+              class: "px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

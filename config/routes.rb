@@ -25,6 +25,14 @@ Rails.application.routes.draw do
   resources :companies do
     resources :addresses, only: [:create, :update, :destroy]
     
+    # Company contacts management
+    resources :company_contacts, except: [:show] do
+      member do
+        post :activate
+        post :deactivate
+      end
+    end
+    
     # User management within companies
     resources :users, controller: 'user_companies', only: [:index, :new, :create, :edit, :update, :destroy]
     
@@ -72,6 +80,7 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       get 'invoice_numbering/next_available', to: 'invoice_numbering#next_available'
+      get 'companies/:company_id/contacts', to: 'company_contacts#index'
     end
   end
   

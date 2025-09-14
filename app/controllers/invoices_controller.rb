@@ -61,10 +61,15 @@ class InvoicesController < ApplicationController
       status: 'draft',
       seller_party_id: params[:seller_party_id],
       buyer_party_id: params[:buyer_party_id],
+      buyer_company_contact_id: params[:buyer_company_contact_id],
       invoice_lines: [build_empty_line_item],
       notes: '',
       internal_notes: ''
     }
+    
+    load_companies
+    load_invoice_series
+    load_all_company_contacts
   end
   
   def create
@@ -93,6 +98,7 @@ class InvoicesController < ApplicationController
       
       load_companies
       load_invoice_series
+      load_all_company_contacts
       flash.now[:alert] = 'Please fix the errors below.'
       render :new, status: :unprocessable_entity
     rescue ApiService::ApiError => e
@@ -101,6 +107,7 @@ class InvoicesController < ApplicationController
       @invoice[:invoice_lines] = params[:invoice][:invoice_lines]&.values || [build_empty_line_item]
       load_companies
       load_invoice_series
+      load_all_company_contacts
       flash.now[:alert] = "Error creating invoice: #{e.message}"
       render :new, status: :unprocessable_entity
     rescue => e
@@ -114,6 +121,10 @@ class InvoicesController < ApplicationController
   
   def edit
     @invoice[:invoice_lines] ||= [build_empty_line_item]
+    
+    load_companies
+    load_invoice_series
+    load_all_company_contacts
   end
   
   def update
@@ -128,12 +139,14 @@ class InvoicesController < ApplicationController
       @invoice[:invoice_lines] = params[:invoice][:invoice_lines]&.values || @invoice[:invoice_lines]
       load_companies
       load_invoice_series
+      load_all_company_contacts
       flash.now[:alert] = 'Please fix the errors below.'
       render :edit, status: :unprocessable_entity
     rescue ApiService::ApiError => e
       @invoice[:invoice_lines] = params[:invoice][:invoice_lines]&.values || @invoice[:invoice_lines]
       load_companies
       load_invoice_series
+      load_all_company_contacts
       flash.now[:alert] = "Error updating invoice: #{e.message}"
       render :edit, status: :unprocessable_entity
     end
@@ -212,6 +225,34 @@ class InvoicesController < ApplicationController
       flash.now[:alert] = "Error loading companies: #{e.message}"
     end
   end
+  
+  def load_company_contacts(company_id = nil)
+    @company_contacts = {}
+    return unless company_id.present?
+    
+    begin
+      contacts = CompanyContactsService.active_contacts(company_id: company_id, token: current_token)
+      @company_contacts[company_id.to_s] = contacts
+    rescue ApiService::ApiError => e
+      @company_contacts[company_id.to_s] = []
+      Rails.logger.warn "Error loading company contacts for company #{company_id}: #{e.message}"
+    end
+  end
+  
+  def load_all_company_contacts
+    @company_contacts = {}
+    return unless @companies.present?
+    
+    @companies.each do |company|
+      begin
+        contacts = CompanyContactsService.active_contacts(company_id: company[:id], token: current_token)
+        @company_contacts[company[:id].to_s] = contacts
+      rescue ApiService::ApiError => e
+        @company_contacts[company[:id].to_s] = []
+        Rails.logger.warn "Error loading contacts for company #{company[:id]}: #{e.message}"
+      end
+    end
+  end
 
   def load_invoice_series
     begin
@@ -233,7 +274,7 @@ class InvoicesController < ApplicationController
   def invoice_params
     params.require(:invoice).permit(
       :invoice_number, :invoice_series_id, :invoice_type, :date, :due_date, :status,
-      :seller_party_id, :buyer_party_id, :notes, :internal_notes, :payment_method,
+      :seller_party_id, :buyer_party_id, :buyer_company_contact_id, :notes, :internal_notes, :payment_method,
       :payment_terms, :currency, :exchange_rate,
       :discount_percentage, :discount_amount,
       invoice_lines_attributes: [:description, :quantity, :unit_price, :tax_rate, :discount_percentage, :product_code]
