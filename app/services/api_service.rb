@@ -85,7 +85,9 @@ class ApiService
       when 404
         raise ApiError, 'The requested resource was not found.'
       when 422
+        Rails.logger.info "DEBUG: ApiService - 422 response body: #{response.body}"
         errors = parse_validation_errors(response)
+        Rails.logger.info "DEBUG: ApiService - parsed errors: #{errors.inspect}"
         raise ValidationError.new('Validation failed', errors)
       when 500..599
         raise ApiError, 'Server error. Please try again later.'

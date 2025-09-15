@@ -208,6 +208,8 @@ class InvoicesController < ApplicationController
   def set_invoice
     begin
       @invoice = InvoiceService.find(params[:id], token: current_token)
+      Rails.logger.info "DEBUG: set_invoice - @invoice = #{@invoice.inspect}"
+      Rails.logger.info "DEBUG: set_invoice - @invoice[:id] = #{@invoice[:id].inspect} (#{@invoice[:id].class})"
     rescue ApiService::ApiError => e
       redirect_to invoices_path, alert: "Invoice not found: #{e.message}"
     end

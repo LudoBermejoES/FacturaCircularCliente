@@ -34,11 +34,11 @@ class CompanyContactsController < ApplicationController
   def new
     @contact = {
       name: '',
+      legal_name: '',
+      tax_id: '',
       email: '',
-      telephone: '',
-      first_surname: '',
-      second_surname: '',
-      contact_details: ''
+      phone: '',
+      website: ''
     }
   end
   
@@ -157,7 +157,10 @@ class CompanyContactsController < ApplicationController
   
   def contact_params
     params.require(:company_contact).permit(
-      :name, :email, :telephone, :first_surname, :second_surname, :contact_details
+      :name, :legal_name, :tax_id, :email, :phone, :website,
+      addresses: [
+        :address_type, :street_address, :city, :postal_code, :state_province, :country_code, :is_default
+      ]
     )
   end
 end

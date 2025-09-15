@@ -75,11 +75,8 @@
                       <div class="flex items-center">
                         <p class="text-sm font-medium text-gray-900 truncate">
                           <%= contact[:name] %>
-                          <% if contact[:first_surname].present? %>
-                            <%= contact[:first_surname] %>
-                          <% end %>
-                          <% if contact[:second_surname].present? %>
-                            <%= contact[:second_surname] %>
+                          <% if contact[:legal_name].present? && contact[:legal_name] != contact[:name] %>
+                            (<%= contact[:legal_name] %>)
                           <% end %>
                         </p>
                         <% if contact[:is_active] %>
@@ -100,17 +97,24 @@
                             </a>
                           </p>
                         <% end %>
-                        <% if contact[:telephone].present? %>
+                        <% if contact[:phone].present? %>
                           <p class="text-sm text-gray-600">
-                            <a href="tel:<%= contact[:telephone] %>" class="text-indigo-600 hover:text-indigo-500">
-                              <%= contact[:telephone] %>
+                            <a href="tel:<%= contact[:phone] %>" class="text-indigo-600 hover:text-indigo-500">
+                              <%= contact[:phone] %>
                             </a>
                           </p>
                         <% end %>
                       </div>
-                      <% if contact[:contact_details].present? %>
-                        <p class="mt-1 text-sm text-gray-500 line-clamp-2">
-                          <%= contact[:contact_details] %>
+                      <% if contact[:tax_id].present? %>
+                        <p class="mt-1 text-sm text-gray-500">
+                          Tax ID: <%= contact[:tax_id] %>
+                        </p>
+                      <% end %>
+                      <% if contact[:website].present? %>
+                        <p class="mt-1 text-sm text-gray-500">
+                          <a href="<%= contact[:website] %>" target="_blank" class="text-indigo-600 hover:text-indigo-500">
+                            <%= contact[:website] %>
+                          </a>
                         </p>
                       <% end %>
                     </div>

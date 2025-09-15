@@ -3,16 +3,16 @@
 <div class="space-y-6">
   <!-- Header -->
   <div>
-    <h1 class="text-2xl font-bold text-gray-900">Add New Contact</h1>
+    <h1 class="text-2xl font-bold text-gray-900">Add Company Contact</h1>
     <p class="mt-1 text-sm text-gray-600">
-      Add a new contact for <%= @company[:name] %>
+      Add a business relationship company for <%= @company[:name] %>
     </p>
   </div>
 
   <!-- Form -->
   <div class="bg-white shadow rounded-lg">
     <div class="px-4 py-5 sm:px-6">
-      <h3 class="text-lg font-medium text-gray-900">Contact Information</h3>
+      <h3 class="text-lg font-medium text-gray-900">Company Contact Information</h3>
     </div>
     <div class="border-t border-gray-200 px-4 py-5 sm:px-6">
       <%= form_with url: company_company_contacts_path(@company[:id]), 
@@ -49,32 +49,32 @@
         <% end %>
 
         <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-          <!-- First Name / Name -->
+          <!-- Company Name -->
           <div>
-            <%= form.label :name, "First Name *", class: "block text-sm font-medium text-gray-700" %>
+            <%= form.label :name, "Company Name *", class: "block text-sm font-medium text-gray-700" %>
             <%= form.text_field :name, 
                 value: @contact ? @contact[:name] : '',
                 class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
-                placeholder: "Enter first name",
+                placeholder: "Enter company name",
                 required: true %>
           </div>
 
-          <!-- First Surname -->
+          <!-- Legal Name -->
           <div>
-            <%= form.label :first_surname, "First Surname", class: "block text-sm font-medium text-gray-700" %>
-            <%= form.text_field :first_surname, 
-                value: @contact ? @contact[:first_surname] : '',
+            <%= form.label :legal_name, "Legal Name", class: "block text-sm font-medium text-gray-700" %>
+            <%= form.text_field :legal_name, 
+                value: @contact ? @contact[:legal_name] : '',
                 class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
-                placeholder: "Enter first surname" %>
+                placeholder: "Enter legal company name" %>
           </div>
 
-          <!-- Second Surname -->
+          <!-- Tax ID -->
           <div>
-            <%= form.label :second_surname, "Second Surname", class: "block text-sm font-medium text-gray-700" %>
-            <%= form.text_field :second_surname, 
-                value: @contact ? @contact[:second_surname] : '',
+            <%= form.label :tax_id, "Tax ID", class: "block text-sm font-medium text-gray-700" %>
+            <%= form.text_field :tax_id, 
+                value: @contact ? @contact[:tax_id] : '',
                 class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
-                placeholder: "Enter second surname" %>
+                placeholder: "Enter tax ID (CIF/NIF)" %>
           </div>
 
           <!-- Email -->
@@ -83,29 +83,108 @@
             <%= form.email_field :email, 
                 value: @contact ? @contact[:email] : '',
                 class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
-                placeholder: "contact@example.com" %>
+                placeholder: "contact@company.com" %>
           </div>
 
-          <!-- Telephone -->
-          <div class="sm:col-span-2">
-            <%= form.label :telephone, "Phone Number", class: "block text-sm font-medium text-gray-700" %>
-            <%= form.tel_field :telephone, 
-                value: @contact ? @contact[:telephone] : '',
+          <!-- Phone -->
+          <div>
+            <%= form.label :phone, "Phone Number", class: "block text-sm font-medium text-gray-700" %>
+            <%= form.telephone_field :phone, 
+                value: @contact ? @contact[:phone] : '',
                 class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
                 placeholder: "+34 911 234 567" %>
           </div>
 
-          <!-- Contact Details -->
-          <div class="sm:col-span-2">
-            <%= form.label :contact_details, "Additional Details", class: "block text-sm font-medium text-gray-700" %>
-            <%= form.text_area :contact_details, 
-                rows: 3,
-                value: @contact ? @contact[:contact_details] : '',
+          <!-- Website -->
+          <div>
+            <%= form.label :website, "Website", class: "block text-sm font-medium text-gray-700" %>
+            <%= form.url_field :website, 
+                value: @contact ? @contact[:website] : '',
                 class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
-                placeholder: "Any additional information about this contact..." %>
-            <p class="mt-2 text-sm text-gray-500">
-              Optional additional information like position, department, or special notes.
-            </p>
+                placeholder: "https://www.company.com" %>
+          </div>
+        </div>
+
+        <!-- Addresses Section -->
+        <div class="border-t border-gray-200 pt-6">
+          <h4 class="text-lg font-medium text-gray-900 mb-4">Address Information</h4>
+          
+          <div id="addresses-container">
+            <div class="address-form border border-gray-200 rounded-md p-4 mb-4">
+              <div class="flex justify-between items-center mb-4">
+                <h5 class="text-md font-medium text-gray-700">Primary Address</h5>
+              </div>
+              
+              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <!-- Address Type -->
+                <div>
+                  <%= form.label "addresses[0][address_type]", "Address Type", class: "block text-sm font-medium text-gray-700" %>
+                  <%= form.select "addresses[0][address_type]",
+                      options_for_select([
+                        ['Billing', 'billing'],
+                        ['Shipping', 'shipping'],
+                        ['Main Office', 'main'],
+                        ['Other', 'other']
+                      ], 'billing'),
+                      {},
+                      class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+                </div>
+
+                <!-- Is Default -->
+                <div class="flex items-center pt-6">
+                  <%= form.check_box "addresses[0][is_default]", { checked: true }, "true", "false" %>
+                  <%= form.label "addresses[0][is_default]", "Default Address", class: "ml-2 text-sm text-gray-700" %>
+                </div>
+
+                <!-- Street Address -->
+                <div class="sm:col-span-2">
+                  <%= form.label "addresses[0][street_address]", "Street Address", class: "block text-sm font-medium text-gray-700" %>
+                  <%= form.text_area "addresses[0][street_address]",
+                      rows: 2,
+                      class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                      placeholder: "Enter street address" %>
+                </div>
+
+                <!-- City -->
+                <div>
+                  <%= form.label "addresses[0][city]", "City", class: "block text-sm font-medium text-gray-700" %>
+                  <%= form.text_field "addresses[0][city]",
+                      class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                      placeholder: "Enter city" %>
+                </div>
+
+                <!-- Postal Code -->
+                <div>
+                  <%= form.label "addresses[0][postal_code]", "Postal Code", class: "block text-sm font-medium text-gray-700" %>
+                  <%= form.text_field "addresses[0][postal_code]",
+                      class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                      placeholder: "Enter postal code" %>
+                </div>
+
+                <!-- State/Province -->
+                <div>
+                  <%= form.label "addresses[0][state_province]", "State/Province", class: "block text-sm font-medium text-gray-700" %>
+                  <%= form.text_field "addresses[0][state_province]",
+                      class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                      placeholder: "Enter state or province" %>
+                </div>
+
+                <!-- Country -->
+                <div>
+                  <%= form.label "addresses[0][country_code]", "Country", class: "block text-sm font-medium text-gray-700" %>
+                  <%= form.select "addresses[0][country_code]",
+                      options_for_select([
+                        ['Spain', 'ESP'],
+                        ['France', 'FRA'],
+                        ['Italy', 'ITA'],
+                        ['Portugal', 'PRT'],
+                        ['United Kingdom', 'GBR']
+                      ], 'ESP'),
+                      {},
+                      class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -115,7 +194,7 @@
               class: "px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" do %>
             Cancel
           <% end %>
-          <%= form.submit "Create Contact", 
+          <%= form.submit "Create Company Contact", 
               class: "px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
         </div>
       <% end %>

@@ -143,6 +143,8 @@ class CompaniesController < ApplicationController
   def set_company
     begin
       @company = CompanyService.find(params[:id], token: current_token)
+      Rails.logger.info "DEBUG: set_company - @company = #{@company.inspect}"
+      Rails.logger.info "DEBUG: set_company - @company[:id] = #{@company[:id].inspect} (#{@company[:id].class})"
     rescue ApiService::ApiError => e
       redirect_to companies_path, alert: "Company not found: #{e.message}"
     end

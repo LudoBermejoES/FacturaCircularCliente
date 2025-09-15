@@ -5,7 +5,43 @@ class InvoiceService < ApiService
     end
     
     def find(id, token:)
-      get("/invoices/#{id}", token: token)
+      response = get("/invoices/#{id}", token: token)
+      Rails.logger.info "DEBUG: InvoiceService.find - Raw API response: #{response.inspect}"
+      
+      # Transform JSON API format to expected format
+      if response[:data]
+        attributes = response[:data][:attributes] || {}
+        transformed = {
+          id: response[:data][:id],
+          invoice_number: attributes[:invoice_number],
+          proforma_number: attributes[:proforma_number],
+          document_type: attributes[:document_type],
+          status: attributes[:status],
+          date: attributes[:issue_date],
+          due_date: attributes[:due_date],
+          seller_party_id: attributes[:seller_party_id],
+          buyer_party_id: attributes[:buyer_party_id],
+          total_invoice: attributes[:total_invoice],
+          currency_code: attributes[:currency_code],
+          language_code: attributes[:language_code],
+          notes: attributes[:notes],
+          internal_notes: attributes[:internal_notes],
+          is_frozen: attributes[:is_frozen],
+          frozen_at: attributes[:frozen_at],
+          display_number: attributes[:display_number],
+          is_proforma: attributes[:is_proforma],
+          created_at: attributes[:created_at],
+          updated_at: attributes[:updated_at],
+          can_be_modified: attributes[:can_be_modified],
+          can_be_converted: attributes[:can_be_converted]
+        }
+        Rails.logger.info "DEBUG: InvoiceService.find - Transformed invoice: #{transformed.inspect}"
+        Rails.logger.info "DEBUG: InvoiceService.find - Transformed invoice[:id]: #{transformed[:id].inspect} (#{transformed[:id].class})"
+        transformed
+      else
+        Rails.logger.info "DEBUG: InvoiceService.find - No data field in response, returning raw response"
+        response
+      end
     end
     
     def create(params, token:)
@@ -47,7 +83,9 @@ class InvoiceService < ApiService
       patch("/invoices/#{id}/status", token: token, body: body)
     end
     
-    # Note: download_pdf method removed - not supported by API
+    def download_pdf(id, token:)
+      download_file("/invoices/#{id}/pdf", token: token)
+    end
     
     def download_facturae(id, token:)
       download_file("/invoices/#{id}/facturae", token: token)
