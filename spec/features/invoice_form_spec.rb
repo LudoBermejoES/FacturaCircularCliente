@@ -10,6 +10,10 @@ RSpec.feature 'Invoice Form Interactions', type: :feature do
   before do
     # Mock all API endpoints for feature tests
     stub_request(:post, 'http://albaranes-api:3000/api/v1/auth/login')
+      .with(
+        body: { grant_type: 'password', email: 'admin@example.com', password: 'password123', remember_me: false }.to_json,
+        headers: { 'Content-Type' => 'application/json', 'Accept' => 'application/json' }
+      )
       .to_return(status: 200, body: auth_response.to_json)
     
     stub_request(:get, 'http://albaranes-api:3000/api/v1/auth/validate')

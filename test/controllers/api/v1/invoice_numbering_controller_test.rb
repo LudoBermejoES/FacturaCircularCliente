@@ -121,21 +121,18 @@ class Api::V1::InvoiceNumberingControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "next_available requires authentication" do
-    # Clear authentication by removing tokens from session
-    session[:access_token] = nil
-    session[:refresh_token] = nil
-    session[:user_id] = nil
-    
-    # Ensure AuthService.validate_token handles nil tokens gracefully
-    AuthService.unstub(:validate_token)
-    AuthService.stubs(:validate_token).with(nil).returns(nil)
-    AuthService.stubs(:validate_token).returns(nil)
+    # Stub the authenticate_api_user! method to simulate unauthenticated request
+    Api::V1::InvoiceNumberingController.any_instance.stubs(:logged_in?).returns(false)
     
     get "/api/v1/invoice_numbering/next_available",
         params: { year: 2025, series_type: "commercial" },
         headers: { "Accept" => "application/json" }
 
-    assert_redirected_to login_path
+    assert_response :unauthorized
+    
+    response_data = JSON.parse(response.body)
+    assert_equal "Authentication Required", response_data["errors"][0]["title"]
+    assert_equal "401", response_data["errors"][0]["status"]
   end
 
   test "next_available handles different series types" do

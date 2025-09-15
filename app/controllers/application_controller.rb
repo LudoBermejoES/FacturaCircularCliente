@@ -48,6 +48,35 @@ class ApplicationController < ActionController::Base
     raise e
   end
   
+  def authenticate_api_user!
+    Rails.logger.info "DEBUG: authenticate_api_user! called for #{request.path}"
+    
+    unless logged_in?
+      Rails.logger.info "DEBUG: User not logged in, returning 401 for API request"
+      render json: {
+        errors: [{
+          status: '401',
+          title: 'Authentication Required',
+          detail: 'You must be logged in to access this resource'
+        }]
+      }, status: :unauthorized
+      return false
+    end
+    
+    true
+  rescue => e
+    Rails.logger.error "DEBUG: authenticate_api_user! error: #{e.message}"
+    Rails.logger.error "DEBUG: authenticate_api_user! backtrace: #{e.backtrace.first(10).join('\n')}"
+    render json: {
+      errors: [{
+        status: '500',
+        title: 'Authentication Error',
+        detail: 'An error occurred during authentication'
+      }]
+    }, status: :internal_server_error
+    false
+  end
+  
   def logged_in?
     Rails.logger.info "DEBUG: logged_in? called"
     has_token = current_token.present?

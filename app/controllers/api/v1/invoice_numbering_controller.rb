@@ -1,5 +1,6 @@
 class Api::V1::InvoiceNumberingController < ApplicationController
-  before_action :authenticate_user!
+  skip_before_action :authenticate_user!
+  before_action :authenticate_api_user!
 
   def next_available
     begin

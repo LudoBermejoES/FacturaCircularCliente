@@ -20,6 +20,23 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should redirect to dashboard if already logged in" do
+    # Mock the API response for single company user
+    mock_response = {
+      access_token: "test_token",
+      refresh_token: "refresh_token",
+      user: {
+        id: 1,
+        email: "user@example.com",
+        name: "Test User",
+        company_id: 1
+      },
+      company_id: 1,
+      companies: [{ id: 1, name: "Test Company", role: "viewer" }]
+    }
+    
+    AuthService.stubs(:login).returns(mock_response)
+    AuthService.stubs(:validate_token).returns({ valid: true })
+    
     # Simulate logged in user
     post login_url, params: @single_company_credentials
     

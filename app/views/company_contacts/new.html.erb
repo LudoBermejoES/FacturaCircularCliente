@@ -38,7 +38,7 @@
                   <ul class="list-disc list-inside space-y-1">
                     <% @errors.each do |field, messages| %>
                       <% Array(messages).each do |message| %>
-                        <li><%= field.humanize %> <%= message %></li>
+                        <li><%= field.to_s.humanize %> <%= message %></li>
                       <% end %>
                     <% end %>
                   </ul>

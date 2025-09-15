@@ -56,7 +56,7 @@ class InvoicesController < ApplicationController
     @invoice = {
       invoice_number: '',
       invoice_type: 'invoice',
-      date: Date.today.to_s,
+      issue_date: Date.today.to_s,
       due_date: (Date.today + 30).to_s,
       status: 'draft',
       seller_party_id: params[:seller_party_id],
@@ -275,7 +275,7 @@ class InvoicesController < ApplicationController
   
   def invoice_params
     params.require(:invoice).permit(
-      :invoice_number, :invoice_series_id, :invoice_type, :date, :due_date, :status,
+      :invoice_number, :invoice_series_id, :invoice_type, :issue_date, :due_date, :status,
       :seller_party_id, :buyer_party_id, :buyer_company_contact_id, :notes, :internal_notes, :payment_method,
       :payment_terms, :currency, :exchange_rate,
       :discount_percentage, :discount_amount,

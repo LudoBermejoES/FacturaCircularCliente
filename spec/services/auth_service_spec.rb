@@ -54,7 +54,7 @@ RSpec.describe AuthService do
       before do
         stub_request(:post, 'http://albaranes-api:3000/api/v1/auth/login')
           .with(
-            body: { grant_type: 'password', email: email, password: password, remember_me: false }.to_json,
+            body: { grant_type: 'password', email: email, password: password, company_id: nil, remember_me: false }.to_json,
             headers: { 'Content-Type' => 'application/json', 'Accept' => 'application/json' }
           )
           .to_return(status: 401, body: { error: 'Invalid credentials' }.to_json)

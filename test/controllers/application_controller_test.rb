@@ -88,6 +88,7 @@ class ApplicationControllerTest < ActionDispatch::IntegrationTest
       companies: []
     })
     AuthService.stubs(:validate_token).returns({ valid: true })
+    InvoiceService.stubs(:recent).returns([])
     
     post login_url, params: { email: "test@example.com", password: "password" }
     
@@ -125,6 +126,11 @@ class ApplicationControllerTest < ActionDispatch::IntegrationTest
 
   test "ensure_can! redirects when permission denied" do
     setup_session_with_role("viewer", 1)
+    
+    # Add stubs for invoice new action API calls
+    CompanyService.stubs(:all).returns({ companies: [] })
+    InvoiceSeriesService.stubs(:all).returns([])
+    CompanyContactsService.stubs(:active_contacts).returns([])
     
     # Try to access a protected action
     # This would normally be in a controller action

@@ -12,6 +12,13 @@ RSpec.describe Api::V1::CompanyContactsController, type: :controller do
   before do
     # Mock authentication for API controller specs
     allow(controller).to receive(:current_token).and_return(token)
+    
+    # Stub authentication validation API calls to prevent WebMock errors
+    stub_authentication(token: token)
+    
+    # Mock the authentication helper methods
+    allow(controller).to receive(:logged_in?).and_return(true)
+    allow(controller).to receive(:valid_token?).and_return(true)
   end
 
   describe 'GET #index' do
@@ -184,12 +191,14 @@ RSpec.describe Api::V1::CompanyContactsController, type: :controller do
           .and_raise(ApiService::AuthenticationError.new('Authentication failed'))
       end
 
-      it 'handles authentication error by redirecting to login' do
+      it 'handles authentication error by returning JSON error' do
         get :index, params: { company_id: company_id }
         
-        expect(response).to have_http_status(:found)
-        expect(response).to redirect_to(login_path)
-        expect(flash[:alert]).to eq('Please sign in to continue')
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.content_type).to eq('application/json; charset=utf-8')
+        
+        json_response = JSON.parse(response.body)
+        expect(json_response['error']).to eq('Authentication failed')
       end
     end
 
@@ -200,12 +209,14 @@ RSpec.describe Api::V1::CompanyContactsController, type: :controller do
           .and_raise(ApiService::AuthenticationError.new('Authentication failed'))
       end
 
-      it 'handles authentication error by redirecting to login' do
+      it 'handles authentication error by returning JSON error' do
         get :index, params: { company_id: company_id }
         
-        expect(response).to have_http_status(:found)
-        expect(response).to redirect_to(login_path)
-        expect(flash[:alert]).to eq('Please sign in to continue')
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.content_type).to eq('application/json; charset=utf-8')
+        
+        json_response = JSON.parse(response.body)
+        expect(json_response['error']).to eq('Authentication failed')
       end
     end
   end

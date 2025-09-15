@@ -43,7 +43,7 @@ RSpec.describe CompanyContactsService, type: :service do
       end
 
       before do
-        stub_request(:get, "#{base_url}/companies/#{company_id}/company_contacts")
+        stub_request(:get, "#{base_url}/companies/#{company_id}/contacts")
           .with(headers: { 'Authorization' => "Bearer #{token}" })
           .to_return(status: 200, body: contacts_response.to_json)
       end

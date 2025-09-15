@@ -60,8 +60,8 @@ class InvoiceAutoAssignmentTest < ActionDispatch::IntegrationTest
       invoice_type: "invoice"
     }
 
-    InvoiceService.stubs(:create)
-      .returns(mock_created_invoice)
+    # Use more general stubbing approach like other tests
+    InvoiceService.stubs(:create).returns({ data: mock_created_invoice })
 
     # Submit form with series selected
     post invoices_path, params: {
@@ -222,6 +222,9 @@ class InvoiceAutoAssignmentTest < ActionDispatch::IntegrationTest
     
     # Mock UserCompanyService to prevent user-related API calls  
     UserCompanyService.stubs(:companies_for_user).returns([])
+    
+    # Mock CompanyContactsService to prevent contact-related API calls
+    CompanyContactsService.stubs(:active_contacts).returns([])
     
     # Mock WorkflowService to prevent workflow-related API calls
     WorkflowService.stubs(:available_transitions).returns([])

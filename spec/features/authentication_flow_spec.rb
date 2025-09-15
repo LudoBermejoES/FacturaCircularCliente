@@ -67,6 +67,10 @@ RSpec.feature 'Authentication Flow', type: :feature do
   scenario 'User logs out successfully' do
     # First log in
     stub_request(:post, 'http://albaranes-api:3000/api/v1/auth/login')
+      .with(
+        body: { grant_type: 'password', email: valid_email, password: valid_password, remember_me: false }.to_json,
+        headers: { 'Content-Type' => 'application/json', 'Accept' => 'application/json' }
+      )
       .to_return(status: 200, body: auth_response.to_json)
     
     # Stub dashboard data
@@ -103,6 +107,10 @@ RSpec.feature 'Authentication Flow', type: :feature do
   scenario 'User can access dashboard after successful login' do
     # Mock successful authentication
     stub_request(:post, 'http://albaranes-api:3000/api/v1/auth/login')
+      .with(
+        body: { grant_type: 'password', email: valid_email, password: valid_password, remember_me: false }.to_json,
+        headers: { 'Content-Type' => 'application/json', 'Accept' => 'application/json' }
+      )
       .to_return(status: 200, body: auth_response.to_json)
     
     # Note: dashboard stats data and endpoint removed from API
@@ -132,6 +140,10 @@ RSpec.feature 'Authentication Flow', type: :feature do
   scenario 'Session expires and user needs to re-authenticate' do
     # Initial successful login
     stub_request(:post, 'http://albaranes-api:3000/api/v1/auth/login')
+      .with(
+        body: { grant_type: 'password', email: valid_email, password: valid_password, remember_me: false }.to_json,
+        headers: { 'Content-Type' => 'application/json', 'Accept' => 'application/json' }
+      )
       .to_return(status: 200, body: auth_response.to_json)
     
     stub_request(:get, 'http://albaranes-api:3000/api/v1/invoices/stats')

@@ -46,6 +46,7 @@ class CompaniesControllerTest < ActionDispatch::IntegrationTest
     )
     
     AuthService.stubs(:switch_company).returns(mock_switch_response(1))
+    CompanyService.stubs(:find).returns({ id: 1, name: "Company A" })
     
     get select_company_url
     assert_redirected_to dashboard_path
@@ -59,6 +60,7 @@ class CompaniesControllerTest < ActionDispatch::IntegrationTest
     )
     
     AuthService.stubs(:switch_company).returns(mock_switch_response(2))
+    CompanyService.stubs(:find).returns({ id: 2, name: "Company B" })
     
     post switch_company_url, params: { company_id: 2 }
     

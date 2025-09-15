@@ -9,7 +9,7 @@ class CompanyContactsService < ApiService
         contacts = response[:data].map do |contact_data|
           attributes = contact_data[:attributes] || {}
           {
-            id: contact_data[:id],
+            id: contact_data[:id].to_i,
             name: attributes[:name],
             legal_name: attributes[:legal_name],
             tax_id: attributes[:tax_id],
@@ -34,7 +34,7 @@ class CompanyContactsService < ApiService
       if response[:data]
         attributes = response[:data][:attributes] || {}
         {
-          id: response[:data][:id],
+          id: response[:data][:id].to_i,
           name: attributes[:name],
           legal_name: attributes[:legal_name],
           tax_id: attributes[:tax_id],
@@ -131,7 +131,7 @@ class CompanyContactsService < ApiService
         contacts = response[:data].map do |contact_data|
           attributes = contact_data[:attributes] || {}
           {
-            id: contact_data[:id],
+            id: contact_data[:id].to_i,
             name: attributes[:name],
             email: attributes[:email],
             phone: attributes[:phone],
