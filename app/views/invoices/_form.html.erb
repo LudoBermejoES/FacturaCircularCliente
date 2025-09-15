@@ -104,25 +104,27 @@
           <%= form.label :seller_party_id, "From (Seller)", class: "block text-sm font-medium text-gray-700" %>
           <%= form.select :seller_party_id,
               options_for_select(
-                @companies.map { |c| [c[:name], c[:id]] },
-                invoice[:seller_party_id]
+                (@seller_companies || @companies || []).map { |c| [c[:name], c[:id]] },
+                invoice[:seller_party_id] || current_company_id
               ),
               { include_blank: 'Select seller company' },
               class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
               required: true %>
+          <p class="mt-1 text-xs text-gray-500">Select your company that is issuing this invoice</p>
         </div>
         
         <div>
           <%= form.label :buyer_party_id, "To (Customer)", class: "block text-sm font-medium text-gray-700" %>
           <%= form.select :buyer_party_id,
               options_for_select(
-                @companies.map { |c| [c[:name], c[:id]] },
+                (@customer_companies || []).map { |c| [c[:name] || c[:legal_name], c[:id]] },
                 invoice[:buyer_party_id]
               ),
               { include_blank: 'Select customer company' },
               class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
               data: { action: "change->invoice-form#updateCompany" },
               required: true %>
+          <p class="mt-1 text-xs text-gray-500">Select from your company contacts/clients</p>
         </div>
         
         <div data-invoice-form-target="contactField" style="<%= 'display: none;' unless invoice[:buyer_party_id].present? %>">

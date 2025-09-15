@@ -44,17 +44,16 @@ Rails.application.configure do
   # Raise error when a before_action's only/except options reference missing actions.
   config.action_controller.raise_on_missing_callback_actions = true
   
-  # Allow test hosts for RSpec and Capybara (including dynamic ports)
-  config.hosts << "localhost"
-  config.hosts << "127.0.0.1"
-  config.hosts << "0.0.0.0"
-  config.hosts << "web"
-  config.hosts << "www.example.com"  # For Rack::Test default host
-  config.hosts << "example.com"      # Additional test host
-  
-  # Allow any port on these hosts for dynamic port allocation
-  config.hosts << /\Alocalhost:\d+\z/
-  config.hosts << /\A127\.0\.0\.1:\d+\z/  
-  config.hosts << /\A0\.0\.0\.0:\d+\z/
-  config.hosts << /\Aweb:\d+\z/
+  # Allow all hosts in test environment
+  config.hosts = [
+    IPAddr.new("0.0.0.0/0"),        # All IPv4
+    IPAddr.new("::/0"),             # All IPv6  
+    "localhost",
+    "127.0.0.1",
+    "0.0.0.0",
+    "example.com",
+    "www.example.com",
+    /.*\.example\.com/,             # All subdomains of example.com
+    /.*/                           # Match any host
+  ]
 end

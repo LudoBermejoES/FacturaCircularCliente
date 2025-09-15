@@ -100,7 +100,7 @@ class InvoicesController < ApplicationController
       load_invoice_series
       load_all_company_contacts
       flash.now[:alert] = 'Please fix the errors below.'
-      render :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_content
     rescue ApiService::ApiError => e
       Rails.logger.info "DEBUG: ApiError caught: #{e.message}"
       @invoice = invoice_params
@@ -109,13 +109,13 @@ class InvoicesController < ApplicationController
       load_invoice_series
       load_all_company_contacts
       flash.now[:alert] = "Error creating invoice: #{e.message}"
-      render :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_content
     rescue => e
       Rails.logger.error "DEBUG: Unexpected error in create: #{e.class} - #{e.message}"
       Rails.logger.error "DEBUG: Backtrace: #{e.backtrace.first(5).join("\n")}"
       @invoice = invoice_params
       flash.now[:alert] = "Unexpected error: #{e.message}"
-      render :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_content
     end
   end
   
@@ -141,14 +141,14 @@ class InvoicesController < ApplicationController
       load_invoice_series
       load_all_company_contacts
       flash.now[:alert] = 'Please fix the errors below.'
-      render :edit, status: :unprocessable_entity
+      render :edit, status: :unprocessable_content
     rescue ApiService::ApiError => e
       @invoice[:invoice_lines] = params[:invoice][:invoice_lines]&.values || @invoice[:invoice_lines]
       load_companies
       load_invoice_series
       load_all_company_contacts
       flash.now[:alert] = "Error updating invoice: #{e.message}"
-      render :edit, status: :unprocessable_entity
+      render :edit, status: :unprocessable_content
     end
   end
   
@@ -220,10 +220,32 @@ class InvoicesController < ApplicationController
       response = CompanyService.all(token: current_token, params: { per_page: 100 })
       all_companies = response[:companies] || []
       
-      # All companies available for both seller and buyer roles
+      # Seller companies: All companies (user can select which company is selling)
+      @seller_companies = all_companies
+      
+      # Customer companies: Only the current company's contacts/clients
+      if current_company_id
+        begin
+          contacts_response = CompanyContactsService.all(
+            company_id: current_company_id, 
+            token: current_token, 
+            params: { per_page: 100 }
+          )
+          @customer_companies = contacts_response[:contacts] || []
+        rescue ApiService::ApiError => e
+          @customer_companies = []
+          Rails.logger.warn "Error loading company contacts: #{e.message}"
+        end
+      else
+        @customer_companies = []
+      end
+      
+      # Keep @companies for backward compatibility
       @companies = all_companies
     rescue ApiService::ApiError => e
       @companies = []
+      @seller_companies = []
+      @customer_companies = []
       flash.now[:alert] = "Error loading companies: #{e.message}"
     end
   end
@@ -274,13 +296,22 @@ class InvoicesController < ApplicationController
   end
   
   def invoice_params
-    params.require(:invoice).permit(
+    # WORKAROUND: Rails 8 seems to have a bug with :issue_date parameter filtering
+    # Allow it explicitly in addition to the permit list
+    base_params = params.require(:invoice).permit(
       :invoice_number, :invoice_series_id, :invoice_type, :issue_date, :due_date, :status,
       :seller_party_id, :buyer_party_id, :buyer_company_contact_id, :notes, :internal_notes, :payment_method,
       :payment_terms, :currency, :exchange_rate,
       :discount_percentage, :discount_amount,
       invoice_lines_attributes: [:description, :quantity, :unit_price, :tax_rate, :discount_percentage, :product_code]
     )
+    
+    # Manual workaround for issue_date parameter filtering bug
+    if params[:invoice][:issue_date].present? && !base_params.key?(:issue_date)
+      base_params[:issue_date] = params[:invoice][:issue_date]
+    end
+    
+    base_params
   end
   
   def process_invoice_params(base_params)

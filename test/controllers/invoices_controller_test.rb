@@ -31,8 +31,14 @@ class InvoicesControllerTest < ActionDispatch::IntegrationTest
       .with(token: "test_admin_token", params: { per_page: 100 })
       .returns({ companies: mock_companies })
       
-    # Stub active_contacts for the specific company returned by CompanyService.all
+    # Mock CompanyContactsService.all call that was added recently
+    CompanyContactsService.stubs(:all)
+      .with(company_id: 1999, token: "test_admin_token", params: { per_page: 100 })
+      .returns({ contacts: [] })
+      
+    # Mock CompanyContactsService.active_contacts call for load_all_company_contacts
     CompanyContactsService.stubs(:active_contacts)
+      .with(company_id: 1999, token: "test_admin_token")
       .returns([])
 
     get new_invoice_path
@@ -47,11 +53,14 @@ class InvoicesControllerTest < ActionDispatch::IntegrationTest
       .with(token: "test_admin_token", params: { per_page: 100 })
       .returns({ companies: [] })
       
+    # Mock CompanyContactsService.all call
+    CompanyContactsService.stubs(:all)
+      .with(company_id: 1999, token: "test_admin_token", params: { per_page: 100 })
+      .returns({ contacts: [] })
+      
     InvoiceSeriesService.stubs(:all)
       .with(token: "test_admin_token", filters: { year: Date.current.year, active_only: true })
       .raises(ApiService::ApiError, "Failed to load series")
-      
-    CompanyContactsService.stubs(:active_contacts).returns([])
 
     get new_invoice_path
 
@@ -73,6 +82,11 @@ class InvoicesControllerTest < ActionDispatch::IntegrationTest
     CompanyService.stubs(:all)
       .with(token: "test_admin_token", params: { per_page: 100 })
       .returns({ companies: [] })
+
+    # Mock CompanyContactsService.all call that was added recently
+    CompanyContactsService.stubs(:all)
+      .with(company_id: 1999, token: "test_admin_token", params: { per_page: 100 })
+      .returns({ contacts: [] })
 
     InvoiceSeriesService.stubs(:all)
       .with(token: "test_admin_token", filters: { year: Date.current.year, active_only: true })
@@ -109,6 +123,11 @@ class InvoicesControllerTest < ActionDispatch::IntegrationTest
     CompanyService.stubs(:all)
       .with(token: "test_admin_token", params: { per_page: 100 })
       .returns({ companies: mock_companies })
+      
+    # Mock CompanyContactsService.all call that was added recently
+    CompanyContactsService.stubs(:all)
+      .with(company_id: 1999, token: "test_admin_token", params: { per_page: 100 })
+      .returns({ contacts: [] })
       
     InvoiceSeriesService.stubs(:all)
       .with(token: "test_admin_token", filters: { year: Date.current.year, active_only: true })
@@ -150,6 +169,11 @@ class InvoicesControllerTest < ActionDispatch::IntegrationTest
     CompanyService.stubs(:all)
       .with(token: "test_admin_token", params: { per_page: 100 })
       .returns({ companies: [] })
+      
+    # Mock CompanyContactsService.all call that was added recently
+    CompanyContactsService.stubs(:all)
+      .with(company_id: 1999, token: "test_admin_token", params: { per_page: 100 })
+      .returns({ contacts: [] })
       
     InvoiceSeriesService.stubs(:all)
       .with(token: "test_admin_token", filters: { year: Date.current.year, active_only: true })
@@ -203,6 +227,11 @@ class InvoicesControllerTest < ActionDispatch::IntegrationTest
       .with(token: "test_admin_token", params: { per_page: 100 })
       .returns({ companies: [] })
 
+    # Mock CompanyContactsService.all call that was added recently
+    CompanyContactsService.stubs(:all)
+      .with(company_id: 1999, token: "test_admin_token", params: { per_page: 100 })
+      .returns({ contacts: [] })
+
     InvoiceSeriesService.stubs(:all)
       .with(token: "test_admin_token", filters: { year: Date.current.year, active_only: true })
       .returns(mock_invoice_series)
@@ -230,6 +259,11 @@ class InvoicesControllerTest < ActionDispatch::IntegrationTest
     CompanyService.stubs(:all)
       .with(token: "test_admin_token", params: { per_page: 100 })
       .returns({ companies: [] })
+      
+    # Mock CompanyContactsService.all call that was added recently
+    CompanyContactsService.stubs(:all)
+      .with(company_id: 1999, token: "test_admin_token", params: { per_page: 100 })
+      .returns({ contacts: [] })
       
     InvoiceSeriesService.stubs(:all)
       .with(token: "test_admin_token", filters: { year: Date.current.year, active_only: true })

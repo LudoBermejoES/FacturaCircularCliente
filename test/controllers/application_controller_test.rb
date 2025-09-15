@@ -132,6 +132,11 @@ class ApplicationControllerTest < ActionDispatch::IntegrationTest
     InvoiceSeriesService.stubs(:all).returns([])
     CompanyContactsService.stubs(:active_contacts).returns([])
     
+    # Mock CompanyContactsService.all call that was added recently
+    CompanyContactsService.stubs(:all)
+      .with(company_id: 1, token: "test_viewer_token", params: { per_page: 100 })
+      .returns({ contacts: [] })
+    
     # Try to access a protected action
     # This would normally be in a controller action
     get new_invoice_url

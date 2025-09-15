@@ -1,17 +1,32 @@
 require 'rails_helper'
 
 RSpec.describe 'TaxRates', type: :request do
-  let(:tax_rates) { [{ id: 1, name: 'Standard VAT', rate: 21.0, type: 'vat' }] }
-  let(:exemptions) { [{ id: 1, name: 'Export', description: 'Goods exported outside EU' }] }
+  let(:tax_rates_response) { 
+    { 
+      'data' => [
+        { 'id' => 1, 'attributes' => { 'name' => 'Standard VAT', 'rate' => 21.0, 'type' => 'vat' } }
+      ]
+    }
+  }
+  let(:exemptions_response) { 
+    { 
+      'data' => [
+        { 'id' => 1, 'attributes' => { 'name' => 'Export', 'description' => 'Goods exported outside EU' } }
+      ]
+    }
+  }
   let(:token) { 'mock-token' }
   
   before do
-    # Mock TaxService calls for read-only operations
-    allow(TaxService).to receive(:rates).and_return(tax_rates)
-    allow(TaxService).to receive(:exemptions).and_return(exemptions)
-    
-    # Mock current_user_token method
+    # Mock authentication methods
+    allow_any_instance_of(ApplicationController).to receive(:logged_in?).and_return(true)
+    allow_any_instance_of(ApplicationController).to receive(:current_token).and_return(token)
     allow_any_instance_of(ApplicationController).to receive(:current_user_token).and_return(token)
+    allow_any_instance_of(ApplicationController).to receive(:current_user).and_return({ id: 1, email: 'test@example.com' })
+    
+    # Mock TaxService calls for read-only operations
+    allow(TaxService).to receive(:rates).and_return(tax_rates_response)
+    allow(TaxService).to receive(:exemptions).and_return(exemptions_response)
   end
 
   describe 'GET /tax_rates' do

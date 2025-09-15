@@ -35,12 +35,20 @@ RSpec.describe 'Dashboard', type: :request do
     end
 
     before do
-      # Mock the authenticate_user! method to bypass authentication completely
-      allow_any_instance_of(ApplicationController).to receive(:authenticate_user!).and_return(true)
+      # Skip all authentication completely for dashboard tests
+      allow_any_instance_of(DashboardController).to receive(:authenticate_user!).and_return(nil)
       
-      # Mock InvoiceService methods to avoid HTTP calls (using same pattern as other specs)
-      # Note: stats method removed from InvoiceService
-      allow(InvoiceService).to receive(:recent).with(any_args).and_return([
+      # Mock all ApplicationController methods that dashboard uses
+      allow_any_instance_of(DashboardController).to receive(:current_user).and_return(user)
+      allow_any_instance_of(DashboardController).to receive(:user_companies).and_return([
+        { id: 1, name: 'Test Company' }
+      ])
+      allow_any_instance_of(DashboardController).to receive(:current_token).and_return(token)
+      allow_any_instance_of(DashboardController).to receive(:logged_in?).and_return(true)
+      allow_any_instance_of(DashboardController).to receive(:user_signed_in?).and_return(true)
+      
+      # Mock InvoiceService.recent to return static data with keyword arguments
+      allow(InvoiceService).to receive(:recent).with(token: token, limit: 5).and_return([
         build(:invoice_response), build(:invoice_response)
       ])
     end
@@ -48,6 +56,10 @@ RSpec.describe 'Dashboard', type: :request do
 
     it 'shows recent invoices' do
       get dashboard_path
+      if response.status == 500
+        puts "Response body: #{response.body}"
+        puts "Response status: #{response.status}"
+      end
       expect(response).to have_http_status(:ok)
       expect(response.body).to include('Recent Invoices')
     end

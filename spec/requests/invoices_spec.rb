@@ -47,11 +47,26 @@ RSpec.describe 'Invoices', type: :request do
     # Note: send_email method removed from InvoiceService
     # Note: download_pdf method removed from InvoiceService
     allow(InvoiceService).to receive(:download_facturae).with(any_args).and_return('<?xml version="1.0"?><Facturae></Facturae>')
-
-    # Mock CompanyService for invoice forms that need company data
+    
+    # Mock CompanyService methods that were added recently (matching feature tests)
     allow(CompanyService).to receive(:all).with(any_args).and_return({ 
-      companies: [company], total: 1, meta: { page: 1, pages: 1, total: 1 }
+      companies: [company], 
+      total: 1, 
+      meta: { page: 1, pages: 1, total: 1 } 
     })
+    
+    # Mock CompanyContactsService methods that were added recently
+    allow(CompanyContactsService).to receive(:all).with(any_args).and_return({ 
+      contacts: [company], 
+      total: 1, 
+      meta: { page: 1, pages: 1, total: 1 } 
+    })
+    allow(CompanyContactsService).to receive(:active_contacts).with(any_args).and_return([])
+    
+    # Mock InvoiceSeriesService for invoice form  
+    allow(InvoiceSeriesService).to receive(:all).with(any_args).and_return([
+      { id: 1, series_code: 'FC', series_name: 'Facturas Comerciales', year: Date.current.year, is_active: true }
+    ])
   end
 
   describe 'GET /invoices' do
@@ -83,13 +98,19 @@ RSpec.describe 'Invoices', type: :request do
     let(:invoice_params) do
       {
         invoice_number: 'INV-001',
+        invoice_series_id: 1,
         seller_party_id: company[:id],
         buyer_party_id: company[:id],
+        issue_date: Date.current.strftime('%Y-%m-%d'),
+        due_date: (Date.current + 30).strftime('%Y-%m-%d'),
+        invoice_type: 'invoice',
+        status: 'draft',
         invoice_lines_attributes: [
           {
             description: 'Service',
             quantity: 1,
-            unit_price: 100.00
+            unit_price: 100.00,
+            tax_rate: 21.0
           }
         ]
       }
@@ -97,7 +118,9 @@ RSpec.describe 'Invoices', type: :request do
 
 
     it 'creates invoice and redirects' do
-      expect(InvoiceService).to receive(:create).with(any_args).and_return(invoice)
+      # Mock should return the same structure as the API response
+      expected_response = { data: invoice }
+      expect(InvoiceService).to receive(:create).with(any_args).and_return(expected_response)
       post invoices_path, params: { invoice: invoice_params }
       
       if response.status == 422
@@ -123,7 +146,7 @@ RSpec.describe 'Invoices', type: :request do
         )
         
         post invoices_path, params: { invoice: { invoice_number: '', seller_party_id: nil, buyer_party_id: nil } }
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(response.body).to include("New Invoice")
         expect(response.body).to include("form")
       end

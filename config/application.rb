@@ -36,5 +36,13 @@ module FacturaCircularCliente
     # config.time_zone = "Central Time (US & Canada)"
     # config.eager_load_paths << Rails.root.join("extras")
     
+    # Disable host authorization in test mode to prevent blocking
+    if Rails.env.test?
+      config.hosts = nil
+      config.force_ssl = false
+      # Completely remove the middleware to avoid any host checking
+      config.middleware.delete ActionDispatch::HostAuthorization
+    end
+    
   end
 end

@@ -58,6 +58,22 @@ RSpec.feature 'Invoice Form Interactions', type: :feature do
       meta: { page: 1, pages: 1, total: 2 }
     })
     
+    # Mock CompanyContactsService methods that were added recently
+    allow(CompanyContactsService).to receive(:all).with(any_args).and_return({ 
+      contacts: [
+        { id: 1, name: 'Test Company' },
+        { id: 2, name: 'Another Company' }
+      ], 
+      total: 2, 
+      meta: { page: 1, pages: 1, total: 2 } 
+    })
+    allow(CompanyContactsService).to receive(:active_contacts).with(any_args).and_return([])
+    
+    # Mock InvoiceSeriesService for invoice form  
+    allow(InvoiceSeriesService).to receive(:all).with(any_args).and_return([
+      { id: 1, series_code: 'FC', series_name: 'Facturas Comerciales', year: Date.current.year, is_active: true }
+    ])
+    
     # Mock invoice creation/update endpoints
     stub_request(:post, 'http://albaranes-api:3000/api/v1/invoices')
       .to_return(status: 201, body: build(:invoice_response).to_json)
@@ -82,7 +98,7 @@ RSpec.feature 'Invoice Form Interactions', type: :feature do
     fill_in 'invoice_invoice_number', with: 'INV-2024-001'
     select 'Test Company', from: 'invoice_seller_party_id'
     select 'Test Company', from: 'invoice_buyer_party_id'
-    fill_in 'invoice_date', with: Date.current.strftime('%Y-%m-%d')
+    fill_in 'invoice_issue_date', with: Date.current.strftime('%Y-%m-%d')
     
     # The form should have at least one default line item row to fill in
     # Fill in the default line item (JavaScript-free approach)
@@ -145,7 +161,7 @@ RSpec.feature 'Invoice Form Interactions', type: :feature do
     # Should have form controls available
     expect(page).to have_select('invoice_invoice_type')
     expect(page).to have_select('invoice_status')
-    expect(page).to have_field('invoice_date')
+    expect(page).to have_field('invoice_issue_date')
     expect(page).to have_field('invoice_due_date')
     
     # Should have line item inputs
@@ -179,8 +195,11 @@ RSpec.feature 'Invoice Form Interactions', type: :feature do
 
   scenario 'User submits form with minimal data and gets successful creation' do
     # Mock successful creation
+    invoice_response = build(:invoice_response, id: 123)
+    # Ensure the response has the structure the controller expects
+    response_body = { data: invoice_response }.to_json
     stub_request(:post, 'http://albaranes-api:3000/api/v1/invoices')
-      .to_return(status: 201, body: build(:invoice_response, id: 123).to_json)
+      .to_return(status: 201, body: response_body)
     
     visit new_invoice_path
     
