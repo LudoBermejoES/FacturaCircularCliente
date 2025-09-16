@@ -303,6 +303,7 @@ class InvoicesController < ApplicationController
       :seller_party_id, :buyer_party_id, :buyer_company_contact_id, :notes, :internal_notes, :payment_method,
       :payment_terms, :currency, :exchange_rate,
       :discount_percentage, :discount_amount,
+      invoice_lines: {},  # Allow nested hash structure
       invoice_lines_attributes: [:description, :quantity, :unit_price, :tax_rate, :discount_percentage, :product_code]
     )
     
@@ -390,4 +391,5 @@ class InvoicesController < ApplicationController
     
     errors
   end
+  
 end

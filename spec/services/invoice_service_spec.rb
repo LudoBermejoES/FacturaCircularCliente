@@ -4,6 +4,89 @@ RSpec.describe InvoiceService do
   let(:token) { 'test_access_token' }
   
   describe '.all' do
+    context 'with JSON API format response' do
+      let(:json_api_response) do
+        {
+          data: [
+            {
+              id: "1",
+              type: "invoices",
+              attributes: {
+                invoice_number: "FC-2025-0001",
+                invoice_series_code: "FC",
+                status: "draft",
+                issue_date: "2025-09-15",
+                due_date: "2025-10-15",
+                total_invoice: "1210.00",
+                currency_code: "EUR",
+                language_code: "es",
+                is_frozen: false,
+                display_number: "FC-FC-2025-0001",
+                is_proforma: false,
+                can_be_modified: true,
+                can_be_converted: false,
+                created_at: "2025-09-15T10:00:00.000Z",
+                updated_at: "2025-09-15T10:00:00.000Z"
+              }
+            },
+            {
+              id: "2", 
+              type: "invoices",
+              attributes: {
+                invoice_number: "FC-2025-0002",
+                invoice_series_code: "FC", 
+                status: "sent",
+                issue_date: "2025-09-15",
+                due_date: "2025-10-15",
+                total_invoice: "550.00",
+                currency_code: "EUR",
+                language_code: "es",
+                is_frozen: false,
+                display_number: "FC-FC-2025-0002",
+                is_proforma: false,
+                can_be_modified: true,
+                can_be_converted: false,
+                created_at: "2025-09-15T10:00:00.000Z",
+                updated_at: "2025-09-15T10:00:00.000Z"
+              }
+            }
+          ],
+          meta: {
+            total: 2,
+            page: 1,
+            pages: 1,
+            per_page: 25
+          }
+        }
+      end
+      
+      before do
+        stub_request(:get, 'http://albaranes-api:3000/api/v1/invoices')
+          .with(headers: { 'Authorization' => "Bearer #{token}" })
+          .to_return(status: 200, body: json_api_response.to_json)
+      end
+      
+      it 'transforms JSON API format to expected client format' do
+        result = described_class.all(token: token)
+        
+        expect(result[:invoices]).to be_an(Array)
+        expect(result[:invoices].length).to eq(2)
+        expect(result[:meta]).to eq(json_api_response[:meta])
+        expect(result[:total]).to eq(2)
+        
+        # Check transformation of first invoice
+        first_invoice = result[:invoices].first
+        expect(first_invoice[:id]).to eq("1")
+        expect(first_invoice[:invoice_number]).to eq("FC-2025-0001")
+        expect(first_invoice[:status]).to eq("draft")
+        expect(first_invoice[:date]).to eq("2025-09-15") # mapped from issue_date
+        expect(first_invoice[:due_date]).to eq("2025-10-15")
+        expect(first_invoice[:total_invoice]).to eq("1210.00")
+        expect(first_invoice[:is_frozen]).to eq(false)
+        expect(first_invoice[:display_number]).to eq("FC-FC-2025-0001")
+      end
+    end
+
     context 'without filters' do
       let(:response_body) do
         {
@@ -27,7 +110,7 @@ RSpec.describe InvoiceService do
           .to_return(status: 200, body: response_body.to_json)
       end
       
-      it 'returns all invoices' do
+      it 'returns response as-is when not in JSON API format' do
         result = described_class.all(token: token)
         expect(result).to eq(response_body.deep_symbolize_keys)
       end
@@ -104,17 +187,14 @@ RSpec.describe InvoiceService do
     end
     
     before do
-      # Expected JSON API format - matching what the service actually sends
+      # Expected JSON API format - invoice_lines_attributes are now extracted and sent separately
       expected_body = {
         data: {
           type: 'invoices',
           attributes: {
             invoice_type: 'standard',
             date: Date.current.to_s,
-            due_date: 30.days.from_now.to_s,
-            invoice_lines_attributes: [
-              { description: 'Service', quantity: 10, unit_price: 100, tax_rate: 21 }
-            ]
+            due_date: 30.days.from_now.to_s
           },
           relationships: {
             seller_party: {
@@ -127,17 +207,45 @@ RSpec.describe InvoiceService do
         }
       }
       
+      # Mock the initial invoice creation (without line items)
       stub_request(:post, 'http://albaranes-api:3000/api/v1/invoices')
         .with(
           body: expected_body.to_json,
           headers: { 'Authorization' => "Bearer #{token}" }
         )
-        .to_return(status: 201, body: response_body.to_json)
+        .to_return(status: 201, body: { data: { id: '1' } }.to_json)
+        
+      # Mock the line item creation
+      expected_line_body = {
+        data: {
+          type: 'invoice_lines',
+          attributes: {
+            item_description: 'Service',
+            unit_price_without_tax: 100,
+            quantity: 10,
+            tax_rate: 21,
+            discount_percentage: nil,
+            gross_amount: 1000.0
+          }
+        }
+      }
+      
+      stub_request(:post, 'http://albaranes-api:3000/api/v1/invoices/1/lines')
+        .with(
+          body: expected_line_body.to_json,
+          headers: { 'Authorization' => "Bearer #{token}" }
+        )
+        .to_return(status: 201, body: { id: 10 }.to_json)
+        
+      # Mock the tax recalculation
+      stub_request(:post, 'http://albaranes-api:3000/api/v1/invoices/1/taxes/recalculate')
+        .with(headers: { 'Authorization' => "Bearer #{token}" })
+        .to_return(status: 200, body: {}.to_json)
     end
     
     it 'creates invoice with line items' do
       result = described_class.create(invoice_params, token: token)
-      expect(result).to eq(response_body.deep_symbolize_keys)
+      expect(result[:data][:id]).to eq('1')
     end
   end
   
@@ -261,10 +369,18 @@ RSpec.describe InvoiceService do
       end
 
       before do
+        # Updated to use JSON API format
+        expected_body = {
+          data: {
+            type: 'invoice_lines',
+            attributes: line_params
+          }
+        }
+        
         stub_request(:post, "http://albaranes-api:3000/api/v1/invoices/#{invoice_id}/lines")
           .with(
             headers: { 'Authorization' => "Bearer #{token}" },
-            body: { invoice_line: line_params }.to_json
+            body: expected_body.to_json
           )
           .to_return(status: 201, body: { id: 10 }.to_json)
       end
