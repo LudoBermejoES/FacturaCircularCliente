@@ -65,7 +65,13 @@ Rails.application.routes.draw do
   
   # Bulk workflow operations
   post 'invoices/bulk_transition', to: 'workflows#bulk_transition', as: :bulk_invoice_transition
-  
+
+  # Workflow Definitions Management
+  resources :workflow_definitions do
+    resources :workflow_states, only: [:index, :show, :new, :create, :edit, :update, :destroy]
+    resources :workflow_transitions, only: [:index, :show, :new, :create, :edit, :update, :destroy]
+  end
+
   # Tax Management
   resources :tax_rates
   resources :tax_calculations, only: [:new, :create, :show] do

@@ -58,7 +58,40 @@ class WorkflowsController < ApplicationController
   end
   
   def bulk_transition
-    redirect_to invoices_path, alert: "Bulk operations are not supported by the API"
+    unless params[:invoice_ids].present? && params[:status].present?
+      redirect_to invoices_path, alert: "Please select invoices and specify a status"
+      return
+    end
+
+    invoice_ids = params[:invoice_ids].reject(&:blank?).map(&:to_i)
+
+    if invoice_ids.empty?
+      redirect_to invoices_path, alert: "Please select at least one invoice"
+      return
+    end
+
+    begin
+      result = WorkflowService.bulk_transition(
+        invoice_ids,
+        status: params[:status],
+        comment: params[:comment],
+        token: current_user_token
+      )
+
+      success_count = result['success_count'] || invoice_ids.size
+      flash[:success] = "Successfully updated #{success_count} invoice(s) to #{params[:status]}"
+
+      if result['errors'] && result['errors'].any?
+        flash[:warning] = "Some invoices could not be updated: #{result['errors'].join(', ')}"
+      end
+
+    rescue ApiService::ValidationError => e
+      flash[:error] = "Validation error: #{e.errors.join(', ')}"
+    rescue ApiService::ApiError => e
+      flash[:error] = "Failed to update invoices: #{e.message}"
+    end
+
+    redirect_to invoices_path
   end
   
   private

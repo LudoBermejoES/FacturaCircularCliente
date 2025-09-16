@@ -10,11 +10,30 @@
       </p>
     </div>
     
-    <div class="flex items-center space-x-2">
-      <span class="text-sm text-gray-500">Current Status:</span>
-      <span class="<%= status_badge_class(@invoice[:status]) %>">
-        <%= @invoice[:status].humanize %>
-      </span>
+    <div class="space-y-2">
+      <div class="flex items-center space-x-2">
+        <span class="text-sm text-gray-500">Current Status:</span>
+        <span class="<%= status_badge_class(@invoice[:status]) %>">
+          <%= @invoice[:status].humanize %>
+        </span>
+      </div>
+
+      <!-- SLA Tracking -->
+      <% if @invoice[:workflow].present? %>
+        <div class="flex items-center space-x-2">
+          <span class="text-sm text-gray-500">SLA Status:</span>
+          <%= render 'shared/sla_indicator', invoice_workflow: @invoice[:workflow] %>
+        </div>
+
+        <% if @invoice[:workflow]['sla_deadline'] %>
+          <div class="mt-3 p-3 bg-gray-50 rounded-lg">
+            <h4 class="text-sm font-medium text-gray-900 mb-2">SLA Details</h4>
+            <%= render 'shared/sla_indicator',
+                invoice_workflow: @invoice[:workflow],
+                show_progress: true %>
+          </div>
+        <% end %>
+      <% end %>
     </div>
   </div>
   

@@ -1,0 +1,62 @@
+<%# SLA Indicator Component %>
+<%# Usage: <%= render 'shared/sla_indicator', invoice_workflow: workflow_data %>
+<% if local_assigns[:invoice_workflow].present? %>
+  <div class="sla-indicator">
+    <% if has_sla_deadline?(invoice_workflow) %>
+      <!-- SLA Status Badge -->
+      <div class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <%= sla_status_class(invoice_workflow) %>">
+        <% case sla_icon(invoice_workflow) %>
+        <% when 'exclamation-triangle' %>
+          <svg class="-ml-0.5 mr-1.5 h-2 w-2" fill="currentColor" viewBox="0 0 8 8">
+            <circle cx="4" cy="4" r="3" />
+          </svg>
+          <%= sla_status_text(invoice_workflow) %>
+        <% when 'exclamation-circle' %>
+          <svg class="-ml-0.5 mr-1.5 h-2 w-2" fill="currentColor" viewBox="0 0 8 8">
+            <circle cx="4" cy="4" r="3" />
+          </svg>
+          <%= sla_status_text(invoice_workflow) %>
+        <% else %>
+          <svg class="-ml-0.5 mr-1.5 h-2 w-2" fill="currentColor" viewBox="0 0 8 8">
+            <circle cx="4" cy="4" r="3" />
+          </svg>
+          <%= sla_status_text(invoice_workflow) %>
+        <% end %>
+      </div>
+
+      <!-- SLA Progress Bar (for detailed view) -->
+      <% if local_assigns[:show_progress] %>
+        <div class="mt-2">
+          <div class="flex items-center justify-between text-xs text-gray-600 mb-1">
+            <span>Time in current state: <%= time_in_current_state(invoice_workflow) %></span>
+            <span>Deadline: <%= sla_deadline_formatted(invoice_workflow) %></span>
+          </div>
+
+          <div class="w-full bg-gray-200 rounded-full h-2">
+            <% progress = sla_progress_percentage(invoice_workflow) %>
+            <%
+              progress_color = if sla_overdue?(invoice_workflow)
+                'bg-red-500'
+              elsif sla_warning?(invoice_workflow)
+                'bg-yellow-500'
+              else
+                'bg-green-500'
+              end
+            %>
+            <div class="<%= progress_color %> h-2 rounded-full transition-all duration-300"
+                 style="width: <%= [progress, 100].min %>%"></div>
+          </div>
+        </div>
+      <% end %>
+
+    <% else %>
+      <!-- No SLA Deadline -->
+      <div class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-gray-500 bg-gray-100">
+        <svg class="-ml-0.5 mr-1.5 h-2 w-2" fill="currentColor" viewBox="0 0 8 8">
+          <circle cx="4" cy="4" r="3" />
+        </svg>
+        No SLA
+      </div>
+    <% end %>
+  </div>
+<% end %>
