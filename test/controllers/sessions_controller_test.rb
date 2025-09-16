@@ -73,7 +73,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     
     post login_url, params: { email: "wrong@example.com", password: "wrong" }
     
-    assert_response :unprocessable_entity
+    assert_response :unprocessable_content
     assert_select ".text-red-800", text: /Invalid email or password/
   end
 

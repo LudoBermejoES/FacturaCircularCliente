@@ -43,9 +43,8 @@ class WorkflowDefinitionsControllerTest < ActionDispatch::IntegrationTest
       }
     ]
 
-    # Mock authentication
-    ApplicationController.any_instance.stubs(:authenticate_user!).returns(true)
-    ApplicationController.any_instance.stubs(:current_user_token).returns(@user_token)
+    # Setup authenticated session using the test helper
+    setup_authenticated_session(role: "admin", company_id: 1)
   end
 
   test "should get index" do

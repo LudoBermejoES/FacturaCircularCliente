@@ -56,7 +56,7 @@ RSpec.describe 'Sessions', type: :request do
 
       it 'renders login form with error' do
         post login_path, params: { email: email, password: 'wrong' }
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(response.body).to include('Invalid credentials')
       end
     end

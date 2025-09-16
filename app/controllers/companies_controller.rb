@@ -97,18 +97,18 @@ class CompaniesController < ApplicationController
       @company = company_params
       @errors = e.errors
       flash.now[:alert] = 'There were errors creating the company.'
-      render :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_content
     rescue ApiService::ApiError => e
       Rails.logger.info "DEBUG: ApiError caught: #{e.message}"
       @company = company_params
       flash.now[:alert] = "Error creating company: #{e.message}"
-      render :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_content
     rescue => e
       Rails.logger.info "DEBUG: Unexpected error: #{e.class}: #{e.message}"
       Rails.logger.info "DEBUG: Backtrace: #{e.backtrace[0..5].join('\n')}"
       @company = company_params
       flash.now[:alert] = "Unexpected error: #{e.message}"
-      render :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_content
     end
   end
   
@@ -122,10 +122,10 @@ class CompaniesController < ApplicationController
     rescue ApiService::ValidationError => e
       @errors = e.errors
       flash.now[:alert] = 'There were errors updating the company.'
-      render :edit, status: :unprocessable_entity
+      render :edit, status: :unprocessable_content
     rescue ApiService::ApiError => e
       flash.now[:alert] = "Error updating company: #{e.message}"
-      render :edit, status: :unprocessable_entity
+      render :edit, status: :unprocessable_content
     end
   end
   

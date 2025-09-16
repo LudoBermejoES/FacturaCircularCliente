@@ -151,14 +151,14 @@ class InvoiceSeriesController < ApplicationController
     @statistics = InvoiceSeriesService.statistics(@invoice_series[:id], token: current_token)
     render partial: 'statistics', locals: { statistics: @statistics }
   rescue ApiService::ApiError => e
-    render json: { error: e.message }, status: :unprocessable_entity
+    render json: { error: e.message }, status: :unprocessable_content
   end
   
   def compliance
     @compliance = InvoiceSeriesService.compliance(@invoice_series[:id], token: current_token)
     render partial: 'compliance', locals: { compliance: @compliance }
   rescue ApiService::ApiError => e
-    render json: { error: e.message }, status: :unprocessable_entity
+    render json: { error: e.message }, status: :unprocessable_content
   end
   
   def rollover

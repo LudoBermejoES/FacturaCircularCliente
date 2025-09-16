@@ -156,7 +156,7 @@ RSpec.describe WorkflowService do
     end
     
     before do
-      stub_request(:get, "http://albaranes-api:3000/api/v1/workflow_definitions/#{definition_id}/states")
+      stub_request(:get, "http://albaranes-api:3000/api/v1/workflow_definitions/#{definition_id}/workflow_states")
         .with(headers: { 'Authorization' => "Bearer #{token}" })
         .to_return(status: 200, body: states_response.to_json)
     end
@@ -179,7 +179,7 @@ RSpec.describe WorkflowService do
     end
     
     before do
-      stub_request(:get, "http://albaranes-api:3000/api/v1/workflow_definitions/#{definition_id}/transitions")
+      stub_request(:get, "http://albaranes-api:3000/api/v1/workflow_definitions/#{definition_id}/workflow_transitions")
         .with(headers: { 'Authorization' => "Bearer #{token}" })
         .to_return(status: 200, body: transitions_response.to_json)
     end

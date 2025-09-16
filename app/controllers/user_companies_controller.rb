@@ -32,7 +32,7 @@ class UserCompaniesController < ApplicationController
       @available_roles = available_roles_for_current_user
       @errors = e.errors
       flash.now[:alert] = 'There were errors inviting the user.'
-      render :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_content
     rescue ApiService::ApiError => e
       redirect_to company_users_path(current_company_id), 
                   alert: "Error inviting user: #{e.message}"
@@ -62,7 +62,7 @@ class UserCompaniesController < ApplicationController
       @available_roles = available_roles_for_current_user
       @errors = e.errors
       flash.now[:alert] = 'There were errors updating the user role.'
-      render :edit, status: :unprocessable_entity
+      render :edit, status: :unprocessable_content
     rescue ApiService::ApiError => e
       redirect_to company_users_path(current_company_id), 
                   alert: "Error updating user: #{e.message}"

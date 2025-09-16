@@ -98,8 +98,9 @@ class ApiService
     
     def parse_response_body(response)
       return nil if response.body.blank?
-      
-      JSON.parse(response.body, symbolize_names: true)
+
+      parsed = JSON.parse(response.body)
+      parsed.is_a?(Hash) ? parsed.deep_symbolize_keys : parsed
     rescue JSON::ParserError => e
       Rails.logger.error "Failed to parse response JSON: #{e.message}"
       response.body
@@ -108,7 +109,8 @@ class ApiService
     def parse_validation_errors(response)
       body = parse_response_body(response)
       return {} unless body.is_a?(Hash)
-      
+
+      # Now that parse_response_body returns symbolized keys, we can use symbol access
       body[:errors] || body[:error] || {}
     rescue
       {}

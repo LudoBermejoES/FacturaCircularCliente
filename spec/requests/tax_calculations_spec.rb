@@ -54,7 +54,7 @@ RSpec.describe 'TaxCalculations', type: :request do
            params: { invoice_id: 1 },
            headers: { 'Accept' => 'application/json' }
       
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       result = JSON.parse(response.body)
       expect(result['valid']).to be_falsey
       expect(result['errors']).to include('Validation service error')

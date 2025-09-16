@@ -30,16 +30,11 @@ class InvoiceSeriesService < ApiService
     end
     
     # Delete an invoice series
-    def delete(id, token:)
+    def destroy(id, token:)
       delete("/invoice_series/#{id}", token: token)
       true
-    rescue ApiError => e
+    rescue ApiService::ApiError => e
       raise e
-    end
-    
-    # Alias for backward compatibility
-    def destroy(id, token:)
-      delete(id, token: token)
     end
     
     # Activate a series

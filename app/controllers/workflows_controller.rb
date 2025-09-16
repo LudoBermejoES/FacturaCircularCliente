@@ -1,6 +1,6 @@
 class WorkflowsController < ApplicationController
   before_action :authenticate_user!
-  before_action :load_invoice
+  before_action :load_invoice, except: [:bulk_transition]
   before_action :load_history, only: [:show]
   
   def show
@@ -86,7 +86,15 @@ class WorkflowsController < ApplicationController
       end
 
     rescue ApiService::ValidationError => e
-      flash[:error] = "Validation error: #{e.errors.join(', ')}"
+      error_message = case e.errors
+                      when Array
+                        e.errors.join(', ')
+                      when Hash
+                        e.errors.values.flatten.join(', ')
+                      else
+                        e.message
+                      end
+      flash[:error] = "Validation error: #{error_message}"
     rescue ApiService::ApiError => e
       flash[:error] = "Failed to update invoices: #{e.message}"
     end
@@ -98,10 +106,12 @@ class WorkflowsController < ApplicationController
   
   def load_invoice
     @invoice = InvoiceService.find(params[:invoice_id], token: current_user_token)
-  rescue ApiService::NotFoundError
-    redirect_to invoices_path, alert: "Invoice not found"
   rescue ApiService::ApiError => e
-    handle_api_error(e, redirect_path: invoices_path)
+    if e.message.include?("not found") || e.message.include?("Not found")
+      redirect_to invoices_path, alert: "Invoice not found"
+    else
+      handle_api_error(e, redirect_path: invoices_path)
+    end
   end
   
   def load_history

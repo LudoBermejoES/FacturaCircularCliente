@@ -56,11 +56,11 @@ class CompanyContactsController < ApplicationController
       @contact = contact_params
       @errors = e.errors
       flash.now[:alert] = 'There were errors creating the contact.'
-      render :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_content
     rescue ApiService::ApiError => e
       @contact = contact_params
       flash.now[:alert] = "Error creating contact: #{e.message}"
-      render :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_content
     end
   end
   
@@ -80,10 +80,10 @@ class CompanyContactsController < ApplicationController
     rescue ApiService::ValidationError => e
       @errors = e.errors
       flash.now[:alert] = 'There were errors updating the contact.'
-      render :edit, status: :unprocessable_entity
+      render :edit, status: :unprocessable_content
     rescue ApiService::ApiError => e
       flash.now[:alert] = "Error updating contact: #{e.message}"
-      render :edit, status: :unprocessable_entity
+      render :edit, status: :unprocessable_content
     end
   end
   

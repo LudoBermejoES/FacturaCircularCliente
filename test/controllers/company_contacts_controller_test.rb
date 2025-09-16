@@ -113,7 +113,7 @@ class CompanyContactsControllerTest < ActionDispatch::IntegrationTest
       company_contact: { name: "", email: "invalid" } 
     }
     
-    assert_response :unprocessable_entity
+    assert_response :unprocessable_content
     assert_select "h3", text: "There were errors with your submission:"
   end
 

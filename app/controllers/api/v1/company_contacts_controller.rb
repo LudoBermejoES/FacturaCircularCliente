@@ -15,7 +15,7 @@ class Api::V1::CompanyContactsController < ApplicationController
         end
       }
     rescue ApiService::ApiError => e
-      render json: { error: e.message }, status: :unprocessable_entity
+      render json: { error: e.message }, status: :unprocessable_content
     rescue => e
       render json: { error: "Unexpected error: #{e.message}" }, status: :internal_server_error
     end

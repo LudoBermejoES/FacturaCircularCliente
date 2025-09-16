@@ -64,7 +64,7 @@ RSpec.describe CompanyContactsService, type: :service do
       let(:params) { { page: 2, per_page: 10 } }
 
       before do
-        stub_request(:get, "#{base_url}/companies/#{company_id}/company_contacts")
+        stub_request(:get, "#{base_url}/companies/#{company_id}/contacts")
           .with(
             headers: { 'Authorization' => "Bearer #{token}" },
             query: params
@@ -75,14 +75,14 @@ RSpec.describe CompanyContactsService, type: :service do
       it 'passes pagination parameters' do
         CompanyContactsService.all(company_id: company_id, token: token, params: params)
         
-        expect(WebMock).to have_requested(:get, "#{base_url}/companies/#{company_id}/company_contacts")
+        expect(WebMock).to have_requested(:get, "#{base_url}/companies/#{company_id}/contacts")
           .with(query: params)
       end
     end
 
     context 'when API returns error' do
       before do
-        stub_request(:get, "#{base_url}/companies/#{company_id}/company_contacts")
+        stub_request(:get, "#{base_url}/companies/#{company_id}/contacts")
           .with(headers: { 'Authorization' => "Bearer #{token}" })
           .to_return(status: 401, body: { error: 'Unauthorized' }.to_json)
       end
@@ -115,7 +115,7 @@ RSpec.describe CompanyContactsService, type: :service do
       end
 
       before do
-        stub_request(:get, "#{base_url}/companies/#{company_id}/company_contacts/#{contact_id}")
+        stub_request(:get, "#{base_url}/companies/#{company_id}/contacts/#{contact_id}")
           .with(headers: { 'Authorization' => "Bearer #{token}" })
           .to_return(status: 200, body: contact_response.to_json)
       end
@@ -133,7 +133,7 @@ RSpec.describe CompanyContactsService, type: :service do
 
     context 'when contact not found' do
       before do
-        stub_request(:get, "#{base_url}/companies/#{company_id}/company_contacts/#{contact_id}")
+        stub_request(:get, "#{base_url}/companies/#{company_id}/contacts/#{contact_id}")
           .with(headers: { 'Authorization' => "Bearer #{token}" })
           .to_return(status: 404, body: { error: 'Contact not found' }.to_json)
       end
@@ -178,7 +178,7 @@ RSpec.describe CompanyContactsService, type: :service do
       end
 
       before do
-        stub_request(:post, "#{base_url}/companies/#{company_id}/company_contacts")
+        stub_request(:post, "#{base_url}/companies/#{company_id}/contacts")
           .with(headers: { 'Authorization' => "Bearer #{token}" })
           .to_return(status: 201, body: created_contact.to_json)
       end
@@ -195,7 +195,7 @@ RSpec.describe CompanyContactsService, type: :service do
 
     context 'when validation fails' do
       before do
-        stub_request(:post, "#{base_url}/companies/#{company_id}/company_contacts")
+        stub_request(:post, "#{base_url}/companies/#{company_id}/contacts")
           .with(headers: { 'Authorization' => "Bearer #{token}" })
           .to_return(
             status: 422,
@@ -250,7 +250,7 @@ RSpec.describe CompanyContactsService, type: :service do
       end
 
       before do
-        stub_request(:put, "#{base_url}/companies/#{company_id}/company_contacts/#{contact_id}")
+        stub_request(:put, "#{base_url}/companies/#{company_id}/contacts/#{contact_id}")
           .with(headers: { 'Authorization' => "Bearer #{token}" })
           .to_return(status: 200, body: updated_contact.to_json)
       end
@@ -266,7 +266,7 @@ RSpec.describe CompanyContactsService, type: :service do
 
     context 'when contact not found' do
       before do
-        stub_request(:put, "#{base_url}/companies/#{company_id}/company_contacts/#{contact_id}")
+        stub_request(:put, "#{base_url}/companies/#{company_id}/contacts/#{contact_id}")
           .with(headers: { 'Authorization' => "Bearer #{token}" })
           .to_return(status: 404, body: { error: 'Contact not found' }.to_json)
       end
@@ -281,7 +281,7 @@ RSpec.describe CompanyContactsService, type: :service do
   describe '.destroy' do
     context 'when successful' do
       before do
-        stub_request(:delete, "#{base_url}/companies/#{company_id}/company_contacts/#{contact_id}")
+        stub_request(:delete, "#{base_url}/companies/#{company_id}/contacts/#{contact_id}")
           .with(headers: { 'Authorization' => "Bearer #{token}" })
           .to_return(status: 204, body: '')
       end
@@ -290,13 +290,13 @@ RSpec.describe CompanyContactsService, type: :service do
         result = CompanyContactsService.destroy(company_id: company_id, id: contact_id, token: token)
         
         expect(result).to be_nil
-        expect(WebMock).to have_requested(:delete, "#{base_url}/companies/#{company_id}/company_contacts/#{contact_id}")
+        expect(WebMock).to have_requested(:delete, "#{base_url}/companies/#{company_id}/contacts/#{contact_id}")
       end
     end
 
     context 'when contact has dependencies' do
       before do
-        stub_request(:delete, "#{base_url}/companies/#{company_id}/company_contacts/#{contact_id}")
+        stub_request(:delete, "#{base_url}/companies/#{company_id}/contacts/#{contact_id}")
           .with(headers: { 'Authorization' => "Bearer #{token}" })
           .to_return(
             status: 422,
@@ -330,7 +330,7 @@ RSpec.describe CompanyContactsService, type: :service do
       end
 
       before do
-        stub_request(:post, "#{base_url}/companies/#{company_id}/company_contacts/#{contact_id}/activate")
+        stub_request(:post, "#{base_url}/companies/#{company_id}/contacts/#{contact_id}/activate")
           .with(headers: { 'Authorization' => "Bearer #{token}" })
           .to_return(status: 200, body: activated_contact.to_json)
       end
@@ -339,13 +339,13 @@ RSpec.describe CompanyContactsService, type: :service do
         result = CompanyContactsService.activate(company_id: company_id, id: contact_id, token: token)
         
         expect(result[:data][:attributes][:is_active]).to eq(true)
-        expect(WebMock).to have_requested(:post, "#{base_url}/companies/#{company_id}/company_contacts/#{contact_id}/activate")
+        expect(WebMock).to have_requested(:post, "#{base_url}/companies/#{company_id}/contacts/#{contact_id}/activate")
       end
     end
 
     context 'when contact not found' do
       before do
-        stub_request(:post, "#{base_url}/companies/#{company_id}/company_contacts/#{contact_id}/activate")
+        stub_request(:post, "#{base_url}/companies/#{company_id}/contacts/#{contact_id}/activate")
           .with(headers: { 'Authorization' => "Bearer #{token}" })
           .to_return(status: 404, body: { error: 'Contact not found' }.to_json)
       end
@@ -376,7 +376,7 @@ RSpec.describe CompanyContactsService, type: :service do
       end
 
       before do
-        stub_request(:post, "#{base_url}/companies/#{company_id}/company_contacts/#{contact_id}/deactivate")
+        stub_request(:post, "#{base_url}/companies/#{company_id}/contacts/#{contact_id}/deactivate")
           .with(headers: { 'Authorization' => "Bearer #{token}" })
           .to_return(status: 200, body: deactivated_contact.to_json)
       end
@@ -385,7 +385,7 @@ RSpec.describe CompanyContactsService, type: :service do
         result = CompanyContactsService.deactivate(company_id: company_id, id: contact_id, token: token)
         
         expect(result[:data][:attributes][:is_active]).to eq(false)
-        expect(WebMock).to have_requested(:post, "#{base_url}/companies/#{company_id}/company_contacts/#{contact_id}/deactivate")
+        expect(WebMock).to have_requested(:post, "#{base_url}/companies/#{company_id}/contacts/#{contact_id}/deactivate")
       end
     end
   end
@@ -424,7 +424,7 @@ RSpec.describe CompanyContactsService, type: :service do
       end
 
       before do
-        stub_request(:get, "#{base_url}/companies/#{company_id}/company_contacts")
+        stub_request(:get, "#{base_url}/companies/#{company_id}/contacts")
           .with(
             headers: { 'Authorization' => "Bearer #{token}" },
             query: { filter: { is_active: true } }
@@ -445,14 +445,14 @@ RSpec.describe CompanyContactsService, type: :service do
       it 'filters for active contacts only' do
         CompanyContactsService.active_contacts(company_id: company_id, token: token)
         
-        expect(WebMock).to have_requested(:get, "#{base_url}/companies/#{company_id}/company_contacts")
+        expect(WebMock).to have_requested(:get, "#{base_url}/companies/#{company_id}/contacts")
           .with(query: { filter: { is_active: true } })
       end
     end
 
     context 'when no active contacts exist' do
       before do
-        stub_request(:get, "#{base_url}/companies/#{company_id}/company_contacts")
+        stub_request(:get, "#{base_url}/companies/#{company_id}/contacts")
           .with(
             headers: { 'Authorization' => "Bearer #{token}" },
             query: { filter: { is_active: true } }
@@ -471,7 +471,7 @@ RSpec.describe CompanyContactsService, type: :service do
   describe 'edge cases and error handling' do
     context 'when token is nil' do
       before do
-        stub_request(:get, "#{base_url}/companies/#{company_id}/company_contacts")
+        stub_request(:get, "#{base_url}/companies/#{company_id}/contacts")
           .to_return(status: 401, body: { error: 'Authentication failed. Please login again.' }.to_json)
       end
 
@@ -483,7 +483,7 @@ RSpec.describe CompanyContactsService, type: :service do
 
     context 'when company_id is nil' do
       before do
-        stub_request(:get, "#{base_url}/companies//company_contacts")
+        stub_request(:get, "#{base_url}/companies//contacts")
           .to_return(status: 401, body: { error: 'Authentication failed. Please login again.' }.to_json)
       end
 
@@ -495,7 +495,7 @@ RSpec.describe CompanyContactsService, type: :service do
 
     context 'when network error occurs' do
       before do
-        stub_request(:get, "#{base_url}/companies/#{company_id}/company_contacts")
+        stub_request(:get, "#{base_url}/companies/#{company_id}/contacts")
           .to_raise(Net::ReadTimeout)
       end
 
@@ -507,7 +507,7 @@ RSpec.describe CompanyContactsService, type: :service do
 
     context 'when server returns 500' do
       before do
-        stub_request(:get, "#{base_url}/companies/#{company_id}/company_contacts")
+        stub_request(:get, "#{base_url}/companies/#{company_id}/contacts")
           .to_return(status: 500, body: { error: 'Internal server error' }.to_json)
       end
 
@@ -519,7 +519,7 @@ RSpec.describe CompanyContactsService, type: :service do
 
     context 'when response data is malformed' do
       before do
-        stub_request(:get, "#{base_url}/companies/#{company_id}/company_contacts")
+        stub_request(:get, "#{base_url}/companies/#{company_id}/contacts")
           .with(headers: { 'Authorization' => "Bearer #{token}" })
           .to_return(status: 200, body: { invalid: 'response' }.to_json)
       end

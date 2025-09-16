@@ -84,7 +84,7 @@ RSpec.describe 'Companies', type: :request do
         )
         
         post companies_path, params: { company: { name: '', tax_id: '', email: '' } }
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(response.body).to include("New Company")
         expect(response.body).to include("form")
       end

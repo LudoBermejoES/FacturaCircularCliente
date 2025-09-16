@@ -102,7 +102,7 @@ class UserCompaniesControllerTest < ActionDispatch::IntegrationTest
       role: "viewer"
     }
     
-    assert_response :unprocessable_entity
+    assert_response :unprocessable_content
     assert_equal "There were errors inviting the user.", flash.now[:alert]
   end
 

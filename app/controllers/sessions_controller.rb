@@ -37,12 +37,12 @@ class SessionsController < ApplicationController
       end
     else
       flash.now[:alert] = 'Invalid email or password'
-      render :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_content
     end
   rescue ApiService::AuthenticationError => e
     Rails.logger.error "DEBUG: Authentication error in create: #{e.message}"
     flash.now[:alert] = 'Invalid credentials'
-    render :new, status: :unprocessable_entity
+    render :new, status: :unprocessable_content
   rescue => e
     Rails.logger.error "DEBUG: Exception in create: #{e.message}"
     Rails.logger.error "DEBUG: Backtrace: #{e.backtrace.first(3).join('\n')}"

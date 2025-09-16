@@ -194,12 +194,10 @@ RSpec.feature 'Invoice Form Interactions', type: :feature do
   end
 
   scenario 'User submits form with minimal data and gets successful creation' do
-    # Mock successful creation
+    # Mock successful creation using service mocking
     invoice_response = build(:invoice_response, id: 123)
-    # Ensure the response has the structure the controller expects
-    response_body = { data: invoice_response }.to_json
-    stub_request(:post, 'http://albaranes-api:3000/api/v1/invoices')
-      .to_return(status: 201, body: response_body)
+    response_data = { data: invoice_response }
+    allow(InvoiceService).to receive(:create).and_return(response_data)
     
     visit new_invoice_path
     
@@ -236,20 +234,47 @@ RSpec.feature 'Invoice Form Interactions', type: :feature do
       ]
     )
 
-    # Mock fetching existing invoice
-    stub_request(:get, "http://albaranes-api:3000/api/v1/invoices/123")
-      .to_return(status: 200, body: existing_invoice.to_json)
+    # Mock all dependencies for edit action (ID comes as string from params)
+    allow(InvoiceService).to receive(:find).with("123", token: anything).and_return(existing_invoice)
+    allow(InvoiceService).to receive(:update).with(123, anything, token: anything).and_return(existing_invoice)
 
-    # Mock update
-    stub_request(:put, "http://albaranes-api:3000/api/v1/invoices/123")
-      .to_return(status: 200, body: existing_invoice.to_json)
+    # Mock load_companies (needed by before_action)
+    allow(CompanyService).to receive(:all).with(token: anything, params: anything).and_return({
+      companies: [company, build(:company_response, name: 'Another Company')],
+      total: 2
+    })
+
+    # Mock load_invoice_series (needed by before_action)
+    allow(InvoiceSeriesService).to receive(:all).and_return([
+      { id: 1, series_code: 'FC', series_name: 'Facturas Comerciales', year: Date.current.year, is_active: true }
+    ])
+
+    # Mock CompanyContactsService (needed by load_all_company_contacts)
+    # Customer companies come from contacts, not companies
+    allow(CompanyContactsService).to receive(:all).with(
+      company_id: anything, token: anything, params: anything
+    ).and_return({
+      contacts: [company, build(:company_response, name: 'Another Company')],
+      total: 2
+    })
+    allow(CompanyContactsService).to receive(:active_contacts).and_return([])
+
+    # Mock permission check
+    allow_any_instance_of(ApplicationController).to receive(:can?).and_return(true)
 
     visit edit_invoice_path(123)
     
+    # Debug: Check what page we actually got
+    puts "DEBUG: Current path: #{current_path}"
+    puts "DEBUG: Page title: #{page.title}"
+    puts "DEBUG: Page has 'Edit Invoice'?: #{page.has_content?('Edit Invoice')}"
+    puts "DEBUG: Page has error content?: #{page.has_css?('.exception-message')}"
+
     expect(page).to have_content('Edit Invoice')
-    
-    # Verify form is pre-populated
-    expect(page).to have_field('invoice_invoice_number', with: 'INV-EXISTING')
+
+    # The invoice number field is readonly, so we need to check by CSS selector instead of field name
+    invoice_number_field = find('input[data-invoice-form-target="invoiceNumber"]')
+    expect(invoice_number_field.value).to eq('INV-EXISTING')
     expect(page).to have_select('invoice_seller_party_id', options: ['Select seller company', 'Test Company', 'Another Company'])
     expect(page).to have_select('invoice_buyer_party_id', options: ['Select customer company', 'Test Company', 'Another Company'])
     # For form inputs, we need to check by placeholders or actual field contents

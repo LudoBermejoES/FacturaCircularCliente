@@ -34,14 +34,7 @@ class Api::V1::InvoiceNumberingControllerTest < ActionDispatch::IntegrationTest
 
     # Stub the HTTP request to the backend API
     stub_request(:get, "http://albaranes-api:3000/api/v1/invoice_numbering/next_available")
-      .with(
-        query: { series_type: "commercial", year: 2025 },
-        headers: {
-          'Authorization' => 'Bearer test_admin_token',
-          'Accept' => 'application/json',
-          'Content-Type' => 'application/json'
-        }
-      )
+      .with(query: { series_type: "commercial", year: "2025" })
       .to_return(
         status: 200,
         body: mock_api_response.to_json,

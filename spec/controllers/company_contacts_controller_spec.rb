@@ -142,7 +142,7 @@ RSpec.describe CompanyContactsController, type: :controller do
       it 'sets flash alert and renders new template' do
         post :create, params: { company_id: company_id, company_contact: contact_params }
         
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(response).to render_template(:new)
         expect(flash.now[:alert]).to eq('There were errors creating the contact.')
         expect(assigns(:contact)).to be_a(ActionController::Parameters)
@@ -160,7 +160,7 @@ RSpec.describe CompanyContactsController, type: :controller do
       it 'sets flash alert and renders new template' do
         post :create, params: { company_id: company_id, company_contact: contact_params }
         
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(response).to render_template(:new)
         expect(flash.now[:alert]).to eq('Error creating contact: API error')
         expect(assigns(:contact)).to be_a(ActionController::Parameters)
@@ -263,7 +263,7 @@ RSpec.describe CompanyContactsController, type: :controller do
       it 'sets flash alert and renders edit template' do
         patch :update, params: { company_id: company_id, id: contact_id, company_contact: contact_params }
         
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(response).to render_template(:edit)
         expect(flash.now[:alert]).to eq('There were errors updating the contact.')
         expect(assigns(:errors)).to eq({ name: ['is required'] })
@@ -280,7 +280,7 @@ RSpec.describe CompanyContactsController, type: :controller do
       it 'sets flash alert and renders edit template' do
         patch :update, params: { company_id: company_id, id: contact_id, company_contact: contact_params }
         
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(response).to render_template(:edit)
         expect(flash.now[:alert]).to eq('Error updating contact: API error')
       end

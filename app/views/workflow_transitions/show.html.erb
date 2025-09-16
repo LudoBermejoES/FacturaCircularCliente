@@ -1,0 +1,222 @@
+<% content_for :title, @page_title %>
+
+<div class="max-w-4xl mx-auto px-6 py-8">
+  <!-- Header -->
+  <div class="flex justify-between items-center mb-6">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900"><%= @workflow_transition['display_name'] %></h1>
+      <p class="text-gray-600 mt-1">Transition details for <%= @workflow_definition['name'] %> workflow</p>
+    </div>
+    <div class="flex gap-3">
+      <%= link_to workflow_definition_workflow_transitions_path(@workflow_definition['id']),
+                  class: "btn-secondary" do %>
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Back to Transitions
+      <% end %>
+      <%= link_to edit_workflow_definition_workflow_transition_path(@workflow_definition['id'], @workflow_transition['id']),
+                  class: "btn-primary" do %>
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+        Edit Transition
+      <% end %>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <!-- Transition Properties -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-900">Transition Properties</h2>
+      </div>
+      <div class="px-6 py-4 space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Display Name</label>
+            <p class="mt-1 text-sm text-gray-900"><%= @workflow_transition['display_name'] %></p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">System Name</label>
+            <p class="mt-1 text-sm text-gray-900 font-mono bg-gray-50 px-2 py-1 rounded">
+              <%= @workflow_transition['name'] %>
+            </p>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Comment Requirement</label>
+          <div class="mt-1 flex items-center">
+            <% if @workflow_transition['requires_comment'] %>
+              <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+              <span class="text-sm text-green-700 font-medium">Comment Required</span>
+            <% else %>
+              <div class="w-2 h-2 bg-gray-300 rounded-full mr-2"></div>
+              <span class="text-sm text-gray-500">Comment Optional</span>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- State Flow -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-900">State Flow</h2>
+      </div>
+      <div class="px-6 py-4">
+        <div class="flex items-center justify-between">
+          <!-- From State -->
+          <div class="text-center">
+            <% if @from_state %>
+              <div class="w-16 h-16 rounded-full mx-auto mb-2 flex items-center justify-center text-white font-medium"
+                   style="background-color: <%= @from_state['color'] || '#6B7280' %>">
+                <%= @from_state['display_name'].split.map(&:first).join.upcase %>
+              </div>
+              <div class="text-sm font-medium text-gray-900"><%= @from_state['display_name'] %></div>
+              <div class="text-xs text-gray-500 font-mono"><%= @from_state['name'] %></div>
+            <% else %>
+              <div class="w-16 h-16 rounded-full mx-auto mb-2 flex items-center justify-center text-white font-medium bg-gray-400">
+                ?
+              </div>
+              <div class="text-sm font-medium text-gray-500">Any State</div>
+              <div class="text-xs text-gray-500">from_state_id: <%= @workflow_transition['from_state_id'] %></div>
+            <% end %>
+          </div>
+
+          <!-- Arrow -->
+          <div class="flex-1 flex items-center justify-center">
+            <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+            </svg>
+          </div>
+
+          <!-- To State -->
+          <div class="text-center">
+            <% if @to_state %>
+              <div class="w-16 h-16 rounded-full mx-auto mb-2 flex items-center justify-center text-white font-medium"
+                   style="background-color: <%= @to_state['color'] || '#6B7280' %>">
+                <%= @to_state['display_name'].split.map(&:first).join.upcase %>
+              </div>
+              <div class="text-sm font-medium text-gray-900"><%= @to_state['display_name'] %></div>
+              <div class="text-xs text-gray-500 font-mono"><%= @to_state['name'] %></div>
+            <% else %>
+              <div class="w-16 h-16 rounded-full mx-auto mb-2 flex items-center justify-center text-white font-medium bg-gray-400">
+                ?
+              </div>
+              <div class="text-sm font-medium text-gray-500">State Not Found</div>
+              <div class="text-xs text-gray-500">to_state_id: <%= @workflow_transition['to_state_id'] %></div>
+            <% end %>
+          </div>
+        </div>
+
+        <!-- Transition Label -->
+        <div class="text-center mt-4 pt-4 border-t border-gray-200">
+          <div class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            <%= @workflow_transition['display_name'] %>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Required Roles -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-900">Required Roles</h2>
+      </div>
+      <div class="px-6 py-4">
+        <% if @workflow_transition['required_roles'] && @workflow_transition['required_roles'].any? %>
+          <div class="space-y-2">
+            <% @workflow_transition['required_roles'].each do |role| %>
+              <div class="flex items-center p-3 bg-blue-50 rounded-lg">
+                <div class="flex-shrink-0">
+                  <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+                <div class="ml-3">
+                  <p class="text-sm font-medium text-blue-900"><%= role.humanize %></p>
+                  <p class="text-sm text-blue-600">Users with this role can execute this transition</p>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <div class="text-center py-6 text-gray-500">
+            <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            <p class="text-sm font-medium">No Role Requirements</p>
+            <p class="text-sm text-gray-400">Any authenticated user can execute this transition</p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Guard Conditions -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-900">Guard Conditions</h2>
+      </div>
+      <div class="px-6 py-4">
+        <% if @workflow_transition['guard_conditions'] && @workflow_transition['guard_conditions'].any? %>
+          <div class="space-y-2">
+            <% @workflow_transition['guard_conditions'].each do |condition| %>
+              <div class="flex items-center p-3 bg-purple-50 rounded-lg">
+                <div class="flex-shrink-0">
+                  <svg class="w-5 h-5 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+                <div class="ml-3">
+                  <p class="text-sm font-medium text-purple-900 font-mono"><%= condition %></p>
+                  <p class="text-sm text-purple-600">Condition must be met for transition to be available</p>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <div class="text-center py-6 text-gray-500">
+            <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p class="text-sm font-medium">No Guard Conditions</p>
+            <p class="text-sm text-gray-400">This transition is always available (subject to role requirements)</p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="mt-8 flex justify-between items-center pt-6 border-t border-gray-200">
+    <div class="flex gap-3">
+      <%= link_to edit_workflow_definition_workflow_transition_path(@workflow_definition['id'], @workflow_transition['id']),
+                  class: "btn-primary" do %>
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+        Edit Transition
+      <% end %>
+    </div>
+
+    <div>
+      <%= link_to workflow_definition_workflow_transition_path(@workflow_definition['id'], @workflow_transition['id']),
+                  method: :delete,
+                  data: {
+                    confirm: "Are you sure you want to delete the '#{@workflow_transition['display_name']}' transition? This action cannot be undone and may break existing workflows.",
+                    turbo_method: :delete
+                  },
+                  class: "btn-danger" do %>
+        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+        </svg>
+        Delete Transition
+      <% end %>
+    </div>
+  </div>
+</div>

@@ -10,12 +10,15 @@ class CompanyContactsService < ApiService
           attributes = contact_data[:attributes] || {}
           {
             id: contact_data[:id].to_i,
-            name: attributes[:name],
+            name: attributes[:person_name] || attributes[:name],
             legal_name: attributes[:legal_name],
             tax_id: attributes[:tax_id],
             email: attributes[:email],
-            phone: attributes[:phone],
+            phone: attributes[:telephone] || attributes[:phone],
             website: attributes[:website],
+            first_surname: attributes[:first_surname],
+            second_surname: attributes[:second_surname],
+            contact_details: attributes[:contact_details],
             is_active: attributes[:is_active]
           }
         end
@@ -35,12 +38,15 @@ class CompanyContactsService < ApiService
         attributes = response[:data][:attributes] || {}
         {
           id: response[:data][:id].to_i,
-          name: attributes[:name],
+          name: attributes[:person_name] || attributes[:name],
           legal_name: attributes[:legal_name],
           tax_id: attributes[:tax_id],
           email: attributes[:email],
-          phone: attributes[:phone],
+          phone: attributes[:telephone] || attributes[:phone],
           website: attributes[:website],
+          first_surname: attributes[:first_surname],
+          second_surname: attributes[:second_surname],
+          contact_details: attributes[:contact_details],
           is_active: attributes[:is_active]
         }
       else
@@ -132,10 +138,10 @@ class CompanyContactsService < ApiService
           attributes = contact_data[:attributes] || {}
           {
             id: contact_data[:id].to_i,
-            name: attributes[:name],
+            name: attributes[:person_name] || attributes[:name],
             email: attributes[:email],
-            phone: attributes[:phone],
-            full_name: "#{attributes[:name]} #{attributes[:legal_name]}".strip
+            phone: attributes[:telephone] || attributes[:phone],
+            full_name: "#{attributes[:person_name] || attributes[:name]} #{attributes[:first_surname]} #{attributes[:second_surname]}".strip.squeeze(' ')
           }
         end
       end

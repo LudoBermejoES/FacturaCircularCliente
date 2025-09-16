@@ -1,0 +1,61 @@
+<% content_for :title, @page_title %>
+
+<div class="max-w-4xl mx-auto px-6 py-8">
+  <!-- Header -->
+  <div class="mb-6">
+    <div class="flex items-center text-sm text-gray-500 mb-2">
+      <%= link_to "Workflow Definitions", workflow_definitions_path, class: "hover:text-gray-700" %>
+      <svg class="w-4 h-4 mx-2" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+      </svg>
+      <%= link_to @workflow_definition['name'], workflow_definition_path(@workflow_definition['id']), class: "hover:text-gray-700" %>
+      <svg class="w-4 h-4 mx-2" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+      </svg>
+      <%= link_to "States", workflow_definition_workflow_states_path(@workflow_definition['id']), class: "hover:text-gray-700" %>
+      <svg class="w-4 h-4 mx-2" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+      </svg>
+      <span>New State</span>
+    </div>
+    <h1 class="text-3xl font-bold text-gray-900"><%= @page_title %></h1>
+    <p class="text-gray-600 mt-1">Create a new state for the <%= @workflow_definition['name'] %> workflow</p>
+  </div>
+
+  <!-- Form Card -->
+  <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+    <div class="px-6 py-4 border-b border-gray-200">
+      <h2 class="text-lg font-semibold text-gray-900">State Configuration</h2>
+      <p class="text-sm text-gray-600 mt-1">Configure the properties and behavior of your new workflow state</p>
+    </div>
+    <div class="px-6 py-6">
+      <%= render 'form',
+                 form_url: workflow_definition_workflow_states_path(@workflow_definition['id']),
+                 submit_label: 'Create State' %>
+    </div>
+  </div>
+
+  <!-- Help Section -->
+  <div class="mt-8 bg-blue-50 rounded-lg p-6">
+    <div class="flex">
+      <div class="flex-shrink-0">
+        <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+        </svg>
+      </div>
+      <div class="ml-3">
+        <h3 class="text-sm font-medium text-blue-800">State Configuration Tips</h3>
+        <div class="mt-2 text-sm text-blue-700">
+          <ul class="list-disc list-inside space-y-1">
+            <li><strong>Display Name:</strong> Use clear, business-friendly names like "Pending Manager Review"</li>
+            <li><strong>System Name:</strong> Keep it simple and consistent like "pending_manager_review"</li>
+            <li><strong>Categories:</strong> Group similar states for better organization and reporting</li>
+            <li><strong>Position:</strong> Lower numbers appear first in lists and workflows</li>
+            <li><strong>Initial State:</strong> Only one state should typically be marked as initial</li>
+            <li><strong>Final State:</strong> Mark states where the workflow process ends</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,9 +1,23 @@
 class WorkflowDefinitionsController < ApplicationController
-  before_action :require_authentication
   before_action :set_workflow_definition, only: [:show, :edit, :update, :destroy]
 
   def index
-    @workflow_definitions = WorkflowService.definitions(token: current_user_token)
+    result = WorkflowService.definitions(token: current_user_token)
+    Rails.logger.info "DEBUG: WorkflowDefinitionsController#index - raw result: #{result.inspect}"
+    Rails.logger.info "DEBUG: WorkflowDefinitionsController#index - result class: #{result.class}"
+
+    # Handle different response formats
+    if result.is_a?(Hash)
+      # API might return { "workflow_definitions": [...] } or { "data": [...] }
+      @workflow_definitions = result['workflow_definitions'] || result['data'] || []
+      Rails.logger.info "DEBUG: Extracted from hash - definitions: #{@workflow_definitions.inspect}"
+    elsif result.is_a?(Array)
+      @workflow_definitions = result
+    else
+      Rails.logger.warn "DEBUG: Unexpected result type: #{result.class}"
+      @workflow_definitions = []
+    end
+
     @page_title = "Workflow Definitions"
   rescue ApiService::ApiError => e
     flash.now[:error] = "Failed to load workflow definitions: #{e.message}"

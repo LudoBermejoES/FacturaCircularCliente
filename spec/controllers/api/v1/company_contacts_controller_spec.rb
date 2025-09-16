@@ -91,7 +91,7 @@ RSpec.describe Api::V1::CompanyContactsController, type: :controller do
       it 'returns API error with unprocessable entity status' do
         get :index, params: { company_id: company_id }
         
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(response.content_type).to eq('application/json; charset=utf-8')
         
         json_response = JSON.parse(response.body)
@@ -108,7 +108,7 @@ RSpec.describe Api::V1::CompanyContactsController, type: :controller do
       it 'returns validation error with unprocessable entity status' do
         get :index, params: { company_id: company_id }
         
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(response.content_type).to eq('application/json; charset=utf-8')
         
         json_response = JSON.parse(response.body)

@@ -187,7 +187,7 @@ RSpec.describe InvoicesController, type: :controller do
         post :create, params: { invoice: invoice_params }
         
         expect(response).to render_template(:new)
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(flash.now[:alert]).to eq('Please fix the errors below.')
         
         # Check that company contacts are reloaded
@@ -218,7 +218,7 @@ RSpec.describe InvoicesController, type: :controller do
         post :create, params: { invoice: invoice_params }
         
         expect(response).to render_template(:new)
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(flash.now[:alert]).to eq('Error creating invoice: Server error')
         
         expect(assigns(:company_contacts)).to be_present
@@ -342,7 +342,7 @@ RSpec.describe InvoicesController, type: :controller do
         patch :update, params: { id: invoice_id, invoice: updated_params }
         
         expect(response).to render_template(:edit)
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(flash.now[:alert]).to eq('Please fix the errors below.')
         
         expect(assigns(:company_contacts)).to be_present
@@ -363,7 +363,7 @@ RSpec.describe InvoicesController, type: :controller do
         patch :update, params: { id: invoice_id, invoice: updated_params }
         
         expect(response).to render_template(:edit)
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(flash.now[:alert]).to eq('Error updating invoice: Invoice is frozen')
         
         expect(assigns(:company_contacts)).to be_present

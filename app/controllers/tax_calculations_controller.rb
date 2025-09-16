@@ -52,7 +52,7 @@ class TaxCalculationsController < ApplicationController
     end
   rescue ApiService::ApiError => e
     respond_to do |format|
-      format.json { render json: { valid: false, errors: [e.message] }, status: :unprocessable_entity }
+      format.json { render json: { valid: false, errors: [e.message] }, status: :unprocessable_content }
       format.turbo_stream do
         render turbo_stream: turbo_stream.replace(
           "validation_result",

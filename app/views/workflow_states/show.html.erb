@@ -1,0 +1,162 @@
+<% content_for :title, @page_title %>
+
+<div class="max-w-4xl mx-auto px-6 py-8">
+  <!-- Header -->
+  <div class="flex justify-between items-center mb-6">
+    <div class="flex items-center">
+      <div class="w-6 h-6 rounded-full mr-4" style="background-color: <%= @workflow_state['color'] || '#6B7280' %>"></div>
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900"><%= @workflow_state['display_name'] %></h1>
+        <p class="text-gray-600 mt-1">State details for <%= @workflow_definition['name'] %> workflow</p>
+      </div>
+    </div>
+    <div class="flex gap-3">
+      <%= link_to workflow_definition_workflow_states_path(@workflow_definition['id']),
+                  class: "btn-secondary" do %>
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Back to States
+      <% end %>
+      <%= link_to edit_workflow_definition_workflow_state_path(@workflow_definition['id'], @workflow_state['id']),
+                  class: "btn-primary" do %>
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+        Edit State
+      <% end %>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <!-- State Properties -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-900">State Properties</h2>
+      </div>
+      <div class="px-6 py-4 space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Display Name</label>
+            <p class="mt-1 text-sm text-gray-900"><%= @workflow_state['display_name'] %></p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">System Name</label>
+            <p class="mt-1 text-sm text-gray-900 font-mono bg-gray-50 px-2 py-1 rounded">
+              <%= @workflow_state['name'] %>
+            </p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Category</label>
+            <p class="mt-1 text-sm text-gray-900 capitalize">
+              <%= @workflow_state['category'].presence || 'None' %>
+            </p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Position</label>
+            <p class="mt-1 text-sm text-gray-900"><%= @workflow_state['position'] || 0 %></p>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Color</label>
+          <div class="mt-1 flex items-center">
+            <div class="w-6 h-6 rounded-md mr-3 border border-gray-300"
+                 style="background-color: <%= @workflow_state['color'] || '#6B7280' %>"></div>
+            <span class="text-sm text-gray-900 font-mono">
+              <%= @workflow_state['color'] || '#6B7280' %>
+            </span>
+          </div>
+        </div>
+
+        <div class="flex gap-4">
+          <div class="flex items-center">
+            <% if @workflow_state['is_initial'] %>
+              <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+              <span class="text-sm text-green-700 font-medium">Initial State</span>
+            <% else %>
+              <div class="w-2 h-2 bg-gray-300 rounded-full mr-2"></div>
+              <span class="text-sm text-gray-500">Not Initial State</span>
+            <% end %>
+          </div>
+          <div class="flex items-center">
+            <% if @workflow_state['is_final'] %>
+              <div class="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+              <span class="text-sm text-blue-700 font-medium">Final State</span>
+            <% else %>
+              <div class="w-2 h-2 bg-gray-300 rounded-full mr-2"></div>
+              <span class="text-sm text-gray-500">Not Final State</span>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- State Usage -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-900">State Usage</h2>
+      </div>
+      <div class="px-6 py-4 space-y-4">
+        <div class="text-center py-8 text-gray-500">
+          <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+          <p class="text-sm">Usage statistics would be displayed here</p>
+          <p class="text-xs text-gray-400 mt-1">This feature requires analytics integration</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Related Transitions -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 lg:col-span-2">
+      <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+        <h2 class="text-lg font-semibold text-gray-900">Related Transitions</h2>
+        <%= link_to workflow_definition_workflow_transitions_path(@workflow_definition['id']),
+                    class: "text-blue-600 hover:text-blue-700 text-sm font-medium" do %>
+          View All Transitions →
+        <% end %>
+      </div>
+      <div class="px-6 py-4">
+        <div class="text-center py-8 text-gray-500">
+          <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          <p class="text-sm">Transitions involving this state would be displayed here</p>
+          <p class="text-xs text-gray-400 mt-1">This requires loading transition data</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="mt-8 flex justify-between items-center pt-6 border-t border-gray-200">
+    <div class="flex gap-3">
+      <%= link_to edit_workflow_definition_workflow_state_path(@workflow_definition['id'], @workflow_state['id']),
+                  class: "btn-primary" do %>
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+        Edit State
+      <% end %>
+    </div>
+
+    <div>
+      <%= link_to workflow_definition_workflow_state_path(@workflow_definition['id'], @workflow_state['id']),
+                  method: :delete,
+                  data: {
+                    confirm: "Are you sure you want to delete the '#{@workflow_state['display_name']}' state? This action cannot be undone and may break existing workflows.",
+                    turbo_method: :delete
+                  },
+                  class: "btn-danger" do %>
+        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+        </svg>
+        Delete State
+      <% end %>
+    </div>
+  </div>
+</div>

@@ -15,7 +15,7 @@
   <% end %>
 
   <div class="bg-white shadow-sm rounded-lg p-6">
-    <%= form_with local: true, url: workflow_definition_path(@workflow_definition['id']), method: :patch, model: @workflow_definition, class: "space-y-6" do |form| %>
+    <%= form_with local: true, url: workflow_definition_path(@workflow_definition['id']), method: :patch, class: "space-y-6" do |form| %>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <%= form.label :name, class: "block text-sm font-medium text-gray-700" %>

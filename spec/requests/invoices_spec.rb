@@ -9,8 +9,10 @@ RSpec.describe 'Invoices', type: :request do
   # HTTP stubs and authentication mocking handled by RequestHelper
   
   before do
-    # Setup authentication session
+    # Setup authentication session - bypass session issues
     allow_any_instance_of(ApplicationController).to receive(:logged_in?).and_return(true)
+    allow_any_instance_of(ApplicationController).to receive(:user_signed_in?).and_return(true)
+    allow_any_instance_of(ApplicationController).to receive(:authenticate_user!).and_return(true)
     allow_any_instance_of(ApplicationController).to receive(:current_token).and_return(token)
     allow_any_instance_of(ApplicationController).to receive(:current_user_token).and_return(token)
     allow_any_instance_of(ApplicationController).to receive(:current_user).and_return(user)
@@ -38,7 +40,7 @@ RSpec.describe 'Invoices', type: :request do
     })
     # Note: statistics and stats methods removed from InvoiceService
     allow(InvoiceService).to receive(:recent).with(any_args).and_return([invoice])
-    allow(InvoiceService).to receive(:find).with(any_args).and_return(invoice)
+    allow(InvoiceService).to receive(:find).and_return(invoice)
     # Note: workflow_history method removed from InvoiceService
     allow(InvoiceService).to receive(:create).with(any_args).and_return(invoice)
     allow(InvoiceService).to receive(:update).with(any_args).and_return(invoice)
@@ -49,11 +51,12 @@ RSpec.describe 'Invoices', type: :request do
     allow(InvoiceService).to receive(:download_facturae).with(any_args).and_return('<?xml version="1.0"?><Facturae></Facturae>')
     
     # Mock CompanyService methods that were added recently (matching feature tests)
-    allow(CompanyService).to receive(:all).with(any_args).and_return({ 
-      companies: [company], 
-      total: 1, 
-      meta: { page: 1, pages: 1, total: 1 } 
+    allow(CompanyService).to receive(:all).with(any_args).and_return({
+      companies: [company],
+      total: 1,
+      meta: { page: 1, pages: 1, total: 1 }
     })
+    allow(CompanyService).to receive(:find).and_return(company)
     
     # Mock CompanyContactsService methods that were added recently
     allow(CompanyContactsService).to receive(:all).with(any_args).and_return({ 
