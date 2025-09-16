@@ -45,8 +45,13 @@ class WorkflowDefinitionsController < ApplicationController
   end
 
   def create
+    # Override company_id with current user's company to ensure data integrity
+    params_with_company = workflow_definition_params.merge(
+      company_id: current_company_id
+    )
+
     @workflow_definition = WorkflowService.create_definition(
-      workflow_definition_params,
+      params_with_company,
       token: current_user_token
     )
     flash[:success] = "Workflow definition created successfully"
@@ -63,9 +68,14 @@ class WorkflowDefinitionsController < ApplicationController
   end
 
   def update
+    # Override company_id with current user's company to ensure data integrity
+    params_with_company = workflow_definition_params.merge(
+      company_id: current_company_id
+    )
+
     @workflow_definition = WorkflowService.update_definition(
       @workflow_definition['id'],
-      workflow_definition_params,
+      params_with_company,
       token: current_user_token
     )
     flash[:success] = "Workflow definition updated successfully"
@@ -95,8 +105,9 @@ class WorkflowDefinitionsController < ApplicationController
   end
 
   def workflow_definition_params
+    # Note: company_display is ignored as it's just for display
     params.require(:workflow_definition).permit(
-      :name, :description, :company_id, :is_active, :is_global
+      :name, :code, :description, :company_id, :is_active, :is_default
     )
   end
 end

@@ -6,10 +6,11 @@ class WorkflowDefinitionsControllerTest < ActionDispatch::IntegrationTest
     @workflow_definition = {
       'id' => 1,
       'name' => 'Standard Invoice Workflow',
+      'code' => 'STANDARD_INVOICE',
       'description' => 'Default workflow for invoice processing',
       'company_id' => 1,
       'is_active' => true,
-      'is_global' => false
+      'is_default' => false
     }
     @states = [
       {
@@ -98,10 +99,101 @@ class WorkflowDefinitionsControllerTest < ActionDispatch::IntegrationTest
     post workflow_definitions_url, params: {
       workflow_definition: {
         name: 'New Workflow',
+        code: 'NEW_WORKFLOW',
         description: 'Test workflow',
         company_id: 1,
         is_active: true,
-        is_global: false
+        is_default: false
+      }
+    }
+
+    assert_redirected_to workflow_definition_path(new_definition['id'])
+    assert_equal 'Workflow definition created successfully', flash[:success]
+  end
+
+  test "should override company_id with current user's company on create" do
+    new_definition = @workflow_definition.merge('id' => 2, 'company_id' => 1)
+
+    # Mock the service call to verify parameters passed
+    create_params = nil
+    WorkflowService.stubs(:create_definition).with do |params, options|
+      create_params = params
+      true
+    end.returns(new_definition)
+
+    # User tries to set a different company_id (999) but it should be overridden
+    post workflow_definitions_url, params: {
+      workflow_definition: {
+        name: 'New Workflow',
+        code: 'NEW_WORKFLOW',
+        description: 'Test workflow',
+        company_id: 999,  # This should be ignored
+        is_active: true,
+        is_default: false
+      }
+    }
+
+    assert_redirected_to workflow_definition_path(new_definition['id'])
+    assert_equal 'Workflow definition created successfully', flash[:success]
+
+    # Verify that the company_id was overridden with current user's company
+    assert_equal 1, create_params['company_id'], "Company ID should be overridden to current user's company"
+    assert_equal 'New Workflow', create_params['name']
+    assert_equal 'NEW_WORKFLOW', create_params['code'], "Code field should be passed through correctly"
+  end
+
+  test "should include code field in workflow definition creation" do
+    new_definition = @workflow_definition.merge('id' => 3, 'code' => 'TEST_CODE_WF')
+
+    # Mock the service call to verify parameters passed including code
+    create_params = nil
+    WorkflowService.stubs(:create_definition).with do |params, options|
+      create_params = params
+      true
+    end.returns(new_definition)
+
+    post workflow_definitions_url, params: {
+      workflow_definition: {
+        name: 'Code Test Workflow',
+        code: 'TEST_CODE_WF',
+        description: 'Testing code field handling',
+        company_id: 1,
+        is_active: true,
+        is_default: true
+      }
+    }
+
+    assert_redirected_to workflow_definition_path(new_definition['id'])
+    assert_equal 'Workflow definition created successfully', flash[:success]
+
+    # Verify all fields including code are passed correctly
+    assert_equal 'Code Test Workflow', create_params['name']
+    assert_equal 'TEST_CODE_WF', create_params['code']
+    assert_equal 'Testing code field handling', create_params['description']
+    assert_equal 1, create_params['company_id']
+    # Form checkboxes submit as string values
+    assert_not_nil create_params['is_active']
+    assert_not_nil create_params['is_default']
+  end
+
+  test "should create workflow definition with nil company_id when user has no company" do
+    # Set up session with no company
+    setup_authenticated_session(role: "admin", company_id: nil)
+
+    new_definition = @workflow_definition.merge('id' => 2, 'company_id' => nil)
+
+    WorkflowService.expects(:create_definition).with do |params, token: nil|
+      params['company_id'] == nil && params['name'] == 'New Workflow'
+    end.returns(new_definition)
+
+    post workflow_definitions_url, params: {
+      workflow_definition: {
+        name: 'New Workflow',
+        code: 'NEW_WORKFLOW',
+        description: 'Test workflow',
+        company_id: 999,  # This should be overridden to nil
+        is_active: true,
+        is_default: false
       }
     }
 
@@ -140,6 +232,57 @@ class WorkflowDefinitionsControllerTest < ActionDispatch::IntegrationTest
     patch workflow_definition_url(@workflow_definition['id']), params: {
       workflow_definition: {
         name: 'Updated Workflow'
+      }
+    }
+
+    assert_redirected_to workflow_definition_path(@workflow_definition['id'])
+    assert_equal 'Workflow definition updated successfully', flash[:success]
+  end
+
+  test "should override company_id with current user's company on update" do
+    updated_definition = @workflow_definition.merge('name' => 'Updated Workflow', 'company_id' => 1)
+    WorkflowService.stubs(:definition).returns(@workflow_definition)
+
+    # Mock the service call to verify parameters passed
+    update_params = nil
+    WorkflowService.stubs(:update_definition).with do |id, params, options|
+      update_params = params if id == @workflow_definition['id']
+      true
+    end.returns(updated_definition)
+
+    # User tries to change company_id (999) but it should be overridden
+    patch workflow_definition_url(@workflow_definition['id']), params: {
+      workflow_definition: {
+        name: 'Updated Workflow',
+        company_id: 999  # This should be ignored
+      }
+    }
+
+    assert_redirected_to workflow_definition_path(@workflow_definition['id'])
+    assert_equal 'Workflow definition updated successfully', flash[:success]
+
+    # Verify that the company_id was overridden with current user's company
+    assert_equal 1, update_params['company_id'], "Company ID should be overridden to current user's company"
+    assert_equal 'Updated Workflow', update_params['name']
+  end
+
+  test "should update workflow definition with nil company_id when user has no company" do
+    # Set up session with no company
+    setup_authenticated_session(role: "admin", company_id: nil)
+
+    updated_definition = @workflow_definition.merge('name' => 'Updated Workflow', 'company_id' => nil)
+    WorkflowService.stubs(:definition).returns(@workflow_definition)
+
+    WorkflowService.expects(:update_definition).with do |id, params, token: nil|
+      id == @workflow_definition['id'] &&
+      params['company_id'] == nil &&
+      params['name'] == 'Updated Workflow'
+    end.returns(updated_definition)
+
+    patch workflow_definition_url(@workflow_definition['id']), params: {
+      workflow_definition: {
+        name: 'Updated Workflow',
+        company_id: 999  # This should be overridden to nil
       }
     }
 

@@ -15,7 +15,7 @@
   <% end %>
 
   <div class="bg-white shadow-sm rounded-lg p-6">
-    <%= form_with local: true, url: workflow_definitions_path, class: "space-y-6" do |form| %>
+    <%= form_with scope: :workflow_definition, local: true, url: workflow_definitions_path, class: "space-y-6" do |form| %>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <%= form.label :name, class: "block text-sm font-medium text-gray-700" %>
@@ -25,11 +25,23 @@
         </div>
 
         <div>
-          <%= form.label :company_id, "Company (Optional)", class: "block text-sm font-medium text-gray-700" %>
-          <%= form.number_field :company_id,
+          <%= form.label :code, class: "block text-sm font-medium text-gray-700" %>
+          <%= form.text_field :code,
               class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500",
-              placeholder: "Leave empty for global workflow" %>
-          <p class="mt-1 text-sm text-gray-500">Leave empty to create a global workflow template</p>
+              placeholder: "e.g. INVOICE_STANDARD" %>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-6">
+        <div>
+          <%= form.label :company_id, "Company", class: "block text-sm font-medium text-gray-700" %>
+          <%= form.text_field :company_display,
+              value: current_company&.dig('name') || current_company&.dig(:name) || "No company assigned",
+              readonly: true,
+              class: "mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm text-gray-700",
+              placeholder: "Company will be automatically assigned" %>
+          <%= form.hidden_field :company_id, value: current_company_id %>
+          <p class="mt-1 text-sm text-gray-500">Automatically assigned from your current company</p>
         </div>
       </div>
 
@@ -50,10 +62,10 @@
         </div>
 
         <div class="flex items-center">
-          <%= form.check_box :is_global,
+          <%= form.check_box :is_default,
               class: "h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" %>
-          <%= form.label :is_global, "Global Template", class: "ml-2 block text-sm text-gray-900" %>
-          <p class="mt-1 text-sm text-gray-500">Make this a global workflow template</p>
+          <%= form.label :is_default, "Default Template", class: "ml-2 block text-sm text-gray-900" %>
+          <p class="mt-1 text-sm text-gray-500">Make this the default workflow template</p>
         </div>
       </div>
 
