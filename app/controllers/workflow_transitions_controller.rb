@@ -44,7 +44,7 @@ class WorkflowTransitionsController < ApplicationController
     )
 
     flash[:success] = 'Workflow transition created successfully'
-    redirect_to workflow_definition_workflow_transition_path(@workflow_definition['id'], @workflow_transition['id'])
+    redirect_to workflow_definition_workflow_transitions_path(@workflow_definition['id'])
   rescue ApiService::ApiError => e
     @workflow_states = WorkflowService.definition_states(@workflow_definition['id'], token: current_user_token)
     @workflow_transition = workflow_transition_params.merge({
@@ -78,7 +78,7 @@ class WorkflowTransitionsController < ApplicationController
     )
 
     flash[:success] = 'Workflow transition updated successfully'
-    redirect_to workflow_definition_workflow_transition_path(@workflow_definition['id'], @workflow_transition['id'])
+    redirect_to workflow_definition_workflow_transitions_path(@workflow_definition['id'])
   rescue ApiService::ApiError => e
     @workflow_states = WorkflowService.definition_states(@workflow_definition['id'], token: current_user_token)
     flash.now[:error] = "Failed to update workflow transition: #{e.message}"
@@ -110,7 +110,7 @@ class WorkflowTransitionsController < ApplicationController
   end
 
   def set_workflow_transition
-    @workflow_transition = WorkflowService.transition(
+    @workflow_transition = WorkflowService.get_transition(
       @workflow_definition['id'],
       params[:id],
       token: current_user_token

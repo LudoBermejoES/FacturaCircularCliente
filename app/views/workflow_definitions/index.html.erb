@@ -65,24 +65,24 @@
                     </div>
                     <div class="ml-4">
                       <div class="text-sm font-medium text-gray-900">
-                        <%= link_to definition['name'], workflow_definition_path(definition['id']),
+                        <%= link_to definition[:name] || definition['name'], workflow_definition_path(definition[:id] || definition['id']),
                             class: "text-blue-600 hover:text-blue-800" %>
                       </div>
                       <div class="text-sm text-gray-500">
-                        <%= definition['description'] %>
+                        <%= definition[:description] || definition['description'] %>
                       </div>
                     </div>
                   </div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  <% if definition['company_id'] %>
-                    Company #<%= definition['company_id'] %>
+                  <% if definition[:company_id] || definition['company_id'] %>
+                    Company #<%= definition[:company_id] || definition['company_id'] %>
                   <% else %>
                     <span class="text-gray-500">N/A</span>
                   <% end %>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <% if definition['is_active'] %>
+                  <% if definition[:is_active] || definition['is_active'] %>
                     <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
                       Active
                     </span>
@@ -93,7 +93,7 @@
                   <% end %>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <% if definition['is_global'] %>
+                  <% if definition[:is_default] || definition['is_default'] || definition[:is_global] || definition['is_global'] %>
                     <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
                       Global
                     </span>
@@ -104,24 +104,24 @@
                   <% end %>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  v<%= definition['version'] || '1' %>
+                  v<%= definition[:version] || definition['version'] || '1' %>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div class="flex justify-end space-x-2">
-                    <%= link_to workflow_definition_path(definition['id']),
+                    <%= link_to workflow_definition_path(definition[:id] || definition['id']),
                         class: "text-blue-600 hover:text-blue-800" do %>
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                       </svg>
                     <% end %>
-                    <%= link_to edit_workflow_definition_path(definition['id']),
+                    <%= link_to edit_workflow_definition_path(definition[:id] || definition['id']),
                         class: "text-gray-600 hover:text-gray-800" do %>
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                       </svg>
                     <% end %>
-                    <%= link_to workflow_definition_path(definition['id']),
+                    <%= link_to workflow_definition_path(definition[:id] || definition['id']),
                         method: :delete,
                         class: "text-red-600 hover:text-red-800",
                         confirm: "Are you sure you want to delete this workflow definition?" do %>

@@ -3,18 +3,21 @@ class WorkflowStatesController < ApplicationController
   before_action :set_workflow_state, only: [:show, :edit, :update, :destroy]
 
   def index
-    @workflow_states = WorkflowService.definition_states(@workflow_definition['id'], token: current_user_token)
-    @page_title = "Workflow States - #{@workflow_definition['name']}"
+    workflow_id = @workflow_definition[:id] || @workflow_definition['id']
+    @workflow_states = WorkflowService.definition_states(workflow_id, token: current_user_token)
+    @page_title = "Workflow States - #{@workflow_definition[:name] || @workflow_definition['name']}"
   rescue ApiService::ApiError => e
     flash[:error] = "Failed to load workflow states: #{e.message}"
     @workflow_states = []
   end
 
   def show
-    @page_title = "#{@workflow_state['name'].capitalize} State"
+    state_name = @workflow_state[:name] || @workflow_state['name']
+    @page_title = "#{state_name.capitalize} State"
   rescue ApiService::ApiError => e
     flash[:error] = "Workflow state not found: #{e.message}"
-    redirect_to workflow_definition_workflow_states_path(@workflow_definition['id'])
+    workflow_id = @workflow_definition[:id] || @workflow_definition['id']
+    redirect_to workflow_definition_workflow_states_path(workflow_id)
   end
 
   def new
@@ -78,13 +81,15 @@ class WorkflowStatesController < ApplicationController
   end
 
   def destroy
-    WorkflowService.delete_state(@workflow_definition['id'], @workflow_state['id'], token: current_user_token)
+    workflow_id = @workflow_definition[:id] || @workflow_definition['id']
+    state_id = @workflow_state[:id] || @workflow_state['id']
+    WorkflowService.delete_state(workflow_id, state_id, token: current_user_token)
 
     flash[:success] = 'Workflow state deleted successfully'
-    redirect_to workflow_definition_workflow_states_path(@workflow_definition['id'])
+    redirect_to workflow_definition_workflow_states_path(workflow_id)
   rescue ApiService::ApiError => e
     flash[:error] = "Failed to delete workflow state: #{e.message}"
-    redirect_to workflow_definition_workflow_states_path(@workflow_definition['id'])
+    redirect_to workflow_definition_workflow_states_path(workflow_id)
   end
 
   private
@@ -97,14 +102,16 @@ class WorkflowStatesController < ApplicationController
   end
 
   def set_workflow_state
+    workflow_id = @workflow_definition[:id] || @workflow_definition['id']
     @workflow_state = WorkflowService.state(
-      @workflow_definition['id'],
+      workflow_id,
       params[:id],
       token: current_user_token
     )
   rescue ApiService::ApiError => e
     flash[:error] = "Workflow state not found: #{e.message}"
-    redirect_to workflow_definition_workflow_states_path(@workflow_definition['id'])
+    workflow_id = @workflow_definition[:id] || @workflow_definition['id']
+    redirect_to workflow_definition_workflow_states_path(workflow_id)
   end
 
   def workflow_state_params

@@ -177,16 +177,203 @@ RSpec.describe WorkflowService do
         ]
       }
     end
-    
+
     before do
       stub_request(:get, "http://albaranes-api:3000/api/v1/workflow_definitions/#{definition_id}/workflow_transitions")
         .with(headers: { 'Authorization' => "Bearer #{token}" })
         .to_return(status: 200, body: transitions_response.to_json)
     end
-    
+
     it 'returns transitions for workflow definition' do
       result = described_class.definition_transitions(definition_id, token: token)
       expect(result).to eq(transitions_response.deep_symbolize_keys)
+    end
+  end
+
+  describe '.create_definition' do
+    let(:params) do
+      {
+        name: 'New Workflow',
+        code: 'NEW_WF',
+        description: 'Test workflow',
+        company_id: 1,
+        is_active: true,
+        is_default: false
+      }
+    end
+
+    let(:expected_body) do
+      {
+        data: {
+          attributes: params
+        }
+      }
+    end
+
+    let(:create_response) do
+      {
+        id: 1,
+        name: params[:name],
+        code: params[:code],
+        description: params[:description],
+        company_id: params[:company_id],
+        is_active: params[:is_active],
+        is_default: params[:is_default],
+        created_at: '2024-01-01T12:00:00Z',
+        updated_at: '2024-01-01T12:00:00Z'
+      }
+    end
+
+    before do
+      stub_request(:post, 'http://albaranes-api:3000/api/v1/workflow_definitions')
+        .with(
+          headers: { 'Authorization' => "Bearer #{token}" },
+          body: expected_body.to_json
+        )
+        .to_return(status: 201, body: create_response.to_json)
+    end
+
+    it 'creates workflow definition with JSON API format' do
+      result = described_class.create_definition(params, token: token)
+      expect(result).to eq(create_response.deep_symbolize_keys)
+    end
+
+    it 'sends data wrapped in JSON API structure' do
+      described_class.create_definition(params, token: token)
+      expect(WebMock).to have_requested(:post, 'http://albaranes-api:3000/api/v1/workflow_definitions')
+        .with(body: expected_body.to_json)
+    end
+
+    it 'includes all parameters in attributes' do
+      described_class.create_definition(params, token: token)
+      expect(WebMock).to have_requested(:post, 'http://albaranes-api:3000/api/v1/workflow_definitions')
+        .with { |req|
+          body = JSON.parse(req.body)
+          body['data']['attributes']['name'] == 'New Workflow' &&
+          body['data']['attributes']['code'] == 'NEW_WF' &&
+          body['data']['attributes']['description'] == 'Test workflow' &&
+          body['data']['attributes']['company_id'] == 1 &&
+          body['data']['attributes']['is_active'] == true &&
+          body['data']['attributes']['is_default'] == false
+        }
+    end
+  end
+
+  describe '.update_definition' do
+    let(:definition_id) { 1 }
+    let(:params) do
+      {
+        name: 'Updated Workflow',
+        description: 'Updated description',
+        is_active: false
+      }
+    end
+
+    let(:expected_body) do
+      {
+        data: {
+          attributes: params
+        }
+      }
+    end
+
+    let(:update_response) do
+      {
+        id: definition_id,
+        name: params[:name],
+        code: 'EXISTING_CODE',
+        description: params[:description],
+        company_id: 1,
+        is_active: params[:is_active],
+        is_default: false,
+        updated_at: '2024-01-02T12:00:00Z'
+      }
+    end
+
+    before do
+      stub_request(:put, "http://albaranes-api:3000/api/v1/workflow_definitions/#{definition_id}")
+        .with(
+          headers: { 'Authorization' => "Bearer #{token}" },
+          body: expected_body.to_json
+        )
+        .to_return(status: 200, body: update_response.to_json)
+    end
+
+    it 'updates workflow definition with JSON API format' do
+      result = described_class.update_definition(definition_id, params, token: token)
+      expect(result).to eq(update_response.deep_symbolize_keys)
+    end
+
+    it 'sends data wrapped in JSON API structure' do
+      described_class.update_definition(definition_id, params, token: token)
+      expect(WebMock).to have_requested(:put, "http://albaranes-api:3000/api/v1/workflow_definitions/#{definition_id}")
+        .with(body: expected_body.to_json)
+    end
+
+    it 'includes only provided parameters in attributes' do
+      described_class.update_definition(definition_id, params, token: token)
+      expect(WebMock).to have_requested(:put, "http://albaranes-api:3000/api/v1/workflow_definitions/#{definition_id}")
+        .with { |req|
+          body = JSON.parse(req.body)
+          body['data']['attributes']['name'] == 'Updated Workflow' &&
+          body['data']['attributes']['description'] == 'Updated description' &&
+          body['data']['attributes']['is_active'] == false &&
+          !body['data']['attributes'].key?('code')
+        }
+    end
+  end
+
+  describe '.delete_definition' do
+    let(:definition_id) { 1 }
+
+    before do
+      stub_request(:delete, "http://albaranes-api:3000/api/v1/workflow_definitions/#{definition_id}")
+        .with(headers: { 'Authorization' => "Bearer #{token}" })
+        .to_return(status: 204, body: '')
+    end
+
+    it 'deletes workflow definition' do
+      result = described_class.delete_definition(definition_id, token: token)
+      expect(result).to be_nil
+    end
+  end
+
+  describe '.definition' do
+    let(:definition_id) { 1 }
+    let(:definition_response) do
+      {
+        id: definition_id,
+        name: 'Standard Workflow',
+        code: 'STANDARD_WF',
+        description: 'Standard workflow for invoices',
+        company_id: 1,
+        is_active: true,
+        is_default: false
+      }
+    end
+
+    before do
+      stub_request(:get, "http://albaranes-api:3000/api/v1/workflow_definitions/#{definition_id}")
+        .with(headers: { 'Authorization' => "Bearer #{token}" })
+        .to_return(status: 200, body: definition_response.to_json)
+    end
+
+    it 'returns workflow definition details' do
+      result = described_class.definition(definition_id, token: token)
+      expect(result).to eq(definition_response.deep_symbolize_keys)
+    end
+
+    it 'returns symbolized keys that work with frontend views' do
+      result = described_class.definition(definition_id, token: token)
+
+      # Test that both symbol and string key access patterns work
+      expect(result[:id]).to eq(definition_id)
+      expect(result[:name]).to eq('Standard Workflow')
+      expect(result[:is_active]).to eq(true)
+
+      # Test the specific patterns used in views
+      expect(result[:id] || result['id']).to eq(definition_id)
+      expect(result[:name] || result['name']).to eq('Standard Workflow')
     end
   end
 end

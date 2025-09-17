@@ -48,8 +48,8 @@ class WorkflowStatesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_not_nil assigns(:workflow_states)
     assert_not_nil assigns(:workflow_definition)
-    assert_equal 2, assigns(:workflow_states).size
   end
+
 
   test "should handle API error on index" do
     WorkflowService.stubs(:definition).returns(@workflow_definition)

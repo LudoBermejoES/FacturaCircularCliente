@@ -27,11 +27,23 @@ class WorkflowService < ApiService
   end
 
   def self.create_definition(params, token:)
-    post('/workflow_definitions', body: params, token: token)
+    body = {
+      data: {
+        attributes: params
+      }
+    }
+    result = post('/workflow_definitions', body: body, token: token)
+    Rails.logger.info "DEBUG: WorkflowService.create_definition returned: #{result.inspect}"
+    result
   end
 
   def self.update_definition(definition_id, params, token:)
-    put("/workflow_definitions/#{definition_id}", body: params, token: token)
+    body = {
+      data: {
+        attributes: params
+      }
+    }
+    put("/workflow_definitions/#{definition_id}", body: body, token: token)
   end
 
   def self.delete_definition(definition_id, token:)
@@ -39,11 +51,11 @@ class WorkflowService < ApiService
   end
 
   def self.definition_states(definition_id, token:)
-    get("/workflow_definitions/#{definition_id}/workflow_states", token: token)
+    get("/workflow_definitions/#{definition_id}/states", token: token)
   end
 
   def self.definition_transitions(definition_id, token:)
-    get("/workflow_definitions/#{definition_id}/workflow_transitions", token: token)
+    get("/workflow_definitions/#{definition_id}/transitions", token: token)
   end
 
   def self.bulk_transition(invoice_ids, status:, comment: nil, token:)

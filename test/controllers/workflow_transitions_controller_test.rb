@@ -98,7 +98,7 @@ class WorkflowTransitionsControllerTest < ActionDispatch::IntegrationTest
 
   test "should get show" do
     WorkflowService.stubs(:definition).returns(@workflow_definition)
-    WorkflowService.stubs(:transition).returns(@workflow_transition)
+    WorkflowService.stubs(:get_transition).returns(@workflow_transition)
     WorkflowService.stubs(:definition_states).returns(@workflow_states)
 
     get workflow_definition_workflow_transition_url(@workflow_definition['id'], @workflow_transition['id'])
@@ -110,7 +110,7 @@ class WorkflowTransitionsControllerTest < ActionDispatch::IntegrationTest
 
   test "should redirect on show with invalid transition id" do
     WorkflowService.stubs(:definition).returns(@workflow_definition)
-    WorkflowService.stubs(:transition).raises(ApiService::ApiError.new("Not found"))
+    WorkflowService.stubs(:get_transition).raises(ApiService::ApiError.new("Not found"))
 
     get workflow_definition_workflow_transition_url(@workflow_definition['id'], 999)
     assert_redirected_to workflow_definition_workflow_transitions_path(@workflow_definition['id'])
@@ -154,7 +154,7 @@ class WorkflowTransitionsControllerTest < ActionDispatch::IntegrationTest
       }
     }
 
-    assert_redirected_to workflow_definition_workflow_transition_path(@workflow_definition['id'], new_transition['id'])
+    assert_redirected_to workflow_definition_workflow_transitions_path(@workflow_definition['id'])
     assert_equal 'Workflow transition created successfully', flash[:success]
   end
 
@@ -177,7 +177,7 @@ class WorkflowTransitionsControllerTest < ActionDispatch::IntegrationTest
 
   test "should get edit" do
     WorkflowService.stubs(:definition).returns(@workflow_definition)
-    WorkflowService.stubs(:transition).returns(@workflow_transition)
+    WorkflowService.stubs(:get_transition).returns(@workflow_transition)
     WorkflowService.stubs(:definition_states).returns(@workflow_states)
 
     get edit_workflow_definition_workflow_transition_url(@workflow_definition['id'], @workflow_transition['id'])
@@ -190,7 +190,7 @@ class WorkflowTransitionsControllerTest < ActionDispatch::IntegrationTest
   test "should update workflow transition" do
     updated_transition = @workflow_transition.merge('display_name' => 'Updated Approve')
     WorkflowService.stubs(:definition).returns(@workflow_definition)
-    WorkflowService.stubs(:transition).returns(@workflow_transition)
+    WorkflowService.stubs(:get_transition).returns(@workflow_transition)
     WorkflowService.stubs(:update_transition).returns(updated_transition)
 
     patch workflow_definition_workflow_transition_url(@workflow_definition['id'], @workflow_transition['id']), params: {
@@ -199,13 +199,13 @@ class WorkflowTransitionsControllerTest < ActionDispatch::IntegrationTest
       }
     }
 
-    assert_redirected_to workflow_definition_workflow_transition_path(@workflow_definition['id'], @workflow_transition['id'])
+    assert_redirected_to workflow_definition_workflow_transitions_path(@workflow_definition['id'])
     assert_equal 'Workflow transition updated successfully', flash[:success]
   end
 
   test "should handle update errors" do
     WorkflowService.stubs(:definition).returns(@workflow_definition)
-    WorkflowService.stubs(:transition).returns(@workflow_transition)
+    WorkflowService.stubs(:get_transition).returns(@workflow_transition)
     WorkflowService.stubs(:definition_states).returns(@workflow_states)
     WorkflowService.stubs(:update_transition).raises(ApiService::ApiError.new("Validation error"))
 
@@ -222,7 +222,7 @@ class WorkflowTransitionsControllerTest < ActionDispatch::IntegrationTest
 
   test "should destroy workflow transition" do
     WorkflowService.stubs(:definition).returns(@workflow_definition)
-    WorkflowService.stubs(:transition).returns(@workflow_transition)
+    WorkflowService.stubs(:get_transition).returns(@workflow_transition)
     WorkflowService.stubs(:delete_transition).returns(true)
 
     delete workflow_definition_workflow_transition_url(@workflow_definition['id'], @workflow_transition['id'])
@@ -233,7 +233,7 @@ class WorkflowTransitionsControllerTest < ActionDispatch::IntegrationTest
 
   test "should handle destroy errors" do
     WorkflowService.stubs(:definition).returns(@workflow_definition)
-    WorkflowService.stubs(:transition).returns(@workflow_transition)
+    WorkflowService.stubs(:get_transition).returns(@workflow_transition)
     WorkflowService.stubs(:delete_transition).raises(ApiService::ApiError.new("Cannot delete"))
 
     delete workflow_definition_workflow_transition_url(@workflow_definition['id'], @workflow_transition['id'])
@@ -275,7 +275,7 @@ class WorkflowTransitionsControllerTest < ActionDispatch::IntegrationTest
       }
     }
 
-    assert_redirected_to workflow_definition_workflow_transition_path(@workflow_definition['id'], 999)
+    assert_redirected_to workflow_definition_workflow_transitions_path(@workflow_definition['id'])
   end
 
   test "should handle empty required_roles and guard_conditions arrays" do

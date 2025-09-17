@@ -78,6 +78,70 @@ class WorkflowDefinitionsControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil assigns(:transitions)
   end
 
+  test "should handle workflow definition with symbol keys" do
+    symbolized_definition = {
+      id: 1,
+      name: 'Symbol Key Workflow',
+      code: 'SYMBOL_TEST',
+      description: 'Testing symbol key access',
+      company_id: 1,
+      is_active: true,
+      is_default: false
+    }
+    symbolized_states = [
+      {
+        id: 1,
+        name: 'draft',
+        code: 'draft',
+        category: 'draft',
+        color: '#gray',
+        position: 1,
+        is_initial: true,
+        is_final: false,
+        is_error: false
+      }
+    ]
+    symbolized_transitions = [
+      {
+        id: 1,
+        name: 'Submit',
+        code: 'submit',
+        from_state_id: 1,
+        to_state_id: 2,
+        required_roles: ['user'],
+        required_permissions: []
+      }
+    ]
+
+    WorkflowService.stubs(:definition).returns(symbolized_definition)
+    WorkflowService.stubs(:definition_states).returns(symbolized_states)
+    WorkflowService.stubs(:definition_transitions).returns(symbolized_transitions)
+
+    get workflow_definition_url(symbolized_definition[:id])
+    assert_response :success
+    assert_equal symbolized_definition, assigns(:workflow_definition)
+    assert_equal symbolized_states, assigns(:states)
+    assert_equal symbolized_transitions, assigns(:transitions)
+  end
+
+  test "should handle mixed symbol and string keys" do
+    mixed_definition = {
+      'id' => 1,
+      :name => 'Mixed Keys Workflow',
+      'code' => 'MIXED_TEST',
+      :description => 'Testing mixed key access',
+      'company_id' => 1
+    }
+
+    WorkflowService.stubs(:definition).returns(mixed_definition)
+    WorkflowService.stubs(:definition_states).returns([])
+    WorkflowService.stubs(:definition_transitions).returns([])
+
+    get workflow_definition_url(mixed_definition['id'])
+    assert_response :success
+    assert_equal mixed_definition, assigns(:workflow_definition)
+  end
+
   test "should redirect on show with invalid id" do
     WorkflowService.stubs(:definition).raises(ApiService::ApiError.new("Not found"))
 
@@ -222,6 +286,24 @@ class WorkflowDefinitionsControllerTest < ActionDispatch::IntegrationTest
     get edit_workflow_definition_url(@workflow_definition['id'])
     assert_response :success
     assert_not_nil assigns(:workflow_definition)
+  end
+
+  test "should handle edit with symbol keys" do
+    symbolized_definition = {
+      id: 1,
+      name: 'Symbol Edit Test',
+      code: 'SYMBOL_EDIT',
+      description: 'Testing edit with symbol keys',
+      company_id: 1,
+      is_active: true,
+      is_default: false
+    }
+
+    WorkflowService.stubs(:definition).returns(symbolized_definition)
+
+    get edit_workflow_definition_url(symbolized_definition[:id])
+    assert_response :success
+    assert_equal symbolized_definition, assigns(:workflow_definition)
   end
 
   test "should update workflow definition" do

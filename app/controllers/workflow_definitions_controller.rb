@@ -8,8 +8,9 @@ class WorkflowDefinitionsController < ApplicationController
 
     # Handle different response formats
     if result.is_a?(Hash)
-      # API might return { "workflow_definitions": [...] } or { "data": [...] }
-      @workflow_definitions = result['workflow_definitions'] || result['data'] || []
+      # API might return { "workflow_definitions": [...] } or { "data": [...] } or with symbol keys
+      @workflow_definitions = result['workflow_definitions'] || result[:workflow_definitions] ||
+                             result['data'] || result[:data] || []
       Rails.logger.info "DEBUG: Extracted from hash - definitions: #{@workflow_definitions.inspect}"
     elsif result.is_a?(Array)
       @workflow_definitions = result
@@ -25,15 +26,16 @@ class WorkflowDefinitionsController < ApplicationController
   end
 
   def show
+    workflow_id = @workflow_definition[:id] || @workflow_definition['id']
     @states = WorkflowService.definition_states(
-      @workflow_definition['id'],
+      workflow_id,
       token: current_user_token
     )
     @transitions = WorkflowService.definition_transitions(
-      @workflow_definition['id'],
+      workflow_id,
       token: current_user_token
     )
-    @page_title = @workflow_definition['name']
+    @page_title = @workflow_definition[:name] || @workflow_definition['name']
   rescue ApiService::ApiError => e
     flash[:error] = "Failed to load workflow details: #{e.message}"
     redirect_to workflow_definitions_path
@@ -55,7 +57,7 @@ class WorkflowDefinitionsController < ApplicationController
       token: current_user_token
     )
     flash[:success] = "Workflow definition created successfully"
-    redirect_to workflow_definition_path(@workflow_definition['id'])
+    redirect_to workflow_definition_path(@workflow_definition[:id] || @workflow_definition['id'])
   rescue ApiService::ApiError => e
     flash.now[:error] = "Failed to create workflow definition: #{e.message}"
     @workflow_definition = workflow_definition_params
@@ -64,7 +66,7 @@ class WorkflowDefinitionsController < ApplicationController
   end
 
   def edit
-    @page_title = "Edit #{@workflow_definition['name']}"
+    @page_title = "Edit #{@workflow_definition[:name] || @workflow_definition['name']}"
   end
 
   def update
@@ -73,21 +75,23 @@ class WorkflowDefinitionsController < ApplicationController
       company_id: current_company_id
     )
 
+    workflow_id = @workflow_definition[:id] || @workflow_definition['id']
     @workflow_definition = WorkflowService.update_definition(
-      @workflow_definition['id'],
+      workflow_id,
       params_with_company,
       token: current_user_token
     )
     flash[:success] = "Workflow definition updated successfully"
-    redirect_to workflow_definition_path(@workflow_definition['id'])
+    redirect_to workflow_definition_path(@workflow_definition[:id] || @workflow_definition['id'])
   rescue ApiService::ApiError => e
     flash.now[:error] = "Failed to update workflow definition: #{e.message}"
-    @page_title = "Edit #{@workflow_definition['name']}"
+    @page_title = "Edit #{@workflow_definition[:name] || @workflow_definition['name']}"
     render :edit
   end
 
   def destroy
-    WorkflowService.delete_definition(@workflow_definition['id'], token: current_user_token)
+    workflow_id = @workflow_definition[:id] || @workflow_definition['id']
+    WorkflowService.delete_definition(workflow_id, token: current_user_token)
     flash[:success] = "Workflow definition deleted successfully"
     redirect_to workflow_definitions_path
   rescue ApiService::ApiError => e
@@ -99,6 +103,7 @@ class WorkflowDefinitionsController < ApplicationController
 
   def set_workflow_definition
     @workflow_definition = WorkflowService.definition(params[:id], token: current_user_token)
+    Rails.logger.info "DEBUG: set_workflow_definition - raw result: #{@workflow_definition.inspect}"
   rescue ApiService::ApiError => e
     flash[:error] = "Workflow definition not found"
     redirect_to workflow_definitions_path

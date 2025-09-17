@@ -139,7 +139,7 @@ module ApplicationHelper
   # Helper to add error styling to form fields
   def field_class(field_name, base_classes, errors = nil)
     classes = base_classes
-    
+
     if errors && errors[field_name.to_s]
       # Add error styling: red border and red focus ring
       classes = classes.gsub('border-gray-300', 'border-red-300')
@@ -154,7 +154,13 @@ module ApplicationHelper
         classes += ' focus:border-indigo-500'
       end
     end
-    
+
     classes
+  end
+
+  # Helper to access hash values with both symbol and string keys
+  def safe_access(hash, key)
+    return nil unless hash.is_a?(Hash)
+    hash[key.to_sym] || hash[key.to_s]
   end
 end
