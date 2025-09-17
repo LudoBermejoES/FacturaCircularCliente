@@ -3,9 +3,29 @@ class WorkflowTransitionsController < ApplicationController
   before_action :set_workflow_transition, only: [:show, :edit, :update, :destroy]
 
   def index
-    @workflow_transitions = WorkflowService.definition_transitions(@workflow_definition['id'], token: current_user_token)
-    @workflow_states = WorkflowService.definition_states(@workflow_definition['id'], token: current_user_token)
-    @page_title = "Workflow Transitions - #{@workflow_definition['name']}"
+    workflow_id = @workflow_definition[:id] || @workflow_definition['id']
+    transitions_result = WorkflowService.definition_transitions(workflow_id, token: current_user_token)
+    states_result = WorkflowService.definition_states(workflow_id, token: current_user_token)
+
+    # Handle different response formats from API for transitions
+    if transitions_result.is_a?(Hash)
+      @workflow_transitions = transitions_result['data'] || transitions_result[:data] || transitions_result['workflow_transitions'] || transitions_result[:workflow_transitions] || []
+    elsif transitions_result.is_a?(Array)
+      @workflow_transitions = transitions_result
+    else
+      @workflow_transitions = []
+    end
+
+    # Handle different response formats from API for states
+    if states_result.is_a?(Hash)
+      @workflow_states = states_result['data'] || states_result[:data] || states_result['workflow_states'] || states_result[:workflow_states] || []
+    elsif states_result.is_a?(Array)
+      @workflow_states = states_result
+    else
+      @workflow_states = []
+    end
+
+    @page_title = "Workflow Transitions - #{@workflow_definition[:name] || @workflow_definition['name']}"
   rescue ApiService::ApiError => e
     flash[:error] = "Failed to load workflow transitions: #{e.message}"
     @workflow_transitions = []
@@ -13,16 +33,39 @@ class WorkflowTransitionsController < ApplicationController
   end
 
   def show
-    @workflow_states = WorkflowService.definition_states(@workflow_definition['id'], token: current_user_token)
-    @from_state = @workflow_states.find { |state| state['id'] == @workflow_transition['from_state_id'] }
-    @to_state = @workflow_states.find { |state| state['id'] == @workflow_transition['to_state_id'] }
-    @page_title = "#{@workflow_transition['display_name']} Transition"
+    workflow_id = @workflow_definition[:id] || @workflow_definition['id']
+    result = WorkflowService.definition_states(workflow_id, token: current_user_token)
+
+    # Handle different response formats from API
+    if result.is_a?(Hash)
+      @workflow_states = result['data'] || result[:data] || result['workflow_states'] || result[:workflow_states] || []
+    elsif result.is_a?(Array)
+      @workflow_states = result
+    else
+      @workflow_states = []
+    end
+
+    @from_state = @workflow_states.find { |state| (state[:code] || state['code']) == (@workflow_transition[:from_state_code] || @workflow_transition['from_state_code']) }
+    @to_state = @workflow_states.find { |state| (state[:code] || state['code']) == (@workflow_transition[:to_state_code] || @workflow_transition['to_state_code']) }
+    @page_title = "#{@workflow_transition[:display_name] || @workflow_transition['display_name']} Transition"
   end
 
   def new
-    @workflow_states = WorkflowService.definition_states(@workflow_definition['id'], token: current_user_token)
+    workflow_id = @workflow_definition[:id] || @workflow_definition['id']
+    result = WorkflowService.definition_states(workflow_id, token: current_user_token)
+
+    # Handle different response formats from API
+    if result.is_a?(Hash)
+      @workflow_states = result['data'] || result[:data] || result['workflow_states'] || result[:workflow_states] || []
+    elsif result.is_a?(Array)
+      @workflow_states = result
+    else
+      @workflow_states = []
+    end
+
     @workflow_transition = {
       'name' => '',
+      'code' => '',
       'display_name' => '',
       'from_state_id' => '',
       'to_state_id' => '',
@@ -33,22 +76,27 @@ class WorkflowTransitionsController < ApplicationController
     @page_title = "New Workflow Transition"
   rescue ApiService::ApiError => e
     flash[:error] = "Failed to load workflow states: #{e.message}"
-    redirect_to workflow_definition_workflow_transitions_path(@workflow_definition['id'])
+    workflow_id = @workflow_definition[:id] || @workflow_definition['id']
+    redirect_to workflow_definition_workflow_transitions_path(workflow_id)
   end
 
   def create
+    workflow_id = @workflow_definition[:id] || @workflow_definition['id']
     @workflow_transition = WorkflowService.create_transition(
-      @workflow_definition['id'],
+      workflow_id,
       workflow_transition_params,
       token: current_user_token
     )
 
     flash[:success] = 'Workflow transition created successfully'
-    redirect_to workflow_definition_workflow_transitions_path(@workflow_definition['id'])
+    workflow_id = @workflow_definition[:id] || @workflow_definition['id']
+    redirect_to workflow_definition_workflow_transitions_path(workflow_id)
   rescue ApiService::ApiError => e
-    @workflow_states = WorkflowService.definition_states(@workflow_definition['id'], token: current_user_token)
+    workflow_id = @workflow_definition[:id] || @workflow_definition['id']
+    @workflow_states = WorkflowService.definition_states(workflow_id, token: current_user_token)
     @workflow_transition = workflow_transition_params.merge({
       'name' => workflow_transition_params[:name] || '',
+      'code' => workflow_transition_params[:code] || '',
       'display_name' => workflow_transition_params[:display_name] || '',
       'from_state_id' => workflow_transition_params[:from_state_id] || '',
       'to_state_id' => workflow_transition_params[:to_state_id] || '',
@@ -62,42 +110,70 @@ class WorkflowTransitionsController < ApplicationController
   end
 
   def edit
-    @workflow_states = WorkflowService.definition_states(@workflow_definition['id'], token: current_user_token)
-    @page_title = "Edit #{@workflow_transition['display_name']} Transition"
+    workflow_id = @workflow_definition[:id] || @workflow_definition['id']
+    result = WorkflowService.definition_states(workflow_id, token: current_user_token)
+
+    # Handle different response formats from API
+    if result.is_a?(Hash)
+      @workflow_states = result['data'] || result[:data] || result['workflow_states'] || result[:workflow_states] || []
+    elsif result.is_a?(Array)
+      @workflow_states = result
+    else
+      @workflow_states = []
+    end
+
+    @page_title = "Edit #{@workflow_transition[:display_name] || @workflow_transition['display_name']} Transition"
   rescue ApiService::ApiError => e
     flash[:error] = "Workflow transition not found: #{e.message}"
-    redirect_to workflow_definition_workflow_transitions_path(@workflow_definition['id'])
+    workflow_id = @workflow_definition[:id] || @workflow_definition['id']
+    redirect_to workflow_definition_workflow_transitions_path(workflow_id)
   end
 
   def update
+    workflow_id = @workflow_definition[:id] || @workflow_definition['id']
     @workflow_transition = WorkflowService.update_transition(
-      @workflow_definition['id'],
-      @workflow_transition['id'],
+      workflow_id,
+      @workflow_transition[:id] || @workflow_transition['id'],
       workflow_transition_params,
       token: current_user_token
     )
 
     flash[:success] = 'Workflow transition updated successfully'
-    redirect_to workflow_definition_workflow_transitions_path(@workflow_definition['id'])
+    workflow_id = @workflow_definition[:id] || @workflow_definition['id']
+    redirect_to workflow_definition_workflow_transitions_path(workflow_id)
   rescue ApiService::ApiError => e
-    @workflow_states = WorkflowService.definition_states(@workflow_definition['id'], token: current_user_token)
+    workflow_id = @workflow_definition[:id] || @workflow_definition['id']
+    result = WorkflowService.definition_states(workflow_id, token: current_user_token)
+
+    # Handle different response formats from API
+    if result.is_a?(Hash)
+      @workflow_states = result['data'] || result[:data] || result['workflow_states'] || result[:workflow_states] || []
+    elsif result.is_a?(Array)
+      @workflow_states = result
+    else
+      @workflow_states = []
+    end
+
     flash.now[:error] = "Failed to update workflow transition: #{e.message}"
-    @page_title = "Edit #{@workflow_transition['display_name']} Transition"
+    @page_title = "Edit #{@workflow_transition[:display_name] || @workflow_transition['display_name']} Transition"
     render :edit, status: :unprocessable_content
   end
 
   def destroy
+    workflow_id = @workflow_definition[:id] || @workflow_definition['id']
     WorkflowService.delete_transition(
-      @workflow_definition['id'],
-      @workflow_transition['id'],
+      workflow_id,
+      @workflow_transition[:id] || @workflow_transition['id'],
       token: current_user_token
     )
 
     flash[:success] = 'Workflow transition deleted successfully'
-    redirect_to workflow_definition_workflow_transitions_path(@workflow_definition['id'])
+    workflow_id = @workflow_definition[:id] || @workflow_definition['id']
+    redirect_to workflow_definition_workflow_transitions_path(workflow_id)
   rescue ApiService::ApiError => e
     flash[:error] = "Failed to delete workflow transition: #{e.message}"
-    redirect_to workflow_definition_workflow_transitions_path(@workflow_definition['id'])
+    workflow_id = @workflow_definition[:id] || @workflow_definition['id']
+    redirect_to workflow_definition_workflow_transitions_path(workflow_id)
   end
 
   private
@@ -110,21 +186,41 @@ class WorkflowTransitionsController < ApplicationController
   end
 
   def set_workflow_transition
+    workflow_id = @workflow_definition[:id] || @workflow_definition['id']
     @workflow_transition = WorkflowService.get_transition(
-      @workflow_definition['id'],
+      workflow_id,
       params[:id],
       token: current_user_token
     )
   rescue ApiService::ApiError => e
     flash[:error] = "Workflow transition not found: #{e.message}"
-    redirect_to workflow_definition_workflow_transitions_path(@workflow_definition['id'])
+    workflow_id = @workflow_definition[:id] || @workflow_definition['id']
+    redirect_to workflow_definition_workflow_transitions_path(workflow_id)
   end
 
   def workflow_transition_params
-    permitted = params.require(:workflow_transition).permit(
-      :name, :display_name, :from_state_id, :to_state_id, :requires_comment,
-      required_roles: [], guard_conditions: []
-    )
+    # Handle both nested (:workflow_transition) and flat parameter formats
+    if params[:workflow_transition].present? && params[:workflow_transition].is_a?(Hash) &&
+       params[:workflow_transition].key?(:display_name) || params[:workflow_transition].key?('display_name')
+      # Standard scoped parameters
+      permitted = params.require(:workflow_transition).permit(
+        :name, :code, :display_name, :from_state_id, :to_state_id, :requires_comment,
+        required_roles: [], guard_conditions: []
+      )
+    else
+      # Handle flat parameters (mixed with some scoped)
+      permitted = {
+        display_name: params[:display_name],
+        name: params[:name],
+        code: params[:code],
+        from_state_id: params[:from_state_id],
+        to_state_id: params[:to_state_id],
+        requires_comment: params[:requires_comment],
+        required_roles: params[:required_roles] || [],
+        guard_conditions: (params[:workflow_transition]&.dig(:guard_conditions) ||
+                           params[:workflow_transition]&.dig('guard_conditions') || [])
+      }
+    end
 
     # Convert empty strings to nil for state IDs
     permitted[:from_state_id] = nil if permitted[:from_state_id].blank?

@@ -31,15 +31,7 @@ class WorkflowStatesController < ApplicationController
   end
 
   def new
-    @workflow_state = {
-      'name' => '',
-      'code' => '',
-      'category' => '',
-      'color' => '#6B7280',
-      'position' => 1,
-      'is_initial' => false,
-      'is_final' => false
-    }
+    @workflow_state = WorkflowStateForm.new
     @page_title = "New Workflow State"
   end
 
@@ -52,24 +44,25 @@ class WorkflowStatesController < ApplicationController
     )
 
     flash[:success] = 'Workflow state created successfully'
-    redirect_to workflow_definition_workflow_state_path(workflow_id, @workflow_state[:id] || @workflow_state['id'])
+    state_id = @workflow_state[:id] || @workflow_state['id']
+    if state_id
+      redirect_to workflow_definition_workflow_state_path(workflow_id, state_id)
+    else
+      redirect_to workflow_definition_workflow_states_path(workflow_id)
+    end
   rescue ApiService::ApiError => e
-    @workflow_state = workflow_state_params.merge({
-      'name' => workflow_state_params[:name] || '',
-      'code' => workflow_state_params[:code] || '',
-      'category' => workflow_state_params[:category] || '',
-      'color' => workflow_state_params[:color] || '#6B7280',
-      'position' => workflow_state_params[:position] || 1,
-      'is_initial' => workflow_state_params[:is_initial] || false,
-      'is_final' => workflow_state_params[:is_final] || false
-    })
+    @workflow_state = WorkflowStateForm.new(workflow_state_params)
     flash.now[:error] = "Failed to create workflow state: #{e.message}"
     @page_title = "New Workflow State"
     render :new, status: :unprocessable_content
   end
 
   def edit
-    @page_title = "Edit #{@workflow_state['display_name']} State"
+    # Convert API hash response to form model for the form
+    api_state = @workflow_state
+    @original_state = api_state  # Keep original for breadcrumbs and URLs
+    @workflow_state = WorkflowStateForm.from_hash(api_state)
+    @page_title = "Edit #{api_state['display_name']} State"
   rescue ApiService::ApiError => e
     flash[:error] = "Workflow state not found: #{e.message}"
     workflow_id = @workflow_definition[:id] || @workflow_definition['id']
@@ -78,19 +71,27 @@ class WorkflowStatesController < ApplicationController
 
   def update
     workflow_id = @workflow_definition[:id] || @workflow_definition['id']
-    @workflow_state = WorkflowService.update_state(
+    original_state = @workflow_state
+    updated_state = WorkflowService.update_state(
       workflow_id,
-      @workflow_state['id'],
+      original_state['id'],
       workflow_state_params,
       token: current_user_token
     )
 
     flash[:success] = 'Workflow state updated successfully'
-    workflow_id = @workflow_definition[:id] || @workflow_definition['id']
-    redirect_to workflow_definition_workflow_state_path(workflow_id, @workflow_state[:id] || @workflow_state['id'])
+    state_id = updated_state[:id] || updated_state['id']
+    if state_id
+      redirect_to workflow_definition_workflow_state_path(workflow_id, state_id)
+    else
+      redirect_to workflow_definition_workflow_states_path(workflow_id)
+    end
   rescue ApiService::ApiError => e
+    @original_state = original_state  # Preserve original state for URLs and breadcrumbs
+    @workflow_state = WorkflowStateForm.new(workflow_state_params)
     flash.now[:error] = "Failed to update workflow state: #{e.message}"
-    @page_title = "Edit #{@workflow_state['display_name']} State"
+    display_name = (original_state && (original_state['display_name'] || original_state[:display_name])) || 'State'
+    @page_title = "Edit #{display_name}"
     render :edit, status: :unprocessable_content
   end
 
@@ -132,12 +133,12 @@ class WorkflowStatesController < ApplicationController
     # Handle both nested (:workflow_state) and flat parameter formats
     if params[:workflow_state].present?
       params.require(:workflow_state).permit(
-        :name, :code, :category, :color, :position, :is_initial, :is_final
+        :name, :code, :category, :color, :position, :is_initial, :is_final, :display_name
       )
     else
       # Handle flat parameters (current form submission format)
       params.permit(
-        :name, :code, :category, :color, :position, :is_initial, :is_final
+        :name, :code, :category, :color, :position, :is_initial, :is_final, :display_name
       )
     end
   end

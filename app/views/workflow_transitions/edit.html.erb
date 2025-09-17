@@ -8,15 +8,15 @@
       <svg class="w-4 h-4 mx-2" fill="currentColor" viewBox="0 0 20 20">
         <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
       </svg>
-      <%= link_to @workflow_definition['name'], workflow_definition_path(@workflow_definition['id']), class: "hover:text-gray-700" %>
+      <%= link_to @workflow_definition[:name] || @workflow_definition['name'], workflow_definition_path(@workflow_definition[:id] || @workflow_definition['id']), class: "hover:text-gray-700" %>
       <svg class="w-4 h-4 mx-2" fill="currentColor" viewBox="0 0 20 20">
         <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
       </svg>
-      <%= link_to "Transitions", workflow_definition_workflow_transitions_path(@workflow_definition['id']), class: "hover:text-gray-700" %>
+      <%= link_to "Transitions", workflow_definition_workflow_transitions_path(@workflow_definition[:id] || @workflow_definition['id']), class: "hover:text-gray-700" %>
       <svg class="w-4 h-4 mx-2" fill="currentColor" viewBox="0 0 20 20">
         <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
       </svg>
-      <%= link_to @workflow_transition['display_name'], workflow_definition_workflow_transition_path(@workflow_definition['id'], @workflow_transition['id']), class: "hover:text-gray-700" %>
+      <%= link_to @workflow_transition[:display_name] || @workflow_transition['display_name'], workflow_definition_workflow_transition_path(@workflow_definition[:id] || @workflow_definition['id'], @workflow_transition[:id] || @workflow_transition['id']), class: "hover:text-gray-700" %>
       <svg class="w-4 h-4 mx-2" fill="currentColor" viewBox="0 0 20 20">
         <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
       </svg>
@@ -47,13 +47,13 @@
     <div class="mt-4 flex items-center justify-between">
       <!-- Current From State -->
       <div class="text-center">
-        <% from_state = @workflow_states.find { |s| s['id'] == @workflow_transition['from_state_id'] } %>
+        <% from_state = @workflow_states.find { |s| (s[:code] || s['code']) == (@workflow_transition[:from_state_code] || @workflow_transition['from_state_code']) } %>
         <% if from_state %>
           <div class="w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center text-white font-medium"
-               style="background-color: <%= from_state['color'] || '#6B7280' %>">
-            <%= from_state['display_name'].split.map(&:first).join.upcase %>
+               style="background-color: <%= (from_state[:color] || from_state['color']) || '#6B7280' %>">
+            <%= (from_state[:display_name] || from_state['display_name']).split.map(&:first).join.upcase %>
           </div>
-          <div class="text-xs font-medium text-blue-900"><%= from_state['display_name'] %></div>
+          <div class="text-xs font-medium text-blue-900"><%= from_state[:display_name] || from_state['display_name'] %></div>
         <% else %>
           <div class="w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center text-white font-medium bg-gray-400">
             *
@@ -68,19 +68,19 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
         </svg>
         <div class="text-xs font-medium text-blue-800 bg-white px-2 py-1 rounded-full">
-          <%= @workflow_transition['display_name'] %>
+          <%= @workflow_transition[:display_name] || @workflow_transition['display_name'] %>
         </div>
       </div>
 
       <!-- Current To State -->
       <div class="text-center">
-        <% to_state = @workflow_states.find { |s| s['id'] == @workflow_transition['to_state_id'] } %>
+        <% to_state = @workflow_states.find { |s| (s[:code] || s['code']) == (@workflow_transition[:to_state_code] || @workflow_transition['to_state_code']) } %>
         <% if to_state %>
           <div class="w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center text-white font-medium"
-               style="background-color: <%= to_state['color'] || '#6B7280' %>">
-            <%= to_state['display_name'].split.map(&:first).join.upcase %>
+               style="background-color: <%= (to_state[:color] || to_state['color']) || '#6B7280' %>">
+            <%= (to_state[:display_name] || to_state['display_name']).split.map(&:first).join.upcase %>
           </div>
-          <div class="text-xs font-medium text-blue-900"><%= to_state['display_name'] %></div>
+          <div class="text-xs font-medium text-blue-900"><%= to_state[:display_name] || to_state['display_name'] %></div>
         <% else %>
           <div class="w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center text-white font-medium bg-gray-400">
             ?
@@ -99,7 +99,7 @@
     </div>
     <div class="px-6 py-6">
       <%= render 'form',
-                 form_url: workflow_definition_workflow_transition_path(@workflow_definition['id'], @workflow_transition['id']),
+                 form_url: workflow_definition_workflow_transition_path(@workflow_definition[:id] || @workflow_definition['id'], @workflow_transition[:id] || @workflow_transition['id']),
                  form_method: :patch,
                  submit_label: 'Update Transition' %>
     </div>
@@ -120,10 +120,10 @@
           </p>
         </div>
         <div class="ml-6">
-          <%= link_to workflow_definition_workflow_transition_path(@workflow_definition['id'], @workflow_transition['id']),
+          <%= link_to workflow_definition_workflow_transition_path(@workflow_definition[:id] || @workflow_definition['id'], @workflow_transition[:id] || @workflow_transition['id']),
                       method: :delete,
                       data: {
-                        confirm: "Are you sure you want to delete the '#{@workflow_transition['display_name']}' transition?\n\nThis action cannot be undone and may:\n- Remove a workflow path\n- Affect invoices that could use this transition\n- Impact workflow functionality\n\nType 'DELETE' to confirm:",
+                        confirm: "Are you sure you want to delete the '#{@workflow_transition[:display_name] || @workflow_transition['display_name']}' transition?\n\nThis action cannot be undone and may:\n- Remove a workflow path\n- Affect invoices that could use this transition\n- Impact workflow functionality\n\nType 'DELETE' to confirm:",
                         turbo_method: :delete
                       },
                       class: "btn-danger btn-sm" do %>

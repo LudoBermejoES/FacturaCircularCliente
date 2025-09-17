@@ -215,8 +215,8 @@
           <% if @transitions.any? %>
             <div class="space-y-3">
               <% @transitions.each do |transition| %>
-                <% from_state = @states.find { |s| (s[:id] || s['id']) == (transition[:from_state_id] || transition['from_state_id']) } %>
-                <% to_state = @states.find { |s| (s[:id] || s['id']) == (transition[:to_state_id] || transition['to_state_id']) } %>
+                <% from_state = @states.find { |s| (s[:code] || s['code']) == (transition[:from_state_code] || transition['from_state_code']) } %>
+                <% to_state = @states.find { |s| (s[:code] || s['code']) == (transition[:to_state_code] || transition['to_state_code']) } %>
                 <div class="border rounded-lg p-3">
                   <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-3">

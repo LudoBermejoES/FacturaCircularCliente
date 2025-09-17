@@ -16,14 +16,14 @@
       <svg class="w-4 h-4 mx-2" fill="currentColor" viewBox="0 0 20 20">
         <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
       </svg>
-      <%= link_to (@workflow_state[:display_name] || @workflow_state['display_name']), workflow_definition_workflow_state_path(@workflow_definition[:id] || @workflow_definition['id'], @workflow_state[:id] || @workflow_state['id']), class: "hover:text-gray-700" %>
+      <%= link_to ((@original_state || @workflow_state)[:display_name] || (@original_state || @workflow_state)['display_name']), workflow_definition_workflow_state_path(@workflow_definition[:id] || @workflow_definition['id'], (@original_state || @workflow_state)[:id] || (@original_state || @workflow_state)['id']), class: "hover:text-gray-700" %>
       <svg class="w-4 h-4 mx-2" fill="currentColor" viewBox="0 0 20 20">
         <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
       </svg>
       <span>Edit</span>
     </div>
     <div class="flex items-center mb-2">
-      <div class="w-6 h-6 rounded-full mr-3" style="background-color: <%= (@workflow_state[:color] || @workflow_state['color']) || '#6B7280' %>"></div>
+      <div class="w-6 h-6 rounded-full mr-3" style="background-color: <%= ((@original_state || @workflow_state)[:color] || (@original_state || @workflow_state)['color']) || '#6B7280' %>"></div>
       <h1 class="text-3xl font-bold text-gray-900"><%= @page_title %></h1>
     </div>
     <p class="text-gray-600 mt-1">Modify the properties and behavior of this workflow state</p>
@@ -37,7 +37,7 @@
     </div>
     <div class="px-6 py-6">
       <%= render 'form',
-                 form_url: workflow_definition_workflow_state_path(@workflow_definition[:id] || @workflow_definition['id'], @workflow_state[:id] || @workflow_state['id']),
+                 form_url: workflow_definition_workflow_state_path(@workflow_definition[:id] || @workflow_definition['id'], (@original_state || @workflow_state)[:id] || (@original_state || @workflow_state)['id']),
                  form_method: :patch,
                  submit_label: 'Update State' %>
     </div>
@@ -58,10 +58,10 @@
           </p>
         </div>
         <div class="ml-6">
-          <%= link_to workflow_definition_workflow_state_path(@workflow_definition[:id] || @workflow_definition['id'], @workflow_state[:id] || @workflow_state['id']),
+          <%= link_to workflow_definition_workflow_state_path(@workflow_definition[:id] || @workflow_definition['id'], (@original_state || @workflow_state)[:id] || (@original_state || @workflow_state)['id']),
                       method: :delete,
                       data: {
-                        confirm: "Are you sure you want to delete the '#{@workflow_state[:display_name] || @workflow_state['display_name']}' state?\n\nThis action cannot be undone and may:\n- Break existing workflows\n- Remove transitions that use this state\n- Affect invoices currently in this state\n\nType 'DELETE' to confirm:",
+                        confirm: "Are you sure you want to delete the '#{((@original_state || @workflow_state)[:display_name] || (@original_state || @workflow_state)['display_name'])}' state?\n\nThis action cannot be undone and may:\n- Break existing workflows\n- Remove transitions that use this state\n- Affect invoices currently in this state\n\nType 'DELETE' to confirm:",
                         turbo_method: :delete
                       },
                       class: "btn-danger btn-sm" do %>

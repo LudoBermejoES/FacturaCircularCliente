@@ -139,12 +139,13 @@ class WorkflowTransitionsControllerTest < ActionDispatch::IntegrationTest
 
   test "should create workflow transition" do
     WorkflowService.stubs(:definition).returns(@workflow_definition)
-    new_transition = @workflow_transition.merge('id' => 3, 'name' => 'review')
+    new_transition = @workflow_transition.merge('id' => 3, 'name' => 'review', 'code' => 'review')
     WorkflowService.stubs(:create_transition).returns(new_transition)
 
     post workflow_definition_workflow_transitions_url(@workflow_definition['id']), params: {
       workflow_transition: {
         name: 'review',
+        code: 'review',
         display_name: 'Send for Review',
         from_state_id: 1,
         to_state_id: 2,
@@ -250,6 +251,7 @@ class WorkflowTransitionsControllerTest < ActionDispatch::IntegrationTest
       @workflow_definition['id'],
       has_entries(
         'name' => 'test',
+        'code' => 'test_code',
         'display_name' => 'Test',
         'from_state_id' => nil, # Empty string should be converted to nil
         'to_state_id' => '2',
@@ -263,6 +265,7 @@ class WorkflowTransitionsControllerTest < ActionDispatch::IntegrationTest
     post workflow_definition_workflow_transitions_url(@workflow_definition['id']), params: {
       workflow_transition: {
         name: 'test',
+        code: 'test_code',
         display_name: 'Test',
         from_state_id: '', # Should be converted to nil
         to_state_id: '2',
@@ -293,6 +296,7 @@ class WorkflowTransitionsControllerTest < ActionDispatch::IntegrationTest
     post workflow_definition_workflow_transitions_url(@workflow_definition['id']), params: {
       workflow_transition: {
         name: 'test',
+        code: 'test',
         display_name: 'Test',
         from_state_id: '1',
         to_state_id: '2',
@@ -302,5 +306,86 @@ class WorkflowTransitionsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_response :redirect
+  end
+
+  test "should require code parameter for create" do
+    WorkflowService.stubs(:definition).returns(@workflow_definition)
+    WorkflowService.stubs(:definition_states).returns(@workflow_states)
+    WorkflowService.stubs(:create_transition).raises(ApiService::ApiError.new("Code can't be blank"))
+
+    post workflow_definition_workflow_transitions_url(@workflow_definition['id']), params: {
+      workflow_transition: {
+        name: 'test',
+        display_name: 'Test',
+        from_state_id: '1',
+        to_state_id: '2'
+        # Missing code parameter
+      }
+    }
+
+    assert_response :unprocessable_content
+    assert_template :new
+    assert_match /Failed to create workflow transition/, flash[:error]
+  end
+
+  test "should handle symbol and string keys for workflow states data" do
+    WorkflowService.stubs(:definition).returns(@workflow_definition)
+
+    # Test with Hash containing :data key (symbolized)
+    states_hash = { data: @workflow_states }
+    WorkflowService.stubs(:definition_states).returns(states_hash)
+
+    get new_workflow_definition_workflow_transition_url(@workflow_definition['id'])
+    assert_response :success
+    assert_not_nil assigns(:workflow_states)
+
+    # Test with Hash containing 'data' key (string)
+    states_hash_string = { 'data' => @workflow_states }
+    WorkflowService.stubs(:definition_states).returns(states_hash_string)
+
+    get new_workflow_definition_workflow_transition_url(@workflow_definition['id'])
+    assert_response :success
+    assert_not_nil assigns(:workflow_states)
+
+    # Test with direct array
+    WorkflowService.stubs(:definition_states).returns(@workflow_states)
+
+    get new_workflow_definition_workflow_transition_url(@workflow_definition['id'])
+    assert_response :success
+    assert_not_nil assigns(:workflow_states)
+  end
+
+  test "should handle workflow transition with all required fields" do
+    WorkflowService.stubs(:definition).returns(@workflow_definition)
+
+    complete_transition = @workflow_transition.merge({
+      'id' => 10,
+      'name' => 'complete_review',
+      'code' => 'complete_review',
+      'display_name' => 'Complete Review Process',
+      'from_state_id' => 1,
+      'to_state_id' => 2,
+      'required_roles' => ['admin', 'manager'],
+      'requires_comment' => true,
+      'guard_conditions' => ['amount > 1000', 'status == "ready"']
+    })
+
+    WorkflowService.stubs(:create_transition).returns(complete_transition)
+
+    post workflow_definition_workflow_transitions_url(@workflow_definition['id']), params: {
+      workflow_transition: {
+        name: 'complete_review',
+        code: 'complete_review',
+        display_name: 'Complete Review Process',
+        from_state_id: 1,
+        to_state_id: 2,
+        required_roles: ['admin', 'manager'],
+        requires_comment: '1',
+        guard_conditions: ['amount > 1000', 'status == "ready"']
+      }
+    }
+
+    assert_redirected_to workflow_definition_workflow_transitions_path(@workflow_definition['id'])
+    assert_equal 'Workflow transition created successfully', flash[:success]
   end
 end
