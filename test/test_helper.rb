@@ -16,6 +16,11 @@ module ActiveSupport
   end
 end
 
+# Disable parallelization for system tests to avoid Chrome session conflicts
+class ActionDispatch::SystemTestCase < ActiveSupport::TestCase
+  parallelize(workers: 1)
+end
+
 # Helper methods for authentication in integration tests
 class ActionDispatch::IntegrationTest
   def sign_in_as(user_data)

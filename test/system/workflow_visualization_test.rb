@@ -70,9 +70,7 @@ class WorkflowVisualizationTest < ApplicationSystemTestCase
       }
     ]
 
-    # Mock authentication
-    ApplicationController.any_instance.stubs(:require_authentication).returns(true)
-    ApplicationController.any_instance.stubs(:current_user_token).returns("test_token")
+    # Authentication will be handled by sign_in_for_system_test in each test
   end
 
   test "displays workflow visualization on workflow definition show page" do
@@ -80,6 +78,7 @@ class WorkflowVisualizationTest < ApplicationSystemTestCase
     WorkflowService.stubs(:definition_states).returns(@states)
     WorkflowService.stubs(:definition_transitions).returns(@transitions)
 
+    sign_in_for_system_test(role: "admin", company_id: 1)
     visit workflow_definition_path(@workflow_definition['id'])
 
     assert_text "Workflow Visualization"

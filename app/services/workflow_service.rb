@@ -11,9 +11,13 @@ class WorkflowService < ApiService
 
   def self.transition(invoice_id, status:, comment: nil, token:)
     body = {
-      status: status,
-      comment: comment
-    }.compact
+      data: {
+        attributes: {
+          status: status,
+          comment: comment
+        }.compact
+      }
+    }
 
     patch("/invoices/#{invoice_id}/status", body: body, token: token)
   end

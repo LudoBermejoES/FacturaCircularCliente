@@ -388,4 +388,205 @@ class WorkflowTransitionsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to workflow_definition_workflow_transitions_path(@workflow_definition['id'])
     assert_equal 'Workflow transition created successfully', flash[:success]
   end
+
+  test "should handle flat parameter format in workflow_transition_params" do
+    WorkflowService.stubs(:definition).returns(@workflow_definition)
+
+    # Test flat parameter format (not nested under workflow_transition)
+    # Based on the controller logic, flat parameters are only used when workflow_transition doesn't have the expected keys
+    WorkflowService.expects(:create_transition).with(
+      @workflow_definition['id'],
+      has_entries(
+        :name => 'flat_test',
+        :code => 'flat_test_code',
+        :display_name => 'Flat Test',
+        :from_state_id => '1',
+        :to_state_id => '2',
+        :required_roles => ['admin'],
+        :guard_conditions => []
+      ),
+      token: anything
+    ).returns(@workflow_transition.merge('id' => 999))
+
+    # Send flat parameters - workflow_transition should not contain display_name key to trigger flat logic
+    post workflow_definition_workflow_transitions_url(@workflow_definition['id']), params: {
+      name: 'flat_test',
+      code: 'flat_test_code',
+      display_name: 'Flat Test',
+      from_state_id: '1',
+      to_state_id: '2',
+      required_roles: ['admin'],
+      workflow_transition: { guard_conditions: [] } # No display_name key here
+    }
+
+    assert_redirected_to workflow_definition_workflow_transitions_path(@workflow_definition['id'])
+  end
+
+  test "should find from_state and to_state for show action" do
+    # Add state codes to test state finding logic
+    workflow_transition_with_codes = @workflow_transition.merge({
+      'from_state_code' => 'draft',
+      'to_state_code' => 'approved'
+    })
+
+    states_with_codes = [
+      {
+        'id' => 1,
+        'name' => 'draft',
+        'code' => 'draft',
+        'display_name' => 'Draft'
+      },
+      {
+        'id' => 2,
+        'name' => 'approved',
+        'code' => 'approved',
+        'display_name' => 'Approved'
+      }
+    ]
+
+    WorkflowService.stubs(:definition).returns(@workflow_definition)
+    WorkflowService.stubs(:get_transition).returns(workflow_transition_with_codes)
+    WorkflowService.stubs(:definition_states).returns(states_with_codes)
+
+    get workflow_definition_workflow_transition_url(@workflow_definition['id'], @workflow_transition['id'])
+
+    assert_response :success
+    assert_not_nil assigns(:from_state)
+    assert_not_nil assigns(:to_state)
+    assert_equal 'draft', assigns(:from_state)['code']
+    assert_equal 'approved', assigns(:to_state)['code']
+  end
+
+  test "should handle missing from_state and to_state codes in show action" do
+    # Test with transition that has no state codes
+    transition_without_codes = @workflow_transition.dup
+    transition_without_codes.delete('from_state_code')
+    transition_without_codes.delete('to_state_code')
+
+    # Use empty states array so find returns nil
+    empty_states = []
+
+    WorkflowService.stubs(:definition).returns(@workflow_definition)
+    WorkflowService.stubs(:get_transition).returns(transition_without_codes)
+    WorkflowService.stubs(:definition_states).returns(empty_states)
+
+    get workflow_definition_workflow_transition_url(@workflow_definition['id'], @workflow_transition['id'])
+
+    assert_response :success
+    assert_nil assigns(:from_state)
+    assert_nil assigns(:to_state)
+  end
+
+  test "should handle both hash response formats for transitions and states" do
+    WorkflowService.stubs(:definition).returns(@workflow_definition)
+
+    # Test with different hash format - 'workflow_transitions' key
+    transitions_hash = { 'workflow_transitions' => @workflow_transitions }
+    states_hash = { 'workflow_states' => @workflow_states }
+
+    WorkflowService.stubs(:definition_transitions).returns(transitions_hash)
+    WorkflowService.stubs(:definition_states).returns(states_hash)
+
+    get workflow_definition_workflow_transitions_url(@workflow_definition['id'])
+
+    assert_response :success
+    assert_equal @workflow_transitions, assigns(:workflow_transitions)
+    assert_equal @workflow_states, assigns(:workflow_states)
+  end
+
+  test "should handle invalid response formats gracefully" do
+    WorkflowService.stubs(:definition).returns(@workflow_definition)
+
+    # Test with completely invalid response format
+    WorkflowService.stubs(:definition_transitions).returns(nil)
+    WorkflowService.stubs(:definition_states).returns("invalid_string")
+
+    get workflow_definition_workflow_transitions_url(@workflow_definition['id'])
+
+    assert_response :success
+    assert_equal [], assigns(:workflow_transitions)
+    assert_equal [], assigns(:workflow_states)
+  end
+
+  test "should handle edit action API errors" do
+    WorkflowService.stubs(:definition).returns(@workflow_definition)
+    WorkflowService.stubs(:get_transition).returns(@workflow_transition)
+    WorkflowService.stubs(:definition_states).raises(ApiService::ApiError.new("States error"))
+
+    get edit_workflow_definition_workflow_transition_url(@workflow_definition['id'], @workflow_transition['id'])
+
+    assert_redirected_to workflow_definition_workflow_transitions_path(@workflow_definition['id'])
+    assert_match /Workflow transition not found/, flash[:error]
+  end
+
+  test "should preserve workflow_transition data on create failure" do
+    WorkflowService.stubs(:definition).returns(@workflow_definition)
+    WorkflowService.stubs(:definition_states).returns(@workflow_states)
+    WorkflowService.stubs(:create_transition).raises(ApiService::ApiError.new("Validation failed"))
+
+    transition_params = {
+      name: 'test_fail',
+      code: 'test_fail_code',
+      display_name: 'Test Fail',
+      from_state_id: '1',
+      to_state_id: '2',
+      required_roles: ['admin'],
+      requires_comment: '1'
+    }
+
+    post workflow_definition_workflow_transitions_url(@workflow_definition['id']), params: {
+      workflow_transition: transition_params
+    }
+
+    assert_response :unprocessable_content
+    assert_template :new
+
+    # Check that the form data is preserved
+    assigned_transition = assigns(:workflow_transition)
+    assert_equal 'test_fail', assigned_transition['name']
+    assert_equal 'test_fail_code', assigned_transition['code']
+    assert_equal 'Test Fail', assigned_transition['display_name']
+  end
+
+  test "should handle boolean conversion for requires_comment" do
+    WorkflowService.stubs(:definition).returns(@workflow_definition)
+
+    # Test different boolean formats
+    WorkflowService.expects(:create_transition).with(
+      @workflow_definition['id'],
+      has_entries('requires_comment' => 'false'),
+      token: anything
+    ).returns(@workflow_transition.merge('id' => 999))
+
+    post workflow_definition_workflow_transitions_url(@workflow_definition['id']), params: {
+      workflow_transition: {
+        name: 'bool_test',
+        code: 'bool_test',
+        display_name: 'Boolean Test',
+        from_state_id: '1',
+        to_state_id: '2',
+        requires_comment: 'false' # Should preserve as string
+      }
+    }
+
+    assert_response :redirect
+  end
+
+  test "should handle mixed parameter formats in update" do
+    updated_transition = @workflow_transition.merge('display_name' => 'Mixed Update')
+    WorkflowService.stubs(:definition).returns(@workflow_definition)
+    WorkflowService.stubs(:get_transition).returns(@workflow_transition)
+    WorkflowService.stubs(:update_transition).returns(updated_transition)
+
+    # Test update with mixed nested and flat parameters
+    patch workflow_definition_workflow_transition_url(@workflow_definition['id'], @workflow_transition['id']), params: {
+      display_name: 'Mixed Update', # Flat parameter
+      workflow_transition: {
+        guard_conditions: ['new_condition'] # Nested parameter
+      }
+    }
+
+    assert_redirected_to workflow_definition_workflow_transitions_path(@workflow_definition['id'])
+    assert_equal 'Workflow transition updated successfully', flash[:success]
+  end
 end

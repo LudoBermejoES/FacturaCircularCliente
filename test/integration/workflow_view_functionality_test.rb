@@ -262,4 +262,222 @@ class WorkflowViewFunctionalityTest < ActionDispatch::IntegrationTest
     assert_select "h1", text: string_definition['name']
     assert_select ".grid.grid-cols-1.md\\:grid-cols-2 .border.rounded-lg", count: string_states.count
   end
+
+  test "workflow show page displays transition state names correctly using state codes" do
+    # Test the critical state code matching logic in the view
+    # This addresses the "Any State to Unknown" issue reported by the user
+
+    transitions_with_state_codes = [
+      {
+        id: 1,
+        name: 'Submit for Review',
+        code: 'submit',
+        from_state_code: 'draft',      # Using state codes instead of IDs
+        to_state_code: 'review',
+        required_roles: []
+      },
+      {
+        id: 2,
+        name: 'Approve',
+        code: 'approve',
+        from_state_code: 'review',
+        to_state_code: 'approved',
+        required_roles: ['manager']
+      },
+      {
+        id: 3,
+        name: 'Reject',
+        code: 'reject',
+        from_state_code: 'review',
+        to_state_code: 'draft',
+        required_roles: ['manager']
+      }
+    ]
+
+    WorkflowService.stubs(:definition).returns(@workflow_definition)
+    WorkflowService.stubs(:definition_states).returns(@states)
+    WorkflowService.stubs(:definition_transitions).returns(transitions_with_state_codes)
+
+    get workflow_definition_path(@workflow_definition[:id])
+
+    assert_response :success
+
+    # Check that state names are correctly displayed in the page body
+    # This tests that the state code matching logic is working properly
+    assert response.body.include?("Draft"), "Should contain 'Draft' state name from code matching"
+    assert response.body.include?("Under Review"), "Should contain 'Under Review' state name from code matching"
+    assert response.body.include?("Approved"), "Should contain 'Approved' state name from code matching"
+
+    # Most importantly: should NOT contain the problematic fallback text
+    # This is the key test for the "Any State to Unknown" bug that was reported
+    assert_not response.body.include?("Any State → Unknown"), "Should not show 'Any State → Unknown' when state codes match properly"
+
+    # Verify the state code matching logic is working by checking that we're NOT seeing fallback text
+    # Count how many times "Any State" appears - should be minimal since our states should match
+    any_state_count = response.body.scan(/Any State/).length
+    assert any_state_count <= 1, "Should have minimal 'Any State' fallbacks when state codes match (found #{any_state_count})"
+  end
+
+  test "workflow show page handles missing state codes gracefully" do
+    # Test the edge case that causes "Any State to Unknown" display
+
+    transitions_with_missing_state_codes = [
+      {
+        id: 1,
+        name: 'Submit for Review',
+        code: 'submit',
+        from_state_code: nil,  # Missing from_state_code
+        to_state_code: nil,    # Missing to_state_code
+        required_roles: []
+      },
+      {
+        id: 2,
+        name: 'Invalid Transition',
+        code: 'invalid',
+        from_state_code: 'nonexistent',  # State code that doesn't exist
+        to_state_code: 'also_nonexistent',
+        required_roles: []
+      }
+    ]
+
+    WorkflowService.stubs(:definition).returns(@workflow_definition)
+    WorkflowService.stubs(:definition_states).returns(@states)
+    WorkflowService.stubs(:definition_transitions).returns(transitions_with_missing_state_codes)
+
+    get workflow_definition_path(@workflow_definition[:id])
+
+    assert_response :success
+
+    # Should gracefully show fallback text for missing/invalid state codes
+    # This tests the edge case that was causing the "Any State to Unknown" issue
+    assert response.body.include?("Any State"), "Should show 'Any State' fallback for missing from_state_code"
+    assert response.body.include?("Unknown"), "Should show 'Unknown' fallback for missing to_state_code"
+  end
+
+  test "workflow show page handles mixed state code formats" do
+    # Test with both symbol and string keys for state codes
+
+    mixed_transitions = [
+      {
+        'id' => 1,
+        'name' => 'Submit for Review',
+        'code' => 'submit',
+        'from_state_code' => 'draft',    # String key
+        'to_state_code' => 'review',
+        'required_roles' => []
+      },
+      {
+        :id => 2,
+        :name => 'Approve',
+        :code => 'approve',
+        :from_state_code => 'review',    # Symbol key
+        :to_state_code => 'approved',
+        :required_roles => ['manager']
+      }
+    ]
+
+    mixed_states = [
+      {
+        'id' => 1,
+        'name' => 'Draft',
+        'code' => 'draft',     # String key
+        'category' => 'draft'
+      },
+      {
+        :id => 2,
+        :name => 'Under Review',
+        :code => 'review',     # Symbol key
+        :category => 'review'
+      },
+      {
+        'id' => 3,
+        'name' => 'Approved',
+        'code' => 'approved',  # String key
+        'category' => 'approved'
+      }
+    ]
+
+    WorkflowService.stubs(:definition).returns(@workflow_definition)
+    WorkflowService.stubs(:definition_states).returns(mixed_states)
+    WorkflowService.stubs(:definition_transitions).returns(mixed_transitions)
+
+    get workflow_definition_path(@workflow_definition[:id])
+
+    assert_response :success
+
+    # Should handle both string and symbol keys correctly
+    assert_select "span", text: "Draft"
+    assert_select "span", text: "Under Review"
+    assert_select "span", text: "Approved"
+  end
+
+  test "workflow show page state code matching is case sensitive" do
+    # Test that state code matching is case sensitive
+
+    case_sensitive_transitions = [
+      {
+        id: 1,
+        name: 'Case Test',
+        code: 'case_test',
+        from_state_code: 'DRAFT',      # Uppercase - should not match 'draft'
+        to_state_code: 'Review',       # Mixed case - should not match 'review'
+        required_roles: []
+      }
+    ]
+
+    WorkflowService.stubs(:definition).returns(@workflow_definition)
+    WorkflowService.stubs(:definition_states).returns(@states)
+    WorkflowService.stubs(:definition_transitions).returns(case_sensitive_transitions)
+
+    get workflow_definition_path(@workflow_definition[:id])
+
+    assert_response :success
+
+    # Should show fallback text due to case mismatch
+    assert_select "span", text: "Any State"  # 'DRAFT' doesn't match 'draft'
+    assert_select "span", text: "Unknown"    # 'Review' doesn't match 'review'
+  end
+
+  test "workflow show page performance with many states and transitions" do
+    # Test performance and correctness with larger datasets
+
+    many_states = (1..20).map do |i|
+      {
+        id: i,
+        name: "State #{i}",
+        code: "state_#{i}",
+        category: 'test'
+      }
+    end
+
+    many_transitions = (1..50).map do |i|
+      from_index = (i % 19) + 1
+      to_index = ((i + 1) % 19) + 1
+      {
+        id: i,
+        name: "Transition #{i}",
+        code: "trans_#{i}",
+        from_state_code: "state_#{from_index}",
+        to_state_code: "state_#{to_index}",
+        required_roles: []
+      }
+    end
+
+    WorkflowService.stubs(:definition).returns(@workflow_definition)
+    WorkflowService.stubs(:definition_states).returns(many_states)
+    WorkflowService.stubs(:definition_transitions).returns(many_transitions)
+
+    get workflow_definition_path(@workflow_definition[:id])
+
+    assert_response :success
+
+    # Should handle large datasets without errors
+    # Check that at least some transitions display correctly
+    assert_select "span", text: "State 1"
+    assert_select "span", text: "State 2"
+
+    # Should not contain error fallbacks
+    assert_select "span", { text: "Any State", count: 0 }, "Should not show 'Any State' with valid state codes"
+    assert_select "span", { text: "Unknown", count: 0 }, "Should not show 'Unknown' with valid state codes"
+  end
 end

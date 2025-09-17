@@ -15,7 +15,7 @@ class InvoicesControllerTest < ActionDispatch::IntegrationTest
         is_active: true
       }
     ]
-    
+
     mock_companies = [
       {
         id: 1999,
@@ -23,41 +23,61 @@ class InvoicesControllerTest < ActionDispatch::IntegrationTest
       }
     ]
 
+    mock_workflows = [
+      {
+        id: 1,
+        name: "Test Workflow",
+        is_active: true
+      }
+    ]
+
     InvoiceSeriesService.stubs(:all)
       .with(token: "test_admin_token", filters: { year: Date.current.year, active_only: true })
       .returns(mock_invoice_series)
-      
+
     CompanyService.stubs(:all)
       .with(token: "test_admin_token", params: { per_page: 100 })
       .returns({ companies: mock_companies })
-      
+
     # Mock CompanyContactsService.all call that was added recently
     CompanyContactsService.stubs(:all)
       .with(company_id: 1999, token: "test_admin_token", params: { per_page: 100 })
       .returns({ contacts: [] })
-      
+
     # Mock CompanyContactsService.active_contacts call for load_all_company_contacts
     CompanyContactsService.stubs(:active_contacts)
       .with(company_id: 1999, token: "test_admin_token")
       .returns([])
+
+    # Mock WorkflowService.definitions call
+    WorkflowService.stubs(:definitions)
+      .with(token: "test_admin_token")
+      .returns({ data: mock_workflows })
 
     get new_invoice_path
 
     assert_response :success
     assert assigns(:invoice_series)
     assert_equal mock_invoice_series, assigns(:invoice_series)
+    assert assigns(:workflows)
+    assert_equal mock_workflows, assigns(:workflows)
   end
 
   test "new action handles API service errors when loading series" do
     CompanyService.stubs(:all)
       .with(token: "test_admin_token", params: { per_page: 100 })
       .returns({ companies: [] })
-      
+
     # Mock CompanyContactsService.all call
     CompanyContactsService.stubs(:all)
       .with(company_id: 1999, token: "test_admin_token", params: { per_page: 100 })
       .returns({ contacts: [] })
-      
+
+    # Mock WorkflowService.definitions call
+    WorkflowService.stubs(:definitions)
+      .with(token: "test_admin_token")
+      .returns({ data: [] })
+
     InvoiceSeriesService.stubs(:all)
       .with(token: "test_admin_token", filters: { year: Date.current.year, active_only: true })
       .raises(ApiService::ApiError, "Failed to load series")
@@ -78,7 +98,7 @@ class InvoicesControllerTest < ActionDispatch::IntegrationTest
         is_active: true
       }
     ]
-    
+
     CompanyService.stubs(:all)
       .with(token: "test_admin_token", params: { per_page: 100 })
       .returns({ companies: [] })
@@ -87,6 +107,11 @@ class InvoicesControllerTest < ActionDispatch::IntegrationTest
     CompanyContactsService.stubs(:all)
       .with(company_id: 1999, token: "test_admin_token", params: { per_page: 100 })
       .returns({ contacts: [] })
+
+    # Mock WorkflowService.definitions call
+    WorkflowService.stubs(:definitions)
+      .with(token: "test_admin_token")
+      .returns({ data: [] })
 
     InvoiceSeriesService.stubs(:all)
       .with(token: "test_admin_token", filters: { year: Date.current.year, active_only: true })
@@ -99,10 +124,13 @@ class InvoicesControllerTest < ActionDispatch::IntegrationTest
     # Check that the form contains the series dropdown
     assert_select 'select[name="invoice[invoice_series_id]"]'
     assert_select 'option', text: /FC - Facturas Comerciales/
-    
+
+    # Check that the workflow dropdown exists
+    assert_select 'select[name="invoice[workflow_definition_id]"]'
+
     # Check that the invoice number field is read-only
     assert_select 'input[name="invoice[invoice_number]"][readonly]'
-    
+
     # Check for Stimulus controller data attributes
     assert_select '[data-controller*="invoice-form"]'
     assert_select '[data-invoice-form-target="seriesSelect"]'
@@ -112,27 +140,32 @@ class InvoicesControllerTest < ActionDispatch::IntegrationTest
 
   test "create action includes invoice_series_id in permitted parameters" do
     mock_invoice_series = [{ id: 874, series_code: "FC", series_name: "Facturas Comerciales" }]
-    
+
     mock_companies = [
       {
         id: 1999,
         name: "Test Company"
       }
     ]
-    
+
     CompanyService.stubs(:all)
       .with(token: "test_admin_token", params: { per_page: 100 })
       .returns({ companies: mock_companies })
-      
+
     # Mock CompanyContactsService.all call that was added recently
     CompanyContactsService.stubs(:all)
       .with(company_id: 1999, token: "test_admin_token", params: { per_page: 100 })
       .returns({ contacts: [] })
-      
+
     InvoiceSeriesService.stubs(:all)
       .with(token: "test_admin_token", filters: { year: Date.current.year, active_only: true })
       .returns(mock_invoice_series)
-      
+
+    # Mock WorkflowService.definitions call
+    WorkflowService.stubs(:definitions)
+      .with(token: "test_admin_token")
+      .returns({ data: [] })
+
     # Comprehensive stubbing to prevent WebMock errors
     CompanyContactsService.stubs(:active_contacts).returns([])
 
@@ -165,20 +198,25 @@ class InvoicesControllerTest < ActionDispatch::IntegrationTest
 
   test "create action validates required invoice_series_id" do
     mock_invoice_series = [{ id: 874, series_code: "FC", series_name: "Facturas Comerciales" }]
-    
+
     CompanyService.stubs(:all)
       .with(token: "test_admin_token", params: { per_page: 100 })
       .returns({ companies: [] })
-      
+
     # Mock CompanyContactsService.all call that was added recently
     CompanyContactsService.stubs(:all)
       .with(company_id: 1999, token: "test_admin_token", params: { per_page: 100 })
       .returns({ contacts: [] })
-      
+
     InvoiceSeriesService.stubs(:all)
       .with(token: "test_admin_token", filters: { year: Date.current.year, active_only: true })
       .returns(mock_invoice_series)
-      
+
+    # Mock WorkflowService.definitions call
+    WorkflowService.stubs(:definitions)
+      .with(token: "test_admin_token")
+      .returns({ data: [] })
+
     CompanyContactsService.stubs(:active_contacts).returns([])
     
     # Stub InvoiceService.create to raise a validation error
@@ -222,7 +260,7 @@ class InvoicesControllerTest < ActionDispatch::IntegrationTest
 
     InvoiceService.stubs(:find)
       .returns(mock_invoice)
-      
+
     CompanyService.stubs(:all)
       .with(token: "test_admin_token", params: { per_page: 100 })
       .returns({ companies: [] })
@@ -235,7 +273,12 @@ class InvoicesControllerTest < ActionDispatch::IntegrationTest
     InvoiceSeriesService.stubs(:all)
       .with(token: "test_admin_token", filters: { year: Date.current.year, active_only: true })
       .returns(mock_invoice_series)
-      
+
+    # Mock WorkflowService.definitions call
+    WorkflowService.stubs(:definitions)
+      .with(token: "test_admin_token")
+      .returns({ data: [] })
+
     CompanyContactsService.stubs(:active_contacts).returns([])
 
     get edit_invoice_path(123)
@@ -255,20 +298,25 @@ class InvoicesControllerTest < ActionDispatch::IntegrationTest
     mock_invoice_series = [{ id: 875, series_code: "PF", series_name: "Proformas" }]
 
     InvoiceService.stubs(:find).returns(mock_invoice)
-    
+
     CompanyService.stubs(:all)
       .with(token: "test_admin_token", params: { per_page: 100 })
       .returns({ companies: [] })
-      
+
     # Mock CompanyContactsService.all call that was added recently
     CompanyContactsService.stubs(:all)
       .with(company_id: 1999, token: "test_admin_token", params: { per_page: 100 })
       .returns({ contacts: [] })
-      
+
     InvoiceSeriesService.stubs(:all)
       .with(token: "test_admin_token", filters: { year: Date.current.year, active_only: true })
       .returns(mock_invoice_series)
-      
+
+    # Mock WorkflowService.definitions call
+    WorkflowService.stubs(:definitions)
+      .with(token: "test_admin_token")
+      .returns({ data: [] })
+
     CompanyContactsService.stubs(:active_contacts).returns([])
 
     updated_invoice = mock_invoice.merge(
@@ -287,6 +335,332 @@ class InvoicesControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_redirected_to invoice_path(123)
+  end
+
+  test "new action loads workflow definitions" do
+    mock_workflows = [
+      {
+        id: 1,
+        name: "Test Workflow",
+        is_active: true
+      },
+      {
+        id: 2,
+        name: "Approval Workflow",
+        is_active: true
+      }
+    ]
+
+    # Mock all required services
+    CompanyService.stubs(:all)
+      .with(token: "test_admin_token", params: { per_page: 100 })
+      .returns({ companies: [] })
+
+    CompanyContactsService.stubs(:all)
+      .with(company_id: 1999, token: "test_admin_token", params: { per_page: 100 })
+      .returns({ contacts: [] })
+
+    InvoiceSeriesService.stubs(:all)
+      .with(token: "test_admin_token", filters: { year: Date.current.year, active_only: true })
+      .returns([])
+
+    CompanyContactsService.stubs(:active_contacts).returns([])
+
+    # Mock WorkflowService.definitions call
+    WorkflowService.stubs(:definitions)
+      .with(token: "test_admin_token")
+      .returns({ data: mock_workflows })
+
+    get new_invoice_path
+
+    assert_response :success
+    assert assigns(:workflows)
+    assert_equal mock_workflows, assigns(:workflows)
+  end
+
+  test "new action handles workflow service errors gracefully" do
+    # Mock other required services
+    CompanyService.stubs(:all)
+      .with(token: "test_admin_token", params: { per_page: 100 })
+      .returns({ companies: [] })
+
+    CompanyContactsService.stubs(:all)
+      .with(company_id: 1999, token: "test_admin_token", params: { per_page: 100 })
+      .returns({ contacts: [] })
+
+    InvoiceSeriesService.stubs(:all)
+      .with(token: "test_admin_token", filters: { year: Date.current.year, active_only: true })
+      .returns([])
+
+    CompanyContactsService.stubs(:active_contacts).returns([])
+
+    # Mock WorkflowService.definitions to raise an error
+    WorkflowService.stubs(:definitions)
+      .with(token: "test_admin_token")
+      .raises(ApiService::ApiError, "Failed to load workflows")
+
+    get new_invoice_path
+
+    assert_response :success
+    assert_equal [], assigns(:workflows)
+  end
+
+  test "create action includes workflow_definition_id in permitted parameters" do
+    mock_companies = [{ id: 1999, name: "Test Company" }]
+
+    # Mock all required services
+    CompanyService.stubs(:all)
+      .with(token: "test_admin_token", params: { per_page: 100 })
+      .returns({ companies: mock_companies })
+
+    CompanyContactsService.stubs(:all)
+      .with(company_id: 1999, token: "test_admin_token", params: { per_page: 100 })
+      .returns({ contacts: [] })
+
+    InvoiceSeriesService.stubs(:all)
+      .with(token: "test_admin_token", filters: { year: Date.current.year, active_only: true })
+      .returns([])
+
+    WorkflowService.stubs(:definitions)
+      .with(token: "test_admin_token")
+      .returns({ data: [] })
+
+    CompanyContactsService.stubs(:active_contacts).returns([])
+
+    mock_create_response = {
+      data: { id: 123 },
+      id: 123,
+      invoice_number: "FC-2025-0001",
+      workflow_definition_id: 1,
+      status: "draft"
+    }
+
+    InvoiceService.stubs(:create)
+      .returns(mock_create_response)
+
+    invoice_params = {
+      invoice_series_id: 874,
+      invoice_type: "invoice",
+      status: "draft",
+      workflow_definition_id: 1,
+      seller_party_id: 1999,
+      buyer_party_id: 1999,
+      issue_date: "2025-01-15",
+      due_date: "2025-02-15"
+    }
+
+    post invoices_path, params: { invoice: invoice_params }
+
+    assert_redirected_to invoice_path(123)
+  end
+
+  test "form contains workflow selection dropdown" do
+    mock_workflows = [
+      { id: 1, name: "Test Workflow" },
+      { id: 2, name: "Approval Workflow" }
+    ]
+
+    # Mock all required services
+    CompanyService.stubs(:all)
+      .with(token: "test_admin_token", params: { per_page: 100 })
+      .returns({ companies: [] })
+
+    CompanyContactsService.stubs(:all)
+      .with(company_id: 1999, token: "test_admin_token", params: { per_page: 100 })
+      .returns({ contacts: [] })
+
+    InvoiceSeriesService.stubs(:all)
+      .with(token: "test_admin_token", filters: { year: Date.current.year, active_only: true })
+      .returns([])
+
+    WorkflowService.stubs(:definitions)
+      .with(token: "test_admin_token")
+      .returns({ data: mock_workflows })
+
+    CompanyContactsService.stubs(:active_contacts).returns([])
+
+    get new_invoice_path
+
+    assert_response :success
+
+    # Check that the workflow dropdown exists
+    assert_select 'select[name="invoice[workflow_definition_id]"]'
+    assert_select 'option', text: "Select workflow (optional)"
+    assert_select 'option', text: "Test Workflow"
+    assert_select 'option', text: "Approval Workflow"
+  end
+
+  test "form contains invoice type dropdown with correct data attributes" do
+    mock_invoice_series = [
+      {
+        id: 874,
+        series_code: "FC",
+        series_name: "Facturas Comerciales",
+        year: 2025,
+        is_active: true
+      },
+      {
+        id: 875,
+        series_code: "PF",
+        series_name: "Proforma",
+        year: 2025,
+        is_active: true
+      }
+    ]
+
+    # Mock all required services
+    CompanyService.stubs(:all)
+      .with(token: "test_admin_token", params: { per_page: 100 })
+      .returns({ companies: [] })
+
+    CompanyContactsService.stubs(:all)
+      .with(company_id: 1999, token: "test_admin_token", params: { per_page: 100 })
+      .returns({ contacts: [] })
+
+    InvoiceSeriesService.stubs(:all)
+      .with(token: "test_admin_token", filters: { year: Date.current.year, active_only: true })
+      .returns(mock_invoice_series)
+
+    WorkflowService.stubs(:definitions)
+      .with(token: "test_admin_token")
+      .returns({ data: [] })
+
+    CompanyContactsService.stubs(:active_contacts).returns([])
+
+    get new_invoice_path
+
+    assert_response :success
+
+    # Check that the invoice type dropdown exists with proper data attributes
+    assert_select 'select[name="invoice[invoice_type]"]'
+    assert_select 'select[data-action*="change->invoice-form#onInvoiceTypeChange"]'
+    assert_select 'select[data-invoice-form-target="invoiceTypeSelect"]'
+
+    # Check that all invoice type options are present
+    assert_select 'option[value="invoice"]', text: 'Invoice'
+    assert_select 'option[value="credit_note"]', text: 'Credit Note'
+    assert_select 'option[value="debit_note"]', text: 'Debit Note'
+    assert_select 'option[value="proforma"]', text: 'Proforma'
+  end
+
+  test "form includes Stimulus controller data attributes for series filtering" do
+    mock_invoice_series = [
+      {
+        id: 874,
+        series_code: "FC",
+        series_name: "Facturas Comerciales",
+        year: 2025,
+        is_active: true
+      },
+      {
+        id: 875,
+        series_code: "PF",
+        series_name: "Proforma",
+        year: 2025,
+        is_active: true
+      }
+    ]
+
+    # Mock all required services
+    CompanyService.stubs(:all)
+      .with(token: "test_admin_token", params: { per_page: 100 })
+      .returns({ companies: [] })
+
+    CompanyContactsService.stubs(:all)
+      .with(company_id: 1999, token: "test_admin_token", params: { per_page: 100 })
+      .returns({ contacts: [] })
+
+    InvoiceSeriesService.stubs(:all)
+      .with(token: "test_admin_token", filters: { year: Date.current.year, active_only: true })
+      .returns(mock_invoice_series)
+
+    WorkflowService.stubs(:definitions)
+      .with(token: "test_admin_token")
+      .returns({ data: [] })
+
+    CompanyContactsService.stubs(:active_contacts).returns([])
+
+    get new_invoice_path
+
+    assert_response :success
+
+    # Verify form has invoice-form Stimulus controller
+    assert_select '[data-controller*="invoice-form"]'
+
+    # Verify series select has correct targets and actions
+    assert_select 'select[data-invoice-form-target="seriesSelect"]'
+    assert_select 'select[data-action*="invoice-form#onSeriesChange"]'
+
+    # Verify invoice type select has correct targets and actions
+    assert_select 'select[data-invoice-form-target="invoiceTypeSelect"]'
+    assert_select 'select[data-action*="invoice-form#onInvoiceTypeChange"]'
+
+    # Verify invoice number field has target
+    assert_select 'input[data-invoice-form-target="invoiceNumber"]'
+  end
+
+  test "new action populates multiple invoice series for filtering" do
+    mock_invoice_series = [
+      {
+        id: 874,
+        series_code: "FC",
+        series_name: "Facturas Comerciales",
+        year: 2025,
+        is_active: true
+      },
+      {
+        id: 875,
+        series_code: "PF",
+        series_name: "Proforma",
+        year: 2025,
+        is_active: true
+      },
+      {
+        id: 876,
+        series_code: "CR",
+        series_name: "Credit Note",
+        year: 2025,
+        is_active: true
+      },
+      {
+        id: 877,
+        series_code: "DB",
+        series_name: "Debit Note",
+        year: 2025,
+        is_active: true
+      }
+    ]
+
+    # Mock all required services
+    CompanyService.stubs(:all)
+      .with(token: "test_admin_token", params: { per_page: 100 })
+      .returns({ companies: [] })
+
+    CompanyContactsService.stubs(:all)
+      .with(company_id: 1999, token: "test_admin_token", params: { per_page: 100 })
+      .returns({ contacts: [] })
+
+    InvoiceSeriesService.stubs(:all)
+      .with(token: "test_admin_token", filters: { year: Date.current.year, active_only: true })
+      .returns(mock_invoice_series)
+
+    WorkflowService.stubs(:definitions)
+      .with(token: "test_admin_token")
+      .returns({ data: [] })
+
+    CompanyContactsService.stubs(:active_contacts).returns([])
+
+    get new_invoice_path
+
+    assert_response :success
+    assert assigns(:invoice_series)
+    assert_equal mock_invoice_series, assigns(:invoice_series)
+
+    # Verify all series types are available in the dropdown
+    assert_select 'option', text: /FC - Facturas Comerciales/
+    assert_select 'option', text: /PF - Proforma/
+    assert_select 'option', text: /CR - Credit Note/
+    assert_select 'option', text: /DB - Debit Note/
   end
 
   private

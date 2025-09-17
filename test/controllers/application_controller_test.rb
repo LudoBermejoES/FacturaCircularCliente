@@ -126,21 +126,22 @@ class ApplicationControllerTest < ActionDispatch::IntegrationTest
 
   test "ensure_can! redirects when permission denied" do
     setup_session_with_role("viewer", 1)
-    
+
     # Add stubs for invoice new action API calls
     CompanyService.stubs(:all).returns({ companies: [] })
     InvoiceSeriesService.stubs(:all).returns([])
     CompanyContactsService.stubs(:active_contacts).returns([])
-    
+    WorkflowService.stubs(:definitions).returns({ data: [] })
+
     # Mock CompanyContactsService.all call that was added recently
     CompanyContactsService.stubs(:all)
       .with(company_id: 1, token: "test_viewer_token", params: { per_page: 100 })
       .returns({ contacts: [] })
-    
+
     # Try to access a protected action
     # This would normally be in a controller action
     get new_invoice_url
-    
+
     # Should redirect due to lack of permission
     assert_redirected_to dashboard_path
   end

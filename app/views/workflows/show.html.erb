@@ -47,7 +47,7 @@
           <div class="border border-gray-200 rounded-lg p-4">
             <div class="flex items-center justify-between mb-3">
               <span class="text-sm font-medium text-gray-900">
-                <%= transition[:to_status].humanize %>
+                <%= transition[:to_status_name] || transition[:to_status].humanize %>
               </span>
               <span class="<%= status_badge_class(transition[:to_status]) %>">
                 <%= transition[:to_status] %>
@@ -60,7 +60,7 @@
               </p>
             <% end %>
             
-            <%= form_with url: invoice_workflow_transition_path(@invoice[:id]), 
+            <%= form_with url: transition_invoice_workflow_path(@invoice[:id]),
                           method: :post,
                           data: { turbo_frame: "workflow_content" },
                           class: "space-y-3" do |f| %>
@@ -83,10 +83,10 @@
                 </div>
               <% end %>
               
-              <%= f.submit "Transition to #{transition[:to_status].humanize}",
+              <%= f.submit "Transition to #{transition[:to_status_name] || transition[:to_status].humanize}",
                           class: "w-full inline-flex justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2",
-                          data: { 
-                            confirm: "Are you sure you want to change the status to #{transition[:to_status]}?",
+                          data: {
+                            confirm: "Are you sure you want to change the status to #{transition[:to_status_name] || transition[:to_status]}?",
                             turbo_confirm: "Are you sure?"
                           } %>
             <% end %>

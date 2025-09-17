@@ -4,17 +4,37 @@ class WorkflowsController < ApplicationController
   before_action :load_history, only: [:show]
   
   def show
-    @available_transitions = WorkflowService.available_transitions(
-      @invoice[:id], 
-      token: current_user_token
-    )
-    
+    begin
+      response = WorkflowService.available_transitions(
+        @invoice[:id],
+        token: current_user_token
+      )
+
+      # Transform the API response into the format expected by the view
+      if response && response[:available_transitions]
+        @available_transitions = response[:available_transitions].map do |transition_data|
+          {
+            to_status: transition_data.dig(:to_state, :code) || transition_data.dig('to_state', 'code'),
+            to_status_name: transition_data.dig(:to_state, :name) || transition_data.dig('to_state', 'name'),
+            description: transition_data.dig(:transition, :description) || transition_data.dig('transition', 'description'),
+            requires_comment: transition_data.dig(:transition, :requires_comment) || transition_data.dig('transition', 'requires_comment') || false
+          }
+        end
+      elsif response.is_a?(Array)
+        @available_transitions = response
+      else
+        @available_transitions = []
+      end
+    rescue ApiService::ApiError => e
+      @available_transitions = []
+      flash[:alert] = "Failed to load workflow transitions: #{e.message}"
+      redirect_to invoice_path(@invoice[:id]) and return
+    end
+
     respond_to do |format|
       format.html
       format.turbo_stream
     end
-  rescue ApiService::ApiError => e
-    handle_api_error(e, redirect_path: invoice_path(@invoice[:id]))
   end
   
   def transition
@@ -33,10 +53,28 @@ class WorkflowsController < ApplicationController
       format.turbo_stream do
         @invoice = InvoiceService.find(@invoice[:id], token: current_user_token)
         @history = WorkflowService.history(token: current_user_token, params: { invoice_id: @invoice[:id] })
-        @available_transitions = WorkflowService.available_transitions(
-          @invoice[:id], 
+
+        # Get available transitions and transform them
+        response = WorkflowService.available_transitions(
+          @invoice[:id],
           token: current_user_token
         )
+
+        # Transform the API response into the format expected by the view
+        if response && response[:available_transitions]
+          @available_transitions = response[:available_transitions].map do |transition_data|
+            {
+              to_status: transition_data.dig(:to_state, :code) || transition_data.dig('to_state', 'code'),
+              to_status_name: transition_data.dig(:to_state, :name) || transition_data.dig('to_state', 'name'),
+              description: transition_data.dig(:transition, :description) || transition_data.dig('transition', 'description'),
+              requires_comment: transition_data.dig(:transition, :requires_comment) || transition_data.dig('transition', 'requires_comment') || false
+            }
+          end
+        elsif response.is_a?(Array)
+          @available_transitions = response
+        else
+          @available_transitions = []
+        end
       end
     end
   rescue ApiService::ValidationError => e
@@ -54,7 +92,18 @@ class WorkflowsController < ApplicationController
       end
     end
   rescue ApiService::ApiError => e
-    handle_api_error(e, redirect_path: invoice_path(@invoice[:id]))
+    respond_to do |format|
+      format.html do
+        redirect_to invoice_path(@invoice[:id]), alert: "Failed to update invoice status: #{e.message}"
+      end
+      format.turbo_stream do
+        render turbo_stream: turbo_stream.replace(
+          "workflow_errors",
+          partial: "shared/errors",
+          locals: { errors: [e.message] }
+        )
+      end
+    end
   end
   
   def bulk_transition
@@ -110,12 +159,23 @@ class WorkflowsController < ApplicationController
     if e.message.include?("not found") || e.message.include?("Not found")
       redirect_to invoices_path, alert: "Invoice not found"
     else
-      handle_api_error(e, redirect_path: invoices_path)
+      redirect_to invoices_path, alert: "Failed to load invoice: #{e.message}"
     end
   end
   
   def load_history
-    @history = WorkflowService.history(token: current_user_token, params: { invoice_id: @invoice[:id] })
+    response = WorkflowService.history(token: current_user_token, params: { invoice_id: @invoice[:id] })
+
+    # Handle different response formats
+    if response.is_a?(Array)
+      @history = response
+    elsif response && response[:data]
+      @history = response[:data]
+    elsif response && response[:history]
+      @history = response[:history]
+    else
+      @history = []
+    end
   rescue ApiService::ApiError => e
     @history = []
     Rails.logger.error "Failed to load workflow history: #{e.message}"

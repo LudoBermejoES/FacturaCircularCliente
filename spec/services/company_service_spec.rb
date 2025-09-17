@@ -571,6 +571,17 @@ RSpec.describe CompanyService, type: :service do
 
   describe 'edge cases and error handling' do
     context 'when token is nil' do
+      before do
+        stub_request(:get, "#{base_url}/companies")
+          .with(
+            headers: {
+              'Content-Type' => 'application/json',
+              'Accept' => 'application/json'
+            }
+          )
+          .to_return(status: 401, body: { error: 'Authentication failed. Please login again.' }.to_json)
+      end
+
       it 'raises ArgumentError for all methods' do
         expect { CompanyService.all(token: nil) }
           .to raise_error(ApiService::AuthenticationError, 'Authentication failed. Please login again.')

@@ -83,7 +83,11 @@
                 ['Proforma', 'proforma']
               ], invoice[:invoice_type]),
               {},
-              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+              data: {
+                action: "change->invoice-form#onInvoiceTypeChange",
+                "invoice-form-target": "invoiceTypeSelect"
+              } %>
         </div>
         
         <div>
@@ -98,6 +102,18 @@
               ], invoice[:status]),
               {},
               class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+        </div>
+
+        <div>
+          <%= form.label :workflow_definition_id, "Workflow", class: "block text-sm font-medium text-gray-700" %>
+          <%= form.select :workflow_definition_id,
+              options_for_select(
+                (@workflows || []).map { |workflow| [workflow[:name] || workflow['name'], workflow[:id]] },
+                invoice[:workflow_definition_id]
+              ),
+              { include_blank: 'Select workflow (optional)' },
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+          <p class="mt-1 text-xs text-gray-500">Choose the approval workflow for this invoice</p>
         </div>
         
         <div>
@@ -114,17 +130,38 @@
         </div>
         
         <div>
-          <%= form.label :buyer_party_id, "To (Customer)", class: "block text-sm font-medium text-gray-700" %>
-          <%= form.select :buyer_party_id,
-              options_for_select(
-                (@customer_companies || []).map { |c| [c[:name] || c[:legal_name], c[:id]] },
-                invoice[:buyer_party_id]
-              ),
-              { include_blank: 'Select customer company' },
-              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
-              data: { action: "change->invoice-form#updateCompany" },
-              required: true %>
-          <p class="mt-1 text-xs text-gray-500">Select from your company contacts/clients</p>
+          <%= form.label :buyer_selection, "To (Customer)", class: "block text-sm font-medium text-gray-700" %>
+          <%
+            buyer_options = (@buyer_options || []).map { |option|
+              label = "#{option[:name]} #{option[:type] == 'contact' ? '(Contact)' : '(Company)'}"
+              ["#{label}", "#{option[:type]}:#{option[:id]}"]
+            }
+
+            selected_value = if invoice[:buyer_party_id].present?
+              "company:#{invoice[:buyer_party_id]}"
+            elsif invoice[:buyer_company_contact_id].present?
+              "contact:#{invoice[:buyer_company_contact_id]}"
+            else
+              nil
+            end
+          %>
+          <%= select_tag "buyer_selection",
+              options_for_select(buyer_options, selected_value),
+              {
+                include_blank: 'Select customer',
+                class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                data: {
+                  action: "change->invoice-form#updateBuyer",
+                  "invoice-form-target": "buyerSelect"
+                },
+                required: true
+              } %>
+
+          <!-- Hidden fields for actual form submission -->
+          <%= form.hidden_field :buyer_party_id, value: invoice[:buyer_party_id], data: { "invoice-form-target": "buyerPartyId" } %>
+          <%= form.hidden_field :buyer_company_contact_id, value: invoice[:buyer_company_contact_id], data: { "invoice-form-target": "buyerContactId" } %>
+
+          <p class="mt-1 text-xs text-gray-500">Select a company or contact for this invoice</p>
         </div>
         
         <div data-invoice-form-target="contactField" style="<%= 'display: none;' unless invoice[:buyer_party_id].present? %>">

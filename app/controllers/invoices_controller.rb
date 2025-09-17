@@ -2,6 +2,7 @@ class InvoicesController < ApplicationController
   before_action :set_invoice, only: [:show, :edit, :update, :destroy, :freeze, :send_email, :download_pdf, :download_facturae]
   before_action :load_companies, only: [:new, :create, :edit, :update]
   before_action :load_invoice_series, only: [:new, :create, :edit, :update]
+  before_action :load_workflows, only: [:new, :create, :edit, :update]
   before_action :check_permission_to_create, only: [:new, :create]
   before_action :check_permission_to_edit, only: [:edit, :update, :destroy]
   
@@ -91,11 +92,23 @@ class InvoicesController < ApplicationController
       Rails.logger.info "DEBUG: ValidationError errors: #{e.errors.inspect}"
       @invoice = invoice_params
       @invoice[:invoice_lines] = params[:invoice][:invoice_lines]&.values || [build_empty_line_item]
-      
+
+      # Preserve buyer selection from original form submission
+      if params[:buyer_selection].present?
+        type, id = params[:buyer_selection].split(':')
+        if type == 'company'
+          @invoice[:buyer_party_id] = id
+          @invoice[:buyer_company_contact_id] = nil
+        elsif type == 'contact'
+          @invoice[:buyer_party_id] = nil
+          @invoice[:buyer_company_contact_id] = id
+        end
+      end
+
       # Parse API errors into a format the view can understand
       @errors = parse_validation_errors(e.errors)
       Rails.logger.info "DEBUG: Parsed errors: #{@errors.inspect}"
-      
+
       load_companies
       load_invoice_series
       load_all_company_contacts
@@ -105,6 +118,19 @@ class InvoicesController < ApplicationController
       Rails.logger.info "DEBUG: ApiError caught: #{e.message}"
       @invoice = invoice_params
       @invoice[:invoice_lines] = params[:invoice][:invoice_lines]&.values || [build_empty_line_item]
+
+      # Preserve buyer selection from original form submission
+      if params[:buyer_selection].present?
+        type, id = params[:buyer_selection].split(':')
+        if type == 'company'
+          @invoice[:buyer_party_id] = id
+          @invoice[:buyer_company_contact_id] = nil
+        elsif type == 'contact'
+          @invoice[:buyer_party_id] = nil
+          @invoice[:buyer_company_contact_id] = id
+        end
+      end
+
       load_companies
       load_invoice_series
       load_all_company_contacts
@@ -219,33 +245,59 @@ class InvoicesController < ApplicationController
     begin
       response = CompanyService.all(token: current_token, params: { per_page: 100 })
       all_companies = response[:companies] || []
-      
+
       # Seller companies: All companies (user can select which company is selling)
       @seller_companies = all_companies
-      
-      # Customer companies: Only the current company's contacts/clients
+
+      # For customers, load both companies and contacts separately
+      @customer_companies = all_companies # Real companies
+
+      # Load company contacts
       if current_company_id
         begin
           contacts_response = CompanyContactsService.all(
-            company_id: current_company_id, 
-            token: current_token, 
+            company_id: current_company_id,
+            token: current_token,
             params: { per_page: 100 }
           )
-          @customer_companies = contacts_response[:contacts] || []
+          @customer_contacts = contacts_response[:contacts] || []
         rescue ApiService::ApiError => e
-          @customer_companies = []
+          @customer_contacts = []
           Rails.logger.warn "Error loading company contacts: #{e.message}"
         end
       else
-        @customer_companies = []
+        @customer_contacts = []
       end
-      
+
+      # Create combined buyer options with type identification
+      @buyer_options = []
+
+      # Add companies with 'company' type
+      all_companies.each do |company|
+        @buyer_options << {
+          id: company[:id],
+          name: company[:corporate_name] || company[:trade_name] || company[:name] || "Company ##{company[:id]}",
+          type: 'company'
+        }
+      end
+
+      # Add contacts with 'contact' type
+      @customer_contacts.each do |contact|
+        @buyer_options << {
+          id: contact[:id],
+          name: contact[:name] || contact[:legal_name] || "Contact ##{contact[:id]}",
+          type: 'contact'
+        }
+      end
+
       # Keep @companies for backward compatibility
       @companies = all_companies
     rescue ApiService::ApiError => e
       @companies = []
       @seller_companies = []
       @customer_companies = []
+      @customer_contacts = []
+      @buyer_options = []
       flash.now[:alert] = "Error loading companies: #{e.message}"
     end
   end
@@ -283,7 +335,7 @@ class InvoicesController < ApplicationController
       # Load active invoice series for current year
       @invoice_series = InvoiceSeriesService.all(
         token: current_token,
-        filters: { 
+        filters: {
           year: Date.current.year,
           active_only: true
         }
@@ -294,6 +346,18 @@ class InvoicesController < ApplicationController
       # Don't show error to user as this might be called during error states
     end
   end
+
+  def load_workflows
+    begin
+      # Load workflow definitions - API doesn't support filtering yet
+      response = WorkflowService.definitions(token: current_token)
+      @workflows = response[:data] || response[:workflow_definitions] || []
+    rescue ApiService::ApiError => e
+      @workflows = []
+      Rails.logger.warn "Error loading workflows: #{e.message}"
+      # Don't show error to user as this might be called during error states
+    end
+  end
   
   def invoice_params
     # WORKAROUND: Rails 8 seems to have a bug with :issue_date parameter filtering
@@ -301,7 +365,7 @@ class InvoicesController < ApplicationController
     base_params = params.require(:invoice).permit(
       :invoice_number, :invoice_series_id, :invoice_type, :issue_date, :due_date, :status,
       :seller_party_id, :buyer_party_id, :buyer_company_contact_id, :notes, :internal_notes, :payment_method,
-      :payment_terms, :currency, :exchange_rate,
+      :payment_terms, :currency, :exchange_rate, :workflow_definition_id,
       :discount_percentage, :discount_amount,
       invoice_lines: {},  # Allow nested hash structure
       invoice_lines_attributes: [:description, :quantity, :unit_price, :tax_rate, :discount_percentage, :product_code]
@@ -317,12 +381,24 @@ class InvoicesController < ApplicationController
   
   def process_invoice_params(base_params)
     processed_params = base_params.dup
-    
+
+    # Process buyer selection - override the empty buyer fields with the selected values
+    if params[:buyer_selection].present?
+      type, id = params[:buyer_selection].split(':')
+      if type == 'company'
+        processed_params[:buyer_party_id] = id
+        processed_params[:buyer_company_contact_id] = nil
+      elsif type == 'contact'
+        processed_params[:buyer_party_id] = nil
+        processed_params[:buyer_company_contact_id] = id
+      end
+    end
+
     # Process invoice lines
     if params[:invoice][:invoice_lines].present?
       lines = params[:invoice][:invoice_lines].values.map do |line|
         next if line[:description].blank? && line[:quantity].blank?
-        
+
         {
           description: line[:description],
           quantity: line[:quantity].to_f,
@@ -332,10 +408,10 @@ class InvoicesController < ApplicationController
           product_code: line[:product_code]
         }
       end.compact
-      
+
       processed_params[:invoice_lines_attributes] = lines
     end
-    
+
     processed_params
   end
   

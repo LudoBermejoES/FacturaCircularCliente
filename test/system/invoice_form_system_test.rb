@@ -2,11 +2,8 @@ require "application_system_test_case"
 
 class InvoiceFormSystemTest < ApplicationSystemTestCase
   def setup
-    setup_authenticated_session(role: "admin", company_id: 1999)
     setup_mocked_services
-    
-    # Enable JavaScript for system tests
-    driven_by :selenium, using: :headless_chrome, screen_size: [1400, 1400]
+    sign_in_for_system_test(role: "admin", company_id: 1999)
   end
 
   test "invoice series selection automatically generates invoice number" do
@@ -165,6 +162,104 @@ class InvoiceFormSystemTest < ApplicationSystemTestCase
     # This assumes the mock includes different series types
   end
 
+  test "filters series options by invoice type selection" do
+    visit new_invoice_path
+
+    # Verify initial state - all series should be visible
+    series_dropdown = find("select[name='invoice[invoice_series_id]']")
+    assert series_dropdown.has_content?("FC - Facturas Comerciales")
+    assert series_dropdown.has_content?("PF - Proforma")
+    assert series_dropdown.has_content?("CR - Credit Note")
+
+    # Select proforma invoice type
+    select "Proforma", from: "Invoice Type"
+
+    # Verify only proforma series (PF) are visible
+    series_dropdown = find("select[name='invoice[invoice_series_id]']")
+    assert series_dropdown.has_content?("PF - Proforma")
+    refute series_dropdown.has_content?("FC - Facturas Comerciales")
+    refute series_dropdown.has_content?("CR - Credit Note")
+
+    # Select regular invoice type
+    select "Invoice", from: "Invoice Type"
+
+    # Verify only FC series are visible
+    series_dropdown = find("select[name='invoice[invoice_series_id]']")
+    assert series_dropdown.has_content?("FC - Facturas Comerciales")
+    refute series_dropdown.has_content?("PF - Proforma")
+    refute series_dropdown.has_content?("CR - Credit Note")
+
+    # Select credit note type
+    select "Credit Note", from: "Invoice Type"
+
+    # Verify only CR series are visible
+    series_dropdown = find("select[name='invoice[invoice_series_id]']")
+    assert series_dropdown.has_content?("CR - Credit Note")
+    refute series_dropdown.has_content?("FC - Facturas Comerciales")
+    refute series_dropdown.has_content?("PF - Proforma")
+  end
+
+  test "clears invoice number when invoice type changes" do
+    visit new_invoice_path
+
+    # First set up a number for FC series
+    stub_request(:get, %r{/api/v1/invoice_numbering/next_available})
+      .to_return(
+        status: 200,
+        body: {
+          data: {
+            attributes: {
+              available_numbers: {
+                "FC" => [{ sequence_number: 5, full_number: "FC-2025-0005" }]
+              }
+            }
+          }
+        }.to_json
+      )
+
+    select "FC - Facturas Comerciales 2025", from: "Invoice Series"
+    assert_field "Invoice Number", with: "FC-0005", wait: 3
+
+    # Change invoice type to proforma
+    select "Proforma", from: "Invoice Type"
+
+    # Invoice number should be cleared
+    invoice_number_field = find("input[name='invoice[invoice_number]']")
+    assert_equal "", invoice_number_field.value
+    assert_equal "Select a series first", invoice_number_field["placeholder"]
+  end
+
+  test "preserves series filtering state during form interactions" do
+    visit new_invoice_path
+
+    # Select proforma type first
+    select "Proforma", from: "Invoice Type"
+
+    # Fill out other form fields
+    fill_in "Customer Notes", with: "Test proforma invoice"
+    fill_in "Item description", with: "Proforma service"
+
+    # Verify PF series are still filtered correctly
+    series_dropdown = find("select[name='invoice[invoice_series_id]']")
+    assert series_dropdown.has_content?("PF - Proforma")
+    refute series_dropdown.has_content?("FC - Facturas Comerciales")
+
+    # Verify form data is preserved
+    assert_field "Customer Notes", with: "Test proforma invoice"
+    assert_field "Item description", with: "Proforma service"
+
+    # Change back to regular invoice
+    select "Invoice", from: "Invoice Type"
+
+    # Verify form data is still preserved but series changed
+    assert_field "Customer Notes", with: "Test proforma invoice"
+    assert_field "Item description", with: "Proforma service"
+
+    series_dropdown = find("select[name='invoice[invoice_series_id]']")
+    assert series_dropdown.has_content?("FC - Facturas Comerciales")
+    refute series_dropdown.has_content?("PF - Proforma")
+  end
+
   test "form submission includes auto-generated invoice number" do
     visit new_invoice_path
 
@@ -240,9 +335,30 @@ class InvoiceFormSystemTest < ApplicationSystemTestCase
         series_name: "Facturas Comerciales",
         year: 2025,
         is_active: true
+      },
+      {
+        id: 875,
+        series_code: "PF",
+        series_name: "Proforma",
+        year: 2025,
+        is_active: true
+      },
+      {
+        id: 876,
+        series_code: "CR",
+        series_name: "Credit Note",
+        year: 2025,
+        is_active: true
+      },
+      {
+        id: 877,
+        series_code: "DB",
+        series_name: "Debit Note",
+        year: 2025,
+        is_active: true
       }
     ]
-    
+
     InvoiceSeriesService.stubs(:all).returns(mock_invoice_series)
     CompanyService.stubs(:all).returns([
       { id: 1999, name: "TechSol", legal_name: "TechSol Solutions S.L." }

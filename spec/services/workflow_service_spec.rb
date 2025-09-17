@@ -23,7 +23,13 @@ RSpec.describe WorkflowService do
     
     before do
       stub_request(:get, 'http://albaranes-api:3000/api/v1/workflow_history')
-        .with(headers: { 'Authorization' => "Bearer #{token}" })
+        .with(
+          headers: {
+            'Authorization' => "Bearer #{token}",
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json'
+          }
+        )
         .to_return(status: 200, body: history_response.to_json)
     end
     
@@ -38,7 +44,11 @@ RSpec.describe WorkflowService do
       before do
         stub_request(:get, 'http://albaranes-api:3000/api/v1/workflow_history')
           .with(
-            headers: { 'Authorization' => "Bearer #{token}" },
+            headers: {
+              'Authorization' => "Bearer #{token}",
+              'Content-Type' => 'application/json',
+              'Accept' => 'application/json'
+            },
             query: params
           )
           .to_return(status: 200, body: history_response.to_json)
@@ -65,7 +75,13 @@ RSpec.describe WorkflowService do
     
     before do
       stub_request(:get, "http://albaranes-api:3000/api/v1/invoices/#{invoice_id}/workflow/available_transitions")
-        .with(headers: { 'Authorization' => "Bearer #{token}" })
+        .with(
+          headers: {
+            'Authorization' => "Bearer #{token}",
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json'
+          }
+        )
         .to_return(status: 200, body: transitions_response.to_json)
     end
     
@@ -86,31 +102,52 @@ RSpec.describe WorkflowService do
         updated_at: '2024-01-01T12:00:00Z'
       }
     end
-    
+
     before do
       stub_request(:patch, "http://albaranes-api:3000/api/v1/invoices/#{invoice_id}/status")
         .with(
-          headers: { 'Authorization' => "Bearer #{token}" },
-          body: { status: status, comment: comment }.to_json
+          headers: {
+            'Authorization' => "Bearer #{token}",
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json'
+          },
+          body: {
+            data: {
+              attributes: {
+                status: status,
+                comment: comment
+              }
+            }
+          }.to_json
         )
         .to_return(status: 200, body: transition_response.to_json)
     end
-    
+
     it 'transitions invoice status with comment' do
       result = described_class.transition(invoice_id, status: status, comment: comment, token: token)
       expect(result).to eq(transition_response.deep_symbolize_keys)
     end
-    
+
     context 'without comment' do
       before do
         stub_request(:patch, "http://albaranes-api:3000/api/v1/invoices/#{invoice_id}/status")
           .with(
-            headers: { 'Authorization' => "Bearer #{token}" },
-            body: { status: status }.to_json
+            headers: {
+              'Authorization' => "Bearer #{token}",
+              'Content-Type' => 'application/json',
+              'Accept' => 'application/json'
+            },
+            body: {
+              data: {
+                attributes: {
+                  status: status
+                }
+              }
+            }.to_json
           )
           .to_return(status: 200, body: transition_response.to_json)
       end
-      
+
       it 'transitions invoice status without comment' do
         result = described_class.transition(invoice_id, status: status, token: token)
         expect(result).to eq(transition_response.deep_symbolize_keys)
@@ -133,7 +170,13 @@ RSpec.describe WorkflowService do
     
     before do
       stub_request(:get, 'http://albaranes-api:3000/api/v1/workflow_definitions')
-        .with(headers: { 'Authorization' => "Bearer #{token}" })
+        .with(
+          headers: {
+            'Authorization' => "Bearer #{token}",
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json'
+          }
+        )
         .to_return(status: 200, body: definitions_response.to_json)
     end
     

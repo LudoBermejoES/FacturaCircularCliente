@@ -1,10 +1,11 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["lineItems", "lineItemTemplate", "subtotal", "tax", "total", "addButton", "seriesSelect", "invoiceNumber", "contactField", "contactSelect"]
-  static values = { 
+  static targets = ["lineItems", "lineItemTemplate", "subtotal", "tax", "total", "addButton", "seriesSelect", "invoiceNumber", "contactField", "contactSelect", "invoiceTypeSelect", "buyerSelect", "buyerPartyId", "buyerContactId"]
+  static values = {
     lineIndex: Number,
-    taxRate: { type: Number, default: 21 }
+    taxRate: { type: Number, default: 21 },
+    allSeries: Array
   }
 
   connect() {
@@ -13,6 +14,11 @@ export default class extends Controller {
       this.addLineItem()
     }
     this.calculateTotals()
+
+    // Store all series options for filtering
+    if (this.hasSeriesSelectTarget) {
+      this.storeAllSeriesOptions()
+    }
   }
 
   addLineItem(event) {
@@ -118,14 +124,38 @@ export default class extends Controller {
     }
   }
 
+  updateBuyer(event) {
+    const selection = event.target.value
+
+    if (!selection) {
+      // Clear both hidden fields
+      if (this.hasBuyerPartyIdTarget) this.buyerPartyIdTarget.value = ''
+      if (this.hasBuyerContactIdTarget) this.buyerContactIdTarget.value = ''
+      return
+    }
+
+    // Parse the selection format: "type:id"
+    const [type, id] = selection.split(':')
+
+    if (type === 'company') {
+      // Set company ID and clear contact ID
+      if (this.hasBuyerPartyIdTarget) this.buyerPartyIdTarget.value = id
+      if (this.hasBuyerContactIdTarget) this.buyerContactIdTarget.value = ''
+    } else if (type === 'contact') {
+      // Set contact ID and clear company ID
+      if (this.hasBuyerContactIdTarget) this.buyerContactIdTarget.value = id
+      if (this.hasBuyerPartyIdTarget) this.buyerPartyIdTarget.value = ''
+    }
+  }
+
   async updateCompany(event) {
     const companyId = event.target.value
-    
+
     if (!companyId) {
       this.hideContactField()
       return
     }
-    
+
     // Load company contacts
     try {
       await this.loadCompanyContacts(companyId)
@@ -326,5 +356,59 @@ export default class extends Controller {
       this.invoiceNumberTarget.classList.remove('animate-pulse', 'bg-gray-50')
       this.invoiceNumberTarget.classList.add('border-red-300', 'text-red-900', 'bg-red-50')
     }
+  }
+
+  storeAllSeriesOptions() {
+    const allOptions = Array.from(this.seriesSelectTarget.options).map(option => ({
+      value: option.value,
+      text: option.text,
+      seriesCode: option.text.split(' - ')[0], // Extract series code like "PF" from "PF - Proforma 2025"
+      selected: option.selected
+    }))
+    this.allSeriesValue = allOptions
+  }
+
+  onInvoiceTypeChange(event) {
+    const invoiceType = event.target.value
+    this.filterSeriesByType(invoiceType)
+    // Clear invoice number when type changes
+    this.clearInvoiceNumber()
+  }
+
+  filterSeriesByType(invoiceType) {
+    if (!this.hasSeriesSelectTarget || !this.allSeriesValue) {
+      return
+    }
+
+    // Determine which series codes are valid for the selected invoice type
+    const validSeriesCodes = this.getValidSeriesCodesForType(invoiceType)
+
+    // Clear current options (except the blank option)
+    while (this.seriesSelectTarget.options.length > 1) {
+      this.seriesSelectTarget.removeChild(this.seriesSelectTarget.lastChild)
+    }
+
+    // Add filtered options
+    this.allSeriesValue.forEach(seriesOption => {
+      if (seriesOption.value === '' || validSeriesCodes.includes(seriesOption.seriesCode)) {
+        const option = document.createElement('option')
+        option.value = seriesOption.value
+        option.text = seriesOption.text
+        option.selected = seriesOption.selected
+        this.seriesSelectTarget.appendChild(option)
+      }
+    })
+  }
+
+  getValidSeriesCodesForType(invoiceType) {
+    // Map invoice types to their corresponding series codes
+    const typeToSeriesMapping = {
+      'invoice': ['FC'], // Regular invoices use FC (Factura Comercial)
+      'proforma': ['PF'], // Proforma invoices use PF (Proforma)
+      'credit_note': ['CR'], // Credit notes use CR (Nota de Crédito)
+      'debit_note': ['DB'] // Debit notes use DB (Nota de Débito)
+    }
+
+    return typeToSeriesMapping[invoiceType] || ['FC'] // Default to FC if type is unknown
   }
 }
