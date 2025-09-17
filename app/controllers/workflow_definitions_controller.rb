@@ -26,15 +26,9 @@ class WorkflowDefinitionsController < ApplicationController
   end
 
   def show
-    workflow_id = @workflow_definition[:id] || @workflow_definition['id']
-    @states = WorkflowService.definition_states(
-      workflow_id,
-      token: current_user_token
-    )
-    @transitions = WorkflowService.definition_transitions(
-      workflow_id,
-      token: current_user_token
-    )
+    # Use embedded states and transitions from the workflow definition response
+    @states = @workflow_definition[:states] || @workflow_definition['states'] || []
+    @transitions = @workflow_definition[:transitions] || @workflow_definition['transitions'] || []
     @page_title = @workflow_definition[:name] || @workflow_definition['name']
   rescue ApiService::ApiError => e
     flash[:error] = "Failed to load workflow details: #{e.message}"

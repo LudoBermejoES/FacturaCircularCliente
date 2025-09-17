@@ -210,14 +210,14 @@ class WorkflowStatesControllerTest < ActionDispatch::IntegrationTest
     WorkflowService.stubs(:definition).returns(@workflow_definition)
     WorkflowService.expects(:create_state).with(
       @workflow_definition['id'],
-      has_entries('name' => 'test', 'display_name' => 'Test', 'color' => '#ff0000'),
+      has_entries('name' => 'Test', 'code' => 'test', 'color' => '#ff0000'),
       token: anything
     ).returns(@workflow_state.merge('id' => 999))
 
     post workflow_definition_workflow_states_url(@workflow_definition['id']), params: {
       workflow_state: {
-        name: 'test',
-        display_name: 'Test',
+        name: 'Test',
+        code: 'test',
         category: 'test',
         color: '#ff0000',
         position: 1,

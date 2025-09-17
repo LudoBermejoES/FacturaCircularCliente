@@ -156,7 +156,7 @@ RSpec.describe WorkflowService do
     end
     
     before do
-      stub_request(:get, "http://albaranes-api:3000/api/v1/workflow_definitions/#{definition_id}/workflow_states")
+      stub_request(:get, "http://albaranes-api:3000/api/v1/workflow_definitions/#{definition_id}/states")
         .with(headers: { 'Authorization' => "Bearer #{token}" })
         .to_return(status: 200, body: states_response.to_json)
     end
@@ -179,7 +179,7 @@ RSpec.describe WorkflowService do
     end
 
     before do
-      stub_request(:get, "http://albaranes-api:3000/api/v1/workflow_definitions/#{definition_id}/workflow_transitions")
+      stub_request(:get, "http://albaranes-api:3000/api/v1/workflow_definitions/#{definition_id}/transitions")
         .with(headers: { 'Authorization' => "Bearer #{token}" })
         .to_return(status: 200, body: transitions_response.to_json)
     end
@@ -374,6 +374,352 @@ RSpec.describe WorkflowService do
       # Test the specific patterns used in views
       expect(result[:id] || result['id']).to eq(definition_id)
       expect(result[:name] || result['name']).to eq('Standard Workflow')
+    end
+  end
+
+  # WORKFLOW STATES CRUD TESTS
+  describe '.state' do
+    let(:definition_id) { 1 }
+    let(:state_id) { 2 }
+    let(:state_response) do
+      {
+        id: state_id,
+        name: 'Pending Review',
+        code: 'pending_review',
+        category: 'review',
+        color: '#F59E0B',
+        is_initial: false,
+        is_final: false,
+        position: 2
+      }
+    end
+
+    before do
+      stub_request(:get, "http://albaranes-api:3000/api/v1/workflow_definitions/#{definition_id}/states/#{state_id}")
+        .with(headers: { 'Authorization' => "Bearer #{token}" })
+        .to_return(status: 200, body: state_response.to_json)
+    end
+
+    it 'returns workflow state details' do
+      result = described_class.state(definition_id, state_id, token: token)
+      expect(result).to eq(state_response.deep_symbolize_keys)
+    end
+  end
+
+  describe '.create_state' do
+    let(:definition_id) { 1 }
+    let(:params) do
+      {
+        name: 'New State',
+        code: 'new_state',
+        category: 'draft',
+        color: '#6B7280',
+        is_initial: false,
+        is_final: false,
+        position: 1
+      }
+    end
+
+    let(:expected_body) do
+      { workflow_state: params }
+    end
+
+    let(:create_response) do
+      {
+        id: 3,
+        name: params[:name],
+        code: params[:code],
+        category: params[:category],
+        color: params[:color],
+        is_initial: params[:is_initial],
+        is_final: params[:is_final],
+        position: params[:position]
+      }
+    end
+
+    before do
+      stub_request(:post, "http://albaranes-api:3000/api/v1/workflow_definitions/#{definition_id}/states")
+        .with(
+          headers: { 'Authorization' => "Bearer #{token}" },
+          body: expected_body.to_json
+        )
+        .to_return(status: 201, body: create_response.to_json)
+    end
+
+    it 'creates workflow state with correct request format' do
+      result = described_class.create_state(definition_id, params, token: token)
+      expect(result).to eq(create_response.deep_symbolize_keys)
+    end
+
+    it 'wraps parameters in workflow_state object' do
+      described_class.create_state(definition_id, params, token: token)
+      expect(WebMock).to have_requested(:post, "http://albaranes-api:3000/api/v1/workflow_definitions/#{definition_id}/states")
+        .with(body: expected_body.to_json)
+    end
+  end
+
+  describe '.update_state' do
+    let(:definition_id) { 1 }
+    let(:state_id) { 2 }
+    let(:params) do
+      {
+        name: 'Updated State',
+        color: '#10B981'
+      }
+    end
+
+    let(:expected_body) do
+      { workflow_state: params }
+    end
+
+    let(:update_response) do
+      {
+        id: state_id,
+        name: params[:name],
+        code: 'existing_code',
+        category: 'review',
+        color: params[:color],
+        is_initial: false,
+        is_final: false,
+        position: 2
+      }
+    end
+
+    before do
+      stub_request(:put, "http://albaranes-api:3000/api/v1/workflow_definitions/#{definition_id}/states/#{state_id}")
+        .with(
+          headers: { 'Authorization' => "Bearer #{token}" },
+          body: expected_body.to_json
+        )
+        .to_return(status: 200, body: update_response.to_json)
+    end
+
+    it 'updates workflow state with correct request format' do
+      result = described_class.update_state(definition_id, state_id, params, token: token)
+      expect(result).to eq(update_response.deep_symbolize_keys)
+    end
+
+    it 'wraps parameters in workflow_state object' do
+      described_class.update_state(definition_id, state_id, params, token: token)
+      expect(WebMock).to have_requested(:put, "http://albaranes-api:3000/api/v1/workflow_definitions/#{definition_id}/states/#{state_id}")
+        .with(body: expected_body.to_json)
+    end
+  end
+
+  describe '.delete_state' do
+    let(:definition_id) { 1 }
+    let(:state_id) { 2 }
+
+    before do
+      stub_request(:delete, "http://albaranes-api:3000/api/v1/workflow_definitions/#{definition_id}/states/#{state_id}")
+        .with(headers: { 'Authorization' => "Bearer #{token}" })
+        .to_return(status: 204, body: '')
+    end
+
+    it 'deletes workflow state' do
+      result = described_class.delete_state(definition_id, state_id, token: token)
+      expect(result).to be_nil
+    end
+  end
+
+  # WORKFLOW TRANSITIONS CRUD TESTS
+  describe '.get_transition' do
+    let(:definition_id) { 1 }
+    let(:transition_id) { 2 }
+    let(:transition_response) do
+      {
+        id: transition_id,
+        name: 'Submit for Review',
+        code: 'submit_review',
+        from_state_code: 'draft',
+        to_state_code: 'pending_review',
+        required_roles: ['employee', 'manager'],
+        guard_conditions: { 'min_amount' => 0 }
+      }
+    end
+
+    before do
+      stub_request(:get, "http://albaranes-api:3000/api/v1/workflow_definitions/#{definition_id}/transitions/#{transition_id}")
+        .with(headers: { 'Authorization' => "Bearer #{token}" })
+        .to_return(status: 200, body: transition_response.to_json)
+    end
+
+    it 'returns workflow transition details' do
+      result = described_class.get_transition(definition_id, transition_id, token: token)
+      expect(result).to eq(transition_response.deep_symbolize_keys)
+    end
+  end
+
+  describe '.create_transition' do
+    let(:definition_id) { 1 }
+    let(:params) do
+      {
+        name: 'New Transition',
+        code: 'new_transition',
+        from_state_id: 1,
+        to_state_id: 2,
+        required_roles: ['manager'],
+        guard_conditions: { 'min_amount' => 100 }
+      }
+    end
+
+    let(:expected_body) do
+      { workflow_transition: params }
+    end
+
+    let(:create_response) do
+      {
+        id: 3,
+        name: params[:name],
+        code: params[:code],
+        from_state_code: 'draft',
+        to_state_code: 'pending_review',
+        required_roles: params[:required_roles],
+        guard_conditions: params[:guard_conditions]
+      }
+    end
+
+    before do
+      stub_request(:post, "http://albaranes-api:3000/api/v1/workflow_definitions/#{definition_id}/transitions")
+        .with(
+          headers: { 'Authorization' => "Bearer #{token}" },
+          body: expected_body.to_json
+        )
+        .to_return(status: 201, body: create_response.to_json)
+    end
+
+    it 'creates workflow transition with correct request format' do
+      result = described_class.create_transition(definition_id, params, token: token)
+      expect(result).to eq(create_response.deep_symbolize_keys)
+    end
+
+    it 'wraps parameters in workflow_transition object' do
+      described_class.create_transition(definition_id, params, token: token)
+      expect(WebMock).to have_requested(:post, "http://albaranes-api:3000/api/v1/workflow_definitions/#{definition_id}/transitions")
+        .with(body: expected_body.to_json)
+    end
+  end
+
+  describe '.update_transition' do
+    let(:definition_id) { 1 }
+    let(:transition_id) { 2 }
+    let(:params) do
+      {
+        name: 'Updated Transition',
+        required_roles: ['admin']
+      }
+    end
+
+    let(:expected_body) do
+      { workflow_transition: params }
+    end
+
+    let(:update_response) do
+      {
+        id: transition_id,
+        name: params[:name],
+        code: 'existing_code',
+        from_state_code: 'draft',
+        to_state_code: 'pending_review',
+        required_roles: params[:required_roles],
+        guard_conditions: {}
+      }
+    end
+
+    before do
+      stub_request(:put, "http://albaranes-api:3000/api/v1/workflow_definitions/#{definition_id}/transitions/#{transition_id}")
+        .with(
+          headers: { 'Authorization' => "Bearer #{token}" },
+          body: expected_body.to_json
+        )
+        .to_return(status: 200, body: update_response.to_json)
+    end
+
+    it 'updates workflow transition with correct request format' do
+      result = described_class.update_transition(definition_id, transition_id, params, token: token)
+      expect(result).to eq(update_response.deep_symbolize_keys)
+    end
+
+    it 'wraps parameters in workflow_transition object' do
+      described_class.update_transition(definition_id, transition_id, params, token: token)
+      expect(WebMock).to have_requested(:put, "http://albaranes-api:3000/api/v1/workflow_definitions/#{definition_id}/transitions/#{transition_id}")
+        .with(body: expected_body.to_json)
+    end
+  end
+
+  describe '.delete_transition' do
+    let(:definition_id) { 1 }
+    let(:transition_id) { 2 }
+
+    before do
+      stub_request(:delete, "http://albaranes-api:3000/api/v1/workflow_definitions/#{definition_id}/transitions/#{transition_id}")
+        .with(headers: { 'Authorization' => "Bearer #{token}" })
+        .to_return(status: 204, body: '')
+    end
+
+    it 'deletes workflow transition' do
+      result = described_class.delete_transition(definition_id, transition_id, token: token)
+      expect(result).to be_nil
+    end
+  end
+
+  # ERROR HANDLING TESTS
+  describe 'error handling' do
+    let(:definition_id) { 1 }
+    let(:state_id) { 99999 }
+
+    context 'when state is not found' do
+      before do
+        stub_request(:get, "http://albaranes-api:3000/api/v1/workflow_definitions/#{definition_id}/states/#{state_id}")
+          .with(headers: { 'Authorization' => "Bearer #{token}" })
+          .to_return(status: 404, body: { error: 'Workflow state not found' }.to_json)
+      end
+
+      it 'handles 404 errors appropriately' do
+        expect {
+          described_class.state(definition_id, state_id, token: token)
+        }.to raise_error(ApiService::ApiError) do |error|
+          expect(error.message).to include('not found')
+        end
+      end
+    end
+
+    context 'when validation fails on create' do
+      let(:invalid_params) do
+        {
+          name: '',  # Invalid empty name
+          code: '',  # Invalid empty code
+        }
+      end
+
+      before do
+        stub_request(:post, "http://albaranes-api:3000/api/v1/workflow_definitions/#{definition_id}/states")
+          .with(
+            headers: { 'Authorization' => "Bearer #{token}" },
+            body: { workflow_state: invalid_params }.to_json
+          )
+          .to_return(status: 422, body: { errors: ['Name can\'t be blank', 'Code can\'t be blank'] }.to_json)
+      end
+
+      it 'handles validation errors appropriately' do
+        expect {
+          described_class.create_state(definition_id, invalid_params, token: token)
+        }.to raise_error(ApiService::ValidationError)
+      end
+    end
+
+    context 'when trying to delete referenced state' do
+      before do
+        stub_request(:delete, "http://albaranes-api:3000/api/v1/workflow_definitions/#{definition_id}/states/#{state_id}")
+          .with(headers: { 'Authorization' => "Bearer #{token}" })
+          .to_return(status: 409, body: { error: 'Cannot delete state that is referenced by transitions' }.to_json)
+      end
+
+      it 'handles conflict errors appropriately' do
+        expect {
+          described_class.delete_state(definition_id, state_id, token: token)
+        }.to raise_error(ApiService::ApiError)
+      end
     end
   end
 end

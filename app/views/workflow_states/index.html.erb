@@ -5,17 +5,17 @@
   <div class="flex justify-between items-center mb-6">
     <div>
       <h1 class="text-3xl font-bold text-gray-900"><%= @page_title %></h1>
-      <p class="text-gray-600 mt-1">Manage states for the <%= @workflow_definition['name'] %> workflow</p>
+      <p class="text-gray-600 mt-1">Manage states for the <%= @workflow_definition[:name] || @workflow_definition['name'] %> workflow</p>
     </div>
     <div class="flex gap-3">
-      <%= link_to workflow_definition_path(@workflow_definition['id']),
+      <%= link_to workflow_definition_path(@workflow_definition[:id] || @workflow_definition['id']),
                   class: "btn-secondary" do %>
         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
         </svg>
         Back to Workflow
       <% end %>
-      <%= link_to new_workflow_definition_workflow_state_path(@workflow_definition['id']),
+      <%= link_to new_workflow_definition_workflow_state_path(@workflow_definition[:id] || @workflow_definition['id']),
                   class: "btn-primary" do %>
         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -28,7 +28,7 @@
   <% if @workflow_states.any? %>
     <!-- States Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <% @workflow_states.sort_by { |state| state['position'] || 0 }.each do |state| %>
+      <% @workflow_states.sort_by { |state| (state[:position] || state['position']) || 0 }.each do |state| %>
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
           <!-- State Header -->
           <div class="flex items-center justify-between mb-4">
@@ -68,15 +68,15 @@
 
           <!-- Actions -->
           <div class="flex gap-2 pt-4 border-t border-gray-100">
-            <%= link_to workflow_definition_workflow_state_path(@workflow_definition['id'], state['id']),
+            <%= link_to workflow_definition_workflow_state_path(@workflow_definition[:id] || @workflow_definition['id'], state[:id] || state['id']),
                         class: "btn-sm btn-secondary flex-1 text-center" do %>
               View
             <% end %>
-            <%= link_to edit_workflow_definition_workflow_state_path(@workflow_definition['id'], state['id']),
+            <%= link_to edit_workflow_definition_workflow_state_path(@workflow_definition[:id] || @workflow_definition['id'], state[:id] || state['id']),
                         class: "btn-sm btn-secondary flex-1 text-center" do %>
               Edit
             <% end %>
-            <%= link_to workflow_definition_workflow_state_path(@workflow_definition['id'], state['id']),
+            <%= link_to workflow_definition_workflow_state_path(@workflow_definition[:id] || @workflow_definition['id'], state[:id] || state['id']),
                         method: :delete,
                         data: {
                           confirm: "Are you sure you want to delete the '#{state['display_name']}' state? This cannot be undone.",
@@ -130,7 +130,7 @@
       <h3 class="mt-2 text-sm font-medium text-gray-900">No workflow states</h3>
       <p class="mt-1 text-sm text-gray-500">Get started by creating your first workflow state.</p>
       <div class="mt-6">
-        <%= link_to new_workflow_definition_workflow_state_path(@workflow_definition['id']),
+        <%= link_to new_workflow_definition_workflow_state_path(@workflow_definition[:id] || @workflow_definition['id']),
                     class: "btn-primary" do %>
           <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />

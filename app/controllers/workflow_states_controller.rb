@@ -4,7 +4,17 @@ class WorkflowStatesController < ApplicationController
 
   def index
     workflow_id = @workflow_definition[:id] || @workflow_definition['id']
-    @workflow_states = WorkflowService.definition_states(workflow_id, token: current_user_token)
+    result = WorkflowService.definition_states(workflow_id, token: current_user_token)
+
+    # Handle different response formats from API
+    if result.is_a?(Hash)
+      @workflow_states = result['data'] || result[:data] || result['workflow_states'] || result[:workflow_states] || []
+    elsif result.is_a?(Array)
+      @workflow_states = result
+    else
+      @workflow_states = []
+    end
+
     @page_title = "Workflow States - #{@workflow_definition[:name] || @workflow_definition['name']}"
   rescue ApiService::ApiError => e
     flash[:error] = "Failed to load workflow states: #{e.message}"
@@ -23,10 +33,10 @@ class WorkflowStatesController < ApplicationController
   def new
     @workflow_state = {
       'name' => '',
-      'display_name' => '',
+      'code' => '',
       'category' => '',
       'color' => '#6B7280',
-      'position' => 0,
+      'position' => 1,
       'is_initial' => false,
       'is_final' => false
     }
@@ -34,21 +44,22 @@ class WorkflowStatesController < ApplicationController
   end
 
   def create
+    workflow_id = @workflow_definition[:id] || @workflow_definition['id']
     @workflow_state = WorkflowService.create_state(
-      @workflow_definition['id'],
+      workflow_id,
       workflow_state_params,
       token: current_user_token
     )
 
     flash[:success] = 'Workflow state created successfully'
-    redirect_to workflow_definition_workflow_state_path(@workflow_definition['id'], @workflow_state['id'])
+    redirect_to workflow_definition_workflow_state_path(workflow_id, @workflow_state[:id] || @workflow_state['id'])
   rescue ApiService::ApiError => e
     @workflow_state = workflow_state_params.merge({
       'name' => workflow_state_params[:name] || '',
-      'display_name' => workflow_state_params[:display_name] || '',
+      'code' => workflow_state_params[:code] || '',
       'category' => workflow_state_params[:category] || '',
       'color' => workflow_state_params[:color] || '#6B7280',
-      'position' => workflow_state_params[:position] || 0,
+      'position' => workflow_state_params[:position] || 1,
       'is_initial' => workflow_state_params[:is_initial] || false,
       'is_final' => workflow_state_params[:is_final] || false
     })
@@ -61,19 +72,22 @@ class WorkflowStatesController < ApplicationController
     @page_title = "Edit #{@workflow_state['display_name']} State"
   rescue ApiService::ApiError => e
     flash[:error] = "Workflow state not found: #{e.message}"
-    redirect_to workflow_definition_workflow_states_path(@workflow_definition['id'])
+    workflow_id = @workflow_definition[:id] || @workflow_definition['id']
+    redirect_to workflow_definition_workflow_states_path(workflow_id)
   end
 
   def update
+    workflow_id = @workflow_definition[:id] || @workflow_definition['id']
     @workflow_state = WorkflowService.update_state(
-      @workflow_definition['id'],
+      workflow_id,
       @workflow_state['id'],
       workflow_state_params,
       token: current_user_token
     )
 
     flash[:success] = 'Workflow state updated successfully'
-    redirect_to workflow_definition_workflow_state_path(@workflow_definition['id'], @workflow_state['id'])
+    workflow_id = @workflow_definition[:id] || @workflow_definition['id']
+    redirect_to workflow_definition_workflow_state_path(workflow_id, @workflow_state[:id] || @workflow_state['id'])
   rescue ApiService::ApiError => e
     flash.now[:error] = "Failed to update workflow state: #{e.message}"
     @page_title = "Edit #{@workflow_state['display_name']} State"
@@ -115,8 +129,16 @@ class WorkflowStatesController < ApplicationController
   end
 
   def workflow_state_params
-    params.require(:workflow_state).permit(
-      :name, :display_name, :category, :color, :position, :is_initial, :is_final
-    )
+    # Handle both nested (:workflow_state) and flat parameter formats
+    if params[:workflow_state].present?
+      params.require(:workflow_state).permit(
+        :name, :code, :category, :color, :position, :is_initial, :is_final
+      )
+    else
+      # Handle flat parameters (current form submission format)
+      params.permit(
+        :name, :code, :category, :color, :position, :is_initial, :is_final
+      )
+    end
   end
 end

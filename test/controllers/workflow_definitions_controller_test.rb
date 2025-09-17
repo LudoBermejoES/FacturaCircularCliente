@@ -79,15 +79,6 @@ class WorkflowDefinitionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should handle workflow definition with symbol keys" do
-    symbolized_definition = {
-      id: 1,
-      name: 'Symbol Key Workflow',
-      code: 'SYMBOL_TEST',
-      description: 'Testing symbol key access',
-      company_id: 1,
-      is_active: true,
-      is_default: false
-    }
     symbolized_states = [
       {
         id: 1,
@@ -112,10 +103,19 @@ class WorkflowDefinitionsControllerTest < ActionDispatch::IntegrationTest
         required_permissions: []
       }
     ]
+    symbolized_definition = {
+      id: 1,
+      name: 'Symbol Key Workflow',
+      code: 'SYMBOL_TEST',
+      description: 'Testing symbol key access',
+      company_id: 1,
+      is_active: true,
+      is_default: false,
+      states: symbolized_states,
+      transitions: symbolized_transitions
+    }
 
     WorkflowService.stubs(:definition).returns(symbolized_definition)
-    WorkflowService.stubs(:definition_states).returns(symbolized_states)
-    WorkflowService.stubs(:definition_transitions).returns(symbolized_transitions)
 
     get workflow_definition_url(symbolized_definition[:id])
     assert_response :success

@@ -68,38 +68,42 @@ class WorkflowService < ApiService
     post("/invoices/bulk_transition", body: body, token: token)
   end
 
-  # Workflow States CRUD
+  # Workflow States CRUD - Fixed URLs to match backend implementation
   def self.state(definition_id, state_id, token:)
-    get("/workflow_definitions/#{definition_id}/workflow_states/#{state_id}", token: token)
+    get("/workflow_definitions/#{definition_id}/states/#{state_id}", token: token)
   end
 
   def self.create_state(definition_id, params, token:)
-    post("/workflow_definitions/#{definition_id}/workflow_states", body: params, token: token)
+    body = { workflow_state: params }
+    post("/workflow_definitions/#{definition_id}/states", body: body, token: token)
   end
 
   def self.update_state(definition_id, state_id, params, token:)
-    put("/workflow_definitions/#{definition_id}/workflow_states/#{state_id}", body: params, token: token)
+    body = { workflow_state: params }
+    put("/workflow_definitions/#{definition_id}/states/#{state_id}", body: body, token: token)
   end
 
   def self.delete_state(definition_id, state_id, token:)
-    delete("/workflow_definitions/#{definition_id}/workflow_states/#{state_id}", token: token)
+    delete("/workflow_definitions/#{definition_id}/states/#{state_id}", token: token)
   end
 
-  # Workflow Transitions CRUD
+  # Workflow Transitions CRUD - Fixed URLs and method naming
   def self.get_transition(definition_id, transition_id, token:)
-    get("/workflow_definitions/#{definition_id}/workflow_transitions/#{transition_id}", token: token)
+    get("/workflow_definitions/#{definition_id}/transitions/#{transition_id}", token: token)
   end
 
   def self.create_transition(definition_id, params, token:)
-    post("/workflow_definitions/#{definition_id}/workflow_transitions", body: params, token: token)
+    body = { workflow_transition: params }
+    post("/workflow_definitions/#{definition_id}/transitions", body: body, token: token)
   end
 
   def self.update_transition(definition_id, transition_id, params, token:)
-    put("/workflow_definitions/#{definition_id}/workflow_transitions/#{transition_id}", body: params, token: token)
+    body = { workflow_transition: params }
+    put("/workflow_definitions/#{definition_id}/transitions/#{transition_id}", body: body, token: token)
   end
 
   def self.delete_transition(definition_id, transition_id, token:)
-    delete("/workflow_definitions/#{definition_id}/workflow_transitions/#{transition_id}", token: token)
+    delete("/workflow_definitions/#{definition_id}/transitions/#{transition_id}", token: token)
   end
 
   # Note: The following methods were removed as they don't exist in the API:
