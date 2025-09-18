@@ -21,6 +21,7 @@ class InvoiceService < ApiService
             due_date: attributes[:due_date],
             seller_party_id: attributes[:seller_party_id],
             buyer_party_id: attributes[:buyer_party_id],
+            buyer_company_contact_id: attributes[:buyer_company_contact_id],
             total_invoice: attributes[:total_invoice],
             total: attributes[:total_invoice]&.to_f, # Field used by views for display
             subtotal: attributes[:total_gross_amount_before_taxes]&.to_f, # Subtotal calculation
@@ -96,6 +97,7 @@ class InvoiceService < ApiService
           due_date: attributes[:due_date],
           seller_party_id: attributes[:seller_party_id],
           buyer_party_id: attributes[:buyer_party_id],
+          buyer_company_contact_id: attributes[:buyer_company_contact_id],
           total_invoice: attributes[:total_invoice],
           total: attributes[:total_invoice]&.to_f, # Field used by views for display
           subtotal: attributes[:total_gross_amount_before_taxes]&.to_f, # Subtotal calculation
@@ -302,11 +304,12 @@ class InvoiceService < ApiService
     def format_for_api(params)
       # Don't modify original params, work with a copy
       params_copy = params.dup
-      
+
       # Extract relationships
       seller_party_id = params_copy.delete(:seller_party_id)
       buyer_party_id = params_copy.delete(:buyer_party_id)
-      
+      buyer_company_contact_id = params_copy.delete(:buyer_company_contact_id)
+
       # Build JSON API structure
       json_api_params = {
         data: {
@@ -314,24 +317,30 @@ class InvoiceService < ApiService
           attributes: params_copy
         }
       }
-      
+
       # Add relationships if present
-      if seller_party_id || buyer_party_id
+      if seller_party_id || buyer_party_id || buyer_company_contact_id
         json_api_params[:data][:relationships] = {}
-        
+
         if seller_party_id
           json_api_params[:data][:relationships][:seller_party] = {
             data: { type: 'companies', id: seller_party_id.to_s }
           }
         end
-        
+
         if buyer_party_id
           json_api_params[:data][:relationships][:buyer_party] = {
             data: { type: 'companies', id: buyer_party_id.to_s }
           }
         end
+
+        if buyer_company_contact_id
+          json_api_params[:data][:relationships][:buyer_company_contact] = {
+            data: { type: 'company_contacts', id: buyer_company_contact_id.to_s }
+          }
+        end
       end
-      
+
       json_api_params
     end
   end

@@ -78,7 +78,7 @@
         <% if to_state %>
           <div class="w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center text-white font-medium"
                style="background-color: <%= (to_state[:color] || to_state['color']) || '#6B7280' %>">
-            <%= (to_state[:display_name] || to_state['display_name']).split.map(&:first).join.upcase %>
+            <%= ((to_state[:display_name] || to_state['display_name']) || 'N/A').split.map(&:first).join.upcase %>
           </div>
           <div class="text-xs font-medium text-blue-900"><%= to_state[:display_name] || to_state['display_name'] %></div>
         <% else %>

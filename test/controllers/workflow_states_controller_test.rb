@@ -114,7 +114,7 @@ class WorkflowStatesControllerTest < ActionDispatch::IntegrationTest
       }
     }
 
-    assert_redirected_to workflow_definition_workflow_state_path(@workflow_definition['id'], new_state['id'])
+    assert_redirected_to workflow_definition_workflow_states_path(@workflow_definition['id'])
     assert_equal 'Workflow state created successfully', flash[:success]
   end
 
@@ -156,7 +156,7 @@ class WorkflowStatesControllerTest < ActionDispatch::IntegrationTest
       }
     }
 
-    assert_redirected_to workflow_definition_workflow_state_path(@workflow_definition['id'], @workflow_state['id'])
+    assert_redirected_to workflow_definition_workflow_states_path(@workflow_definition['id'])
     assert_equal 'Workflow state updated successfully', flash[:success]
   end
 
@@ -229,6 +229,68 @@ class WorkflowStatesControllerTest < ActionDispatch::IntegrationTest
       }
     }
 
-    assert_redirected_to workflow_definition_workflow_state_path(@workflow_definition['id'], 999)
+    assert_redirected_to workflow_definition_workflow_states_path(@workflow_definition['id'])
+  end
+
+  test "should handle state update with correct state ID extraction" do
+    WorkflowService.stubs(:definition).returns(@workflow_definition)
+
+    # Test with symbol keys (typical API response format)
+    state_with_symbol_keys = {
+      id: 1428,
+      name: 'Test State',
+      display_name: 'Test State Display',
+      category: 'draft',
+      color: '#6B7280'
+    }
+    WorkflowService.stubs(:state).returns(state_with_symbol_keys)
+
+    # Verify the state ID is correctly extracted and passed to the API
+    WorkflowService.expects(:update_state).with(
+      @workflow_definition['id'],
+      1428,  # This should be the extracted state ID
+      has_entries('display_name' => 'Updated Test State'),
+      token: anything
+    ).returns(state_with_symbol_keys.merge(display_name: 'Updated Test State'))
+
+    patch workflow_definition_workflow_state_url(@workflow_definition['id'], 1428), params: {
+      workflow_state: {
+        display_name: 'Updated Test State'
+      }
+    }
+
+    assert_redirected_to workflow_definition_workflow_states_path(@workflow_definition['id'])
+    assert_equal 'Workflow state updated successfully', flash[:success]
+  end
+
+  test "should handle state update with string keys" do
+    WorkflowService.stubs(:definition).returns(@workflow_definition)
+
+    # Test with string keys (alternative API response format)
+    state_with_string_keys = {
+      'id' => 1429,
+      'name' => 'Another State',
+      'display_name' => 'Another State Display',
+      'category' => 'review',
+      'color' => '#FF0000'
+    }
+    WorkflowService.stubs(:state).returns(state_with_string_keys)
+
+    # Verify the state ID is correctly extracted from string keys
+    WorkflowService.expects(:update_state).with(
+      @workflow_definition['id'],
+      1429,  # This should be the extracted state ID from string key
+      has_entries('display_name' => 'Updated Another State'),
+      token: anything
+    ).returns(state_with_string_keys.merge('display_name' => 'Updated Another State'))
+
+    patch workflow_definition_workflow_state_url(@workflow_definition['id'], 1429), params: {
+      workflow_state: {
+        display_name: 'Updated Another State'
+      }
+    }
+
+    assert_redirected_to workflow_definition_workflow_states_path(@workflow_definition['id'])
+    assert_equal 'Workflow state updated successfully', flash[:success]
   end
 end

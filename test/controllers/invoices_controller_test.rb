@@ -663,6 +663,218 @@ class InvoicesControllerTest < ActionDispatch::IntegrationTest
     assert_select 'option', text: /DB - Debit Note/
   end
 
+  # Test for show action with company contact loading
+  test "show action loads seller company information" do
+    invoice_data = {
+      id: "729",
+      invoice_number: "PF-0001",
+      seller_party_id: 1859,
+      buyer_party_id: nil,
+      buyer_company_contact_id: nil,
+      status: "draft",
+      total: 0.0
+    }
+
+    seller_company = {
+      id: 1859,
+      name: "TechSol",
+      tax_id: "B12345678",
+      email: "info@techsol.com",
+      phone: "+34912345678"
+    }
+
+    InvoiceService.stubs(:find)
+      .with("729", token: "test_admin_token")
+      .returns(invoice_data)
+
+    CompanyService.stubs(:find)
+      .with(1859, token: "test_admin_token")
+      .returns(seller_company)
+
+    get invoice_path(729)
+
+    assert_response :success
+    assert_equal invoice_data, assigns(:invoice)
+    assert_equal seller_company, assigns(:seller_company)
+    assert_nil assigns(:buyer_company)
+    assert_nil assigns(:buyer_contact)
+  end
+
+  test "show action loads buyer company information when buyer_party_id is present" do
+    invoice_data = {
+      id: "727",
+      invoice_number: "FC-2025-0001",
+      seller_party_id: 1859,
+      buyer_party_id: 1860,
+      buyer_company_contact_id: nil,
+      status: "draft",
+      total: 1210.0
+    }
+
+    seller_company = {
+      id: 1859,
+      name: "TechSol",
+      tax_id: "B12345678"
+    }
+
+    buyer_company = {
+      id: 1860,
+      name: "GreenWaste",
+      tax_id: "B23456789"
+    }
+
+    InvoiceService.stubs(:find)
+      .with("727", token: "test_admin_token")
+      .returns(invoice_data)
+
+    CompanyService.stubs(:find)
+      .with(1859, token: "test_admin_token")
+      .returns(seller_company)
+
+    CompanyService.stubs(:find)
+      .with(1860, token: "test_admin_token")
+      .returns(buyer_company)
+
+    get invoice_path(727)
+
+    assert_response :success
+    assert_equal invoice_data, assigns(:invoice)
+    assert_equal seller_company, assigns(:seller_company)
+    assert_equal buyer_company, assigns(:buyer_company)
+    assert_nil assigns(:buyer_contact)
+  end
+
+  test "show action loads buyer contact information when buyer_company_contact_id is present" do
+    invoice_data = {
+      id: "729",
+      invoice_number: "PF-0001",
+      seller_party_id: 1859,
+      buyer_party_id: nil,
+      buyer_company_contact_id: 112,
+      buyer_name: "DataCenter Barcelona (Contact)",
+      status: "draft",
+      total: 0.0
+    }
+
+    seller_company = {
+      id: 1859,
+      name: "TechSol",
+      tax_id: "B12345678"
+    }
+
+    buyer_contact = {
+      id: "112",
+      company_name: "DataCenter Barcelona S.A.",
+      legal_name: "DataCenter Barcelona S.A.",
+      tax_id: "A22222222",
+      email: "services@datacenterbarcelona.com",
+      phone: "+34 933 789 012"
+    }
+
+    InvoiceService.stubs(:find)
+      .with("729", token: "test_admin_token")
+      .returns(invoice_data)
+
+    CompanyService.stubs(:find)
+      .with(1859, token: "test_admin_token")
+      .returns(seller_company)
+
+    CompanyContactService.stubs(:find)
+      .with(112, company_id: 1859, token: "test_admin_token")
+      .returns(buyer_contact)
+
+    get invoice_path(729)
+
+    assert_response :success
+    assert_equal invoice_data, assigns(:invoice)
+    assert_equal seller_company, assigns(:seller_company)
+    assert_nil assigns(:buyer_company)
+    assert_equal buyer_contact, assigns(:buyer_contact)
+  end
+
+  test "show action falls back to placeholder when company contact loading fails" do
+    invoice_data = {
+      id: "729",
+      invoice_number: "PF-0001",
+      seller_party_id: 1859,
+      buyer_party_id: nil,
+      buyer_company_contact_id: 112,
+      buyer_name: "DataCenter Barcelona (Contact)",
+      status: "draft",
+      total: 0.0
+    }
+
+    seller_company = {
+      id: 1859,
+      name: "TechSol",
+      tax_id: "B12345678"
+    }
+
+    InvoiceService.stubs(:find)
+      .with("729", token: "test_admin_token")
+      .returns(invoice_data)
+
+    CompanyService.stubs(:find)
+      .with(1859, token: "test_admin_token")
+      .returns(seller_company)
+
+    # Mock CompanyContactService to return nil (simulating failure)
+    CompanyContactService.stubs(:find)
+      .with(112, company_id: 1859, token: "test_admin_token")
+      .returns(nil)
+
+    get invoice_path(729)
+
+    assert_response :success
+    assert_equal invoice_data, assigns(:invoice)
+    assert_equal seller_company, assigns(:seller_company)
+    assert_nil assigns(:buyer_company)
+
+    # Should fall back to placeholder contact
+    expected_placeholder = {
+      id: 112,
+      company_name: "DataCenter Barcelona (Contact)",
+      email: nil,
+      phone: nil,
+      tax_id: nil
+    }
+    assert_equal expected_placeholder, assigns(:buyer_contact)
+  end
+
+  test "show action handles missing seller_party_id gracefully" do
+    invoice_data = {
+      id: "729",
+      invoice_number: "PF-0001",
+      seller_party_id: nil,
+      buyer_party_id: nil,
+      buyer_company_contact_id: 112,
+      buyer_name: "DataCenter Barcelona (Contact)",
+      status: "draft",
+      total: 0.0
+    }
+
+    InvoiceService.stubs(:find)
+      .with("729", token: "test_admin_token")
+      .returns(invoice_data)
+
+    get invoice_path(729)
+
+    assert_response :success
+    assert_equal invoice_data, assigns(:invoice)
+    assert_nil assigns(:seller_company)
+    assert_nil assigns(:buyer_company)
+
+    # Should still create placeholder contact
+    expected_placeholder = {
+      id: 112,
+      company_name: "DataCenter Barcelona (Contact)",
+      email: nil,
+      phone: nil,
+      tax_id: nil
+    }
+    assert_equal expected_placeholder, assigns(:buyer_contact)
+  end
+
   private
 
   def mock_required_services

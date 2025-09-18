@@ -106,7 +106,7 @@ class WorkflowDefinitionsController < ApplicationController
   def workflow_definition_params
     # Note: company_display is ignored as it's just for display
     params.require(:workflow_definition).permit(
-      :name, :code, :description, :company_id, :is_active, :is_default
+      :name, :code, :description, :company_id, :is_active, :is_default, :company_display
     )
   end
 end

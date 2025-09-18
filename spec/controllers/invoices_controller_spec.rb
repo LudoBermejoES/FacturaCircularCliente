@@ -372,6 +372,192 @@ RSpec.describe InvoicesController, type: :controller do
     end
   end
 
+  describe 'GET #show' do
+    let(:companies) { [company, build(:company_response, id: company_id + 1)] }
+    let(:buyer_company) { build(:company_response, id: company_id + 1, name: 'Buyer Company') }
+    let(:invoice_with_buyer_company) { build(:invoice_response, id: invoice_id, seller_party_id: company_id, buyer_party_id: company_id + 1) }
+    let(:invoice_with_buyer_contact) { build(:invoice_response, id: invoice_id, seller_party_id: company_id, buyer_company_contact_id: contact_id, buyer_name: 'GreenWaste') }
+
+    before do
+      allow(InvoiceService).to receive(:find).and_return(invoice_with_buyer_company)
+      allow(CompanyService).to receive(:find).and_return(company)
+    end
+
+    context 'when invoice has seller and buyer companies' do
+      it 'loads seller and buyer company information' do
+        allow(CompanyService).to receive(:find).with(company_id, token: token).and_return(company)
+        allow(CompanyService).to receive(:find).with(company_id + 1, token: token).and_return(buyer_company)
+
+        get :show, params: { id: invoice_id }
+
+        expect(response).to have_http_status(:ok)
+        expect(response).to render_template(:show)
+
+        expect(assigns(:invoice)).to eq(invoice_with_buyer_company)
+        expect(assigns(:seller_company)).to eq(company)
+        expect(assigns(:buyer_company)).to eq(buyer_company)
+        expect(assigns(:buyer_contact)).to be_nil
+
+        expect(InvoiceService).to have_received(:find).with(invoice_id.to_s, token: token)
+        expect(CompanyService).to have_received(:find).with(company_id, token: token)
+        expect(CompanyService).to have_received(:find).with(company_id + 1, token: token)
+      end
+    end
+
+    context 'when invoice has seller company and buyer contact' do
+      before do
+        allow(InvoiceService).to receive(:find).and_return(invoice_with_buyer_contact)
+      end
+
+      it 'loads seller company and creates buyer contact information' do
+        allow(CompanyService).to receive(:find).with(company_id, token: token).and_return(company)
+
+        get :show, params: { id: invoice_id }
+
+        expect(response).to have_http_status(:ok)
+        expect(response).to render_template(:show)
+
+        expect(assigns(:invoice)).to eq(invoice_with_buyer_contact)
+        expect(assigns(:seller_company)).to eq(company)
+        expect(assigns(:buyer_company)).to be_nil
+
+        buyer_contact = assigns(:buyer_contact)
+        expect(buyer_contact).to be_present
+        expect(buyer_contact[:id]).to eq(contact_id)
+        expect(buyer_contact[:company_name]).to eq('GreenWaste')
+        expect(buyer_contact[:email]).to be_nil
+        expect(buyer_contact[:phone]).to be_nil
+      end
+
+      it 'logs the buyer contact creation' do
+        allow(CompanyService).to receive(:find).with(company_id, token: token).and_return(company)
+        allow(Rails.logger).to receive(:info)
+
+        get :show, params: { id: invoice_id }
+
+        expect(Rails.logger).to have_received(:info)
+          .with("DEBUG: Found buyer_company_contact_id: #{contact_id}")
+      end
+    end
+
+    context 'when invoice has no buyer information' do
+      let(:invoice_without_buyer) { build(:invoice_response, id: invoice_id, seller_party_id: company_id) }
+
+      before do
+        allow(InvoiceService).to receive(:find).and_return(invoice_without_buyer)
+      end
+
+      it 'only loads seller company information' do
+        allow(CompanyService).to receive(:find).with(company_id, token: token).and_return(company)
+
+        get :show, params: { id: invoice_id }
+
+        expect(response).to have_http_status(:ok)
+        expect(assigns(:seller_company)).to eq(company)
+        expect(assigns(:buyer_company)).to be_nil
+        expect(assigns(:buyer_contact)).to be_nil
+
+        expect(CompanyService).to have_received(:find).once.with(company_id, token: token)
+      end
+    end
+
+    context 'when seller company loading fails' do
+      before do
+        allow(CompanyService).to receive(:find).with(company_id, token: token)
+          .and_raise(ApiService::ApiError.new('Company not found'))
+      end
+
+      it 'handles seller company loading errors gracefully' do
+        get :show, params: { id: invoice_id }
+
+        expect(response).to have_http_status(:ok)
+        expect(assigns(:seller_company)).to be_nil
+        expect(assigns(:buyer_company)).to be_nil
+      end
+    end
+
+    context 'when buyer company loading fails' do
+      before do
+        allow(CompanyService).to receive(:find).with(company_id, token: token).and_return(company)
+        allow(CompanyService).to receive(:find).with(company_id + 1, token: token)
+          .and_raise(ApiService::ApiError.new('Buyer company not found'))
+      end
+
+      it 'handles buyer company error gracefully but rescue block sets all to nil' do
+        get :show, params: { id: invoice_id }
+
+        expect(response).to have_http_status(:ok)
+        # The rescue block in controller catches ApiService::ApiError and sets all company vars to nil
+        expect(assigns(:seller_company)).to be_nil
+        expect(assigns(:buyer_company)).to be_nil
+        expect(flash.now[:alert]).to include('Error loading invoice details')
+      end
+    end
+
+    context 'when invoice loading fails' do
+      before do
+        allow(InvoiceService).to receive(:find)
+          .and_raise(ApiService::ApiError.new('Invoice not found'))
+      end
+
+      it 'redirects to invoices index with error message' do
+        get :show, params: { id: invoice_id }
+
+        expect(response).to redirect_to(invoices_path)
+        expect(flash[:alert]).to eq('Invoice not found: Invoice not found')
+      end
+    end
+
+
+    context 'with complex seller/buyer scenario' do
+      let(:seller_company) { build(:company_response, id: company_id, name: 'Tech Solutions Inc.') }
+      let(:buyer_company) { build(:company_response, id: company_id + 1, name: 'Green Waste Management S.L.') }
+      let(:complex_invoice) do
+        build(:invoice_response,
+          id: invoice_id,
+          seller_party_id: company_id,
+          buyer_party_id: company_id + 1,
+          invoice_number: 'FC-0001',
+          total: 1500.50,
+          status: 'approved'
+        )
+      end
+
+      before do
+        allow(InvoiceService).to receive(:find).and_return(complex_invoice)
+        allow(CompanyService).to receive(:find).with(company_id, token: token).and_return(seller_company)
+        allow(CompanyService).to receive(:find).with(company_id + 1, token: token).and_return(buyer_company)
+      end
+
+      it 'successfully loads all information for complete display' do
+        get :show, params: { id: invoice_id }
+
+        expect(response).to have_http_status(:ok)
+        expect(response).to render_template(:show)
+
+        # Verify invoice data
+        invoice = assigns(:invoice)
+        expect(invoice[:id]).to eq(invoice_id)
+        expect(invoice[:invoice_number]).to eq('FC-0001')
+        expect(invoice[:total]).to eq(1500.50)
+        expect(invoice[:status]).to eq('approved')
+
+        # Verify seller information
+        seller = assigns(:seller_company)
+        expect(seller[:id]).to eq(company_id)
+        expect(seller[:name]).to eq('Tech Solutions Inc.')
+
+        # Verify buyer information
+        buyer = assigns(:buyer_company)
+        expect(buyer[:id]).to eq(company_id + 1)
+        expect(buyer[:name]).to eq('Green Waste Management S.L.')
+
+        # Verify no buyer contact (since it's a full company)
+        expect(assigns(:buyer_contact)).to be_nil
+      end
+    end
+  end
+
   describe 'private methods' do
     describe '#load_company_contacts' do
       it 'loads contacts for specific company' do

@@ -44,11 +44,59 @@ class InvoicesController < ApplicationController
   
   def show
     begin
+      # Load seller company information
+      @seller_company = nil
+      if @invoice[:seller_party_id] || @invoice[:seller_company_id]
+        seller_id = @invoice[:seller_party_id] || @invoice[:seller_company_id]
+        @seller_company = CompanyService.find(seller_id, token: current_token)
+      end
+
+      # Load buyer company or contact information
+      @buyer_company = nil
+      @buyer_contact = nil
+
+      if @invoice[:buyer_party_id] || @invoice[:buyer_company_id]
+        buyer_id = @invoice[:buyer_party_id] || @invoice[:buyer_company_id]
+        @buyer_company = CompanyService.find(buyer_id, token: current_token)
+      elsif @invoice[:buyer_company_contact_id]
+        Rails.logger.info "DEBUG: Found buyer_company_contact_id: #{@invoice[:buyer_company_contact_id]}"
+
+        # Try to load the company contact
+        # Since the API requires a company_id, we'll try the seller's company first (current user's company)
+        seller_company_id = @invoice[:seller_party_id]
+
+        if seller_company_id
+          @buyer_contact = CompanyContactService.find(
+            @invoice[:buyer_company_contact_id],
+            company_id: seller_company_id,
+            token: current_token
+          )
+          Rails.logger.info "DEBUG: Loaded buyer contact: #{@buyer_contact.inspect}"
+        end
+
+        # Fall back to placeholder if loading failed
+        if @buyer_contact.nil?
+          Rails.logger.info "DEBUG: Could not load contact, using placeholder"
+          @buyer_contact = {
+            id: @invoice[:buyer_company_contact_id],
+            company_name: @invoice[:buyer_name] || "External Contact",
+            email: nil,
+            phone: nil,
+            tax_id: nil
+          }
+        end
+      end
+
       # Workflow history endpoint doesn't exist in API, use empty array
       @workflow_history = []
-      @company = CompanyService.find(@invoice[:company_id], token: current_token) if @invoice[:company_id]
+
+      # Legacy company field for backward compatibility
+      @company = @buyer_company || @buyer_contact
     rescue ApiService::ApiError => e
       @workflow_history = []
+      @seller_company = nil
+      @buyer_company = nil
+      @buyer_contact = nil
       flash.now[:alert] = "Error loading invoice details: #{e.message}"
     end
   end

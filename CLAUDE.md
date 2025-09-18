@@ -428,5 +428,350 @@ A successful implementation will provide:
 - 📱 **Responsive design** for all devices
 - 🚀 **Fast, intuitive user experience** with Hotwire
 
+## 📋 Invoice Series Management System
+
+### Overview
+The invoice series system provides comprehensive management of sequential invoice numbering for different document types and business scenarios. Each company can have multiple active series for different purposes (commercial invoices, proforma, credit notes, etc.).
+
+### Document Types Supported
+The system supports all Spanish invoice document types:
+
+| Code | Document Type | Series Examples | Purpose |
+|------|---------------|-----------------|---------|
+| **FC** | Factura Comercial | FC, SI, EX, IN, SV, PR, MX, RE, AG | Standard commercial invoices |
+| **FP** | Factura Proforma | PF | Proforma invoices for quotes |
+| **FR** | Factura Rectificativa | CR | Credit notes and corrections |
+| **FD** | Factura Duplicado | FD | Invoice duplicates |
+| **FA** | Factura Abono | FA | Credit invoices (Abono) |
+
+### Standard Invoice Series (Created for All Companies)
+
+Each company gets these 13 standard series automatically:
+
+#### Core Commercial Series
+- **FC** - Facturas Comerciales (default, commercial invoices)
+- **PF** - Proforma (quotes and advance billing)
+- **CR** - Notas de Crédito (credit notes/corrections)
+- **SI** - Facturas Simplificadas (simplified invoices)
+- **EX** - Facturas de Exportación (export invoices)
+- **IN** - Facturas Intracomunitarias (intra-EU invoices)
+
+#### Specialized Business Series
+- **SV** - Facturas de Servicios (service-only invoices)
+- **PR** - Facturas de Productos (product-only invoices)
+- **MX** - Facturas Mixtas (products + services)
+- **RE** - Facturas con Recargo (equivalence surcharge)
+- **AG** - Facturas de Agencia (agency commissions)
+
+#### Additional Document Types
+- **FD** - Duplicados de Factura (invoice duplicates)
+- **FA** - Facturas de Abono (credit invoices)
+
+### Industry-Specific Series
+
+Companies also get specialized series based on their business type:
+
+#### Tech Solutions Inc.
+- **SW** - Licencias de Software (software licenses)
+- **MT** - Mantenimiento (maintenance services)
+
+#### Green Waste Management S.L.
+- **WC** - Recogida de Residuos (waste collection)
+- **RC** - Servicios de Reciclaje (recycling services)
+
+#### Consulting Partners Group
+- **CS** - Consultoría (consulting services)
+- **TR** - Formación (training services)
+
+### Invoice Number Generation
+
+Invoice numbers follow this format: `{prefix}{formatted_number}{suffix}`
+
+#### Examples:
+- **FC series**: `FC-0001`, `FC-0002`, etc.
+- **PF series**: `PF-0001`, `PF-0002`, etc.
+- **Export series**: `EX-0001`, `EX-0002`, etc.
+
+#### Full Invoice Number Database Storage:
+The system generates full numbers like: `FC--FC-2025-0001` where:
+- First `FC-` is the prefix
+- `FC-2025-` appears to be part of the internal format
+- `0001` is the sequential number with padding
+
+### API Integration Examples
+
+#### Creating Invoice with Specific Series
+```json
+POST /api/v1/invoices
+{
+  "data": {
+    "type": "invoices",
+    "attributes": {
+      "invoice_series_id": 72,
+      "document_type": "FC",
+      "issue_date": "2025-01-18",
+      "currency_code": "EUR",
+      "status": "draft"
+    },
+    "relationships": {
+      "seller_party": {
+        "data": { "type": "companies", "id": "1" }
+      },
+      "buyer_party": {
+        "data": { "type": "companies", "id": "2" }
+      }
+    }
+  }
+}
+```
+
+#### Updating Invoice Series
+```json
+PATCH /api/v1/invoices/123
+{
+  "data": {
+    "type": "invoices",
+    "id": "123",
+    "attributes": {
+      "invoice_series_id": 74
+    }
+  }
+}
+```
+
+#### API Response with Series Information
+```json
+{
+  "data": {
+    "id": "123",
+    "type": "invoices",
+    "attributes": {
+      "invoice_series_id": 72,
+      "invoice_series_code": "FC",
+      "invoice_number": "FC-0001",
+      "document_type": "FC"
+    }
+  }
+}
+```
+
+### Frontend Integration
+
+#### Dropdown Selection
+The client forms include series selection dropdowns:
+```erb
+<%= form.select :invoice_series_id,
+    options_for_select(
+      (@invoice_series || []).map { |series|
+        ["#{series[:series_code]} - #{series[:series_name]}", series[:id].to_s]
+      },
+      invoice[:invoice_series_id]&.to_s
+    ),
+    { prompt: 'Select invoice series' },
+    { class: 'form-select' }
+%>
+```
+
+#### Service Layer Integration
+```ruby
+# app/services/invoice_service.rb
+def self.transform_api_response(api_response)
+  attributes = api_response.dig('data', 'attributes') || {}
+
+  # Map invoice_series_id from API response
+  invoice_series_id = attributes[:invoice_series_id]
+
+  # Handle fallback logic if needed
+  if invoice_series_id.nil? && attributes[:invoice_number].present?
+    invoice_series_id = infer_series_from_number(attributes[:invoice_number])
+  end
+
+  {
+    id: api_response.dig('data', 'id'),
+    invoice_series_id: invoice_series_id,
+    invoice_series_code: attributes[:invoice_series_code],
+    # ... other attributes
+  }
+end
+```
+
+## 🏢 Company Contacts System
+
+### Overview
+The system supports two distinct types of buyers for invoicing:
+
+1. **Company Contacts** (`CompanyContact`) - External companies without users in the system
+2. **Companies** (`Company`) - Full companies with users and system access
+
+### Buyer Type Logic
+- **Invoices can have ONLY ONE buyer type** - either `buyer_party_id` (Company) OR `buyer_company_contact_id` (CompanyContact)
+- **Current company is always the seller** when using contact companies
+- **Cross-company invoicing** is supported between full companies
+
+### Company Contacts (External Companies)
+
+These are external companies stored as contacts without user accounts:
+
+#### Seeded External Contacts (18 per company)
+
+**Construction & Infrastructure:**
+- Construcciones García S.L. (B98765432)
+- Ingeniería Martínez S.A. (A87654321)
+- Reformas López y Asociados (B76543210)
+
+**Technology & Services:**
+- Sistemas Informáticos Ruiz (B65432109)
+- Consultoría Digital Fernández (A54321098)
+- Soporte Técnico Jiménez (B43210987)
+
+**Commercial & Retail:**
+- Distribuciones Moreno S.L. (B32109876)
+- Comercial Sánchez Hermanos (A21098765)
+- Importaciones Romero (B10987654)
+
+**Manufacturing & Production:**
+- Fabricación Herrera S.A. (A09876543)
+- Industrias Vega Limitada (B98765431)
+- Producción Torres y Cía (A87654320)
+
+**Professional Services:**
+- Asesoría Fiscal Navarro (B76543209)
+- Gestoría Administrativa Ramos (A65432108)
+- Consultoría Legal Iglesias (B54321097)
+
+**Hospitality & Food:**
+- Restaurante El Buen Sabor (B43210986)
+- Hostelería Central Plaza (A32109875)
+- Catering Deliciosos Eventos (B21098764)
+
+### Cross-Company Relationships
+
+All companies in the system can invoice each other:
+
+#### System Companies:
+1. **Tech Solutions Inc.** (A12345678)
+2. **Green Waste Management S.L.** (B23456789)
+3. **Consulting Partners Group** (A34567890)
+
+Each company can be both seller and buyer in different invoices, enabling B2B invoicing scenarios.
+
+### Database Structure
+
+#### CompanyContact Model
+```ruby
+# Key attributes for external contacts
+company_contact_attributes = {
+  id: 1,
+  company_name: "Construcciones García S.L.",
+  legal_name: "Construcciones García Sociedad Limitada",
+  tax_id: "B98765432",
+  email: "facturacion@construccionesgarcia.es",
+  phone: "+34 91 234 5678",
+  contact_person: "María García López",
+  is_active: true,
+  # Address embedded as JSON
+  address: {
+    street_address: "Calle Mayor 123",
+    city: "Madrid",
+    postal_code: "28001",
+    region: "Madrid",
+    country_code: "ESP"
+  }
+}
+```
+
+#### Invoice Buyer Relationships
+```ruby
+# Option 1: External contact as buyer
+invoice.buyer_company_contact_id = company_contact.id
+invoice.buyer_party_id = nil
+
+# Option 2: Full company as buyer
+invoice.buyer_party_id = company.id
+invoice.buyer_company_contact_id = nil
+
+# Always: Current company as seller
+invoice.seller_party_id = current_company.id
+```
+
+### API Integration
+
+#### Creating Invoice with External Contact
+```json
+POST /api/v1/invoices
+{
+  "data": {
+    "type": "invoices",
+    "attributes": { /* invoice data */ },
+    "relationships": {
+      "seller_party": {
+        "data": { "type": "companies", "id": "1" }
+      },
+      "buyer_company_contact": {
+        "data": { "type": "company_contacts", "id": "1" }
+      }
+    }
+  }
+}
+```
+
+#### Creating Invoice with Full Company
+```json
+POST /api/v1/invoices
+{
+  "data": {
+    "type": "invoices",
+    "attributes": { /* invoice data */ },
+    "relationships": {
+      "seller_party": {
+        "data": { "type": "companies", "id": "1" }
+      },
+      "buyer_party": {
+        "data": { "type": "companies", "id": "2" }
+      }
+    }
+  }
+}
+```
+
+### Frontend Buyer Selection
+
+The client should provide a unified interface for selecting buyers:
+
+```erb
+<!-- Buyer selection with both types -->
+<div class="buyer-selection">
+  <%= form.radio_button :buyer_type, 'company_contact', checked: invoice[:buyer_company_contact_id].present? %>
+  <%= form.label :buyer_type_company_contact, 'External Contact' %>
+
+  <%= form.radio_button :buyer_type, 'company', checked: invoice[:buyer_party_id].present? %>
+  <%= form.label :buyer_type_company, 'Company' %>
+
+  <!-- Dynamic dropdown based on selection -->
+  <div id="buyer-company-contacts" style="<%= 'display: none;' unless invoice[:buyer_company_contact_id].present? %>">
+    <%= form.select :buyer_company_contact_id,
+        options_for_select(company_contact_options, invoice[:buyer_company_contact_id]) %>
+  </div>
+
+  <div id="buyer-companies" style="<%= 'display: none;' unless invoice[:buyer_party_id].present? %>">
+    <%= form.select :buyer_party_id,
+        options_for_select(company_options, invoice[:buyer_party_id]) %>
+  </div>
+</div>
+```
+
+### Business Rules
+
+#### Validation Rules:
+- Invoice **MUST** have exactly one buyer (either company_contact OR company)
+- Invoice **CANNOT** have both buyer types
+- Current company **MUST** be the seller when using contact companies
+- Contact companies can **ONLY** be buyers, never sellers
+
+#### Use Cases:
+- **B2C Invoicing**: Use CompanyContact for external clients
+- **B2B Invoicing**: Use Company for companies with system access
+- **Mixed Environment**: Single company can invoice both contact companies and full companies
+
 ---
 *This document serves as the development guide for building the FacturaCircular web client. Always refer to the API documentation in `/Users/ludo/code/albaranes/` when implementing features.*

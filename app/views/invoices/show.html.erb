@@ -12,17 +12,27 @@
         <span class="text-sm text-gray-500">
           <%= @invoice[:invoice_type]&.humanize %>
         </span>
+        <% if @invoice[:document_type] %>
+          <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+            <%= @invoice[:document_type] %>
+          </span>
+        <% end %>
         <% if @invoice[:is_frozen] %>
           <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
             Frozen
           </span>
         <% end %>
+        <% if @invoice[:is_proforma] %>
+          <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
+            Proforma
+          </span>
+        <% end %>
       </div>
     </div>
-    
+
     <div class="mt-4 sm:mt-0 flex flex-wrap gap-2">
       <% if @invoice[:status] == 'draft' && !@invoice[:is_frozen] %>
-        <%= link_to edit_invoice_path(params[:id]), 
+        <%= link_to edit_invoice_path(params[:id]),
             class: "inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50" do %>
           <svg class="-ml-0.5 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
@@ -30,27 +40,27 @@
           Edit
         <% end %>
       <% end %>
-      
+
       <%# PDF and XML generation disabled - not yet implemented %>
-      <button disabled 
-          class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-400 bg-gray-50 cursor-not-allowed" 
+      <button disabled
+          class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-400 bg-gray-50 cursor-not-allowed"
           title="PDF generation not yet available">
         <svg class="-ml-0.5 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
         </svg>
         Download PDF
       </button>
-      
-      <button disabled 
-          class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-400 bg-gray-50 cursor-not-allowed" 
+
+      <button disabled
+          class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-400 bg-gray-50 cursor-not-allowed"
           title="Facturae XML generation not yet available">
         <svg class="-ml-0.5 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5" />
         </svg>
         Facturae XML
       </button>
-      
-      <button type="button" 
+
+      <button type="button"
               onclick="document.getElementById('email-modal').classList.remove('hidden')"
               class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
         <svg class="-ml-0.5 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -58,7 +68,7 @@
         </svg>
         Send Email
       </button>
-      
+
       <% if !@invoice[:is_frozen] && @invoice[:status] != 'cancelled' %>
         <%= button_to freeze_invoice_path(params[:id]), method: :post,
             class: "inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700" do %>
@@ -74,6 +84,131 @@
   <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
     <!-- Main Content -->
     <div class="lg:col-span-2 space-y-6">
+
+      <!-- Seller Information -->
+      <% if @seller_company %>
+        <div class="bg-white shadow rounded-lg">
+          <div class="px-4 py-5 sm:px-6">
+            <h3 class="text-lg font-medium text-gray-900">Seller Information</h3>
+          </div>
+          <div class="border-t border-gray-200 px-4 py-5 sm:px-6">
+            <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+              <div>
+                <dt class="text-sm font-medium text-gray-500">Company Name</dt>
+                <dd class="mt-1 text-sm text-gray-900">
+                  <%= link_to (@seller_company[:corporate_name] || @seller_company[:name]), company_path(@seller_company[:id]), class: "text-indigo-600 hover:text-indigo-500" %>
+                </dd>
+              </div>
+              <div>
+                <dt class="text-sm font-medium text-gray-500">Tax ID</dt>
+                <dd class="mt-1 text-sm text-gray-900"><%= @seller_company[:tax_id] || '-' %></dd>
+              </div>
+              <div>
+                <dt class="text-sm font-medium text-gray-500">Email</dt>
+                <dd class="mt-1 text-sm text-gray-900">
+                  <% if @seller_company[:email] %>
+                    <a href="mailto:<%= @seller_company[:email] %>" class="text-indigo-600 hover:text-indigo-500">
+                      <%= @seller_company[:email] %>
+                    </a>
+                  <% else %>
+                    -
+                  <% end %>
+                </dd>
+              </div>
+              <div>
+                <dt class="text-sm font-medium text-gray-500">Phone</dt>
+                <dd class="mt-1 text-sm text-gray-900"><%= @seller_company[:phone] || '-' %></dd>
+              </div>
+              <% if @seller_company[:address] %>
+                <div class="sm:col-span-2">
+                  <dt class="text-sm font-medium text-gray-500">Address</dt>
+                  <dd class="mt-1 text-sm text-gray-900">
+                    <%= @seller_company[:address][:street_address] if @seller_company[:address][:street_address] %><br>
+                    <%= @seller_company[:address][:city] if @seller_company[:address][:city] %>
+                    <%= @seller_company[:address][:postal_code] if @seller_company[:address][:postal_code] %><br>
+                    <%= @seller_company[:address][:region] if @seller_company[:address][:region] %>
+                    <%= @seller_company[:address][:country_code] if @seller_company[:address][:country_code] %>
+                  </dd>
+                </div>
+              <% end %>
+            </dl>
+          </div>
+        </div>
+      <% end %>
+
+      <!-- Buyer Information -->
+      <% if @buyer_company || @buyer_contact %>
+        <div class="bg-white shadow rounded-lg">
+          <div class="px-4 py-5 sm:px-6">
+            <h3 class="text-lg font-medium text-gray-900">
+              Buyer Information
+              <% if @buyer_contact %>
+                <span class="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                  Contact
+                </span>
+              <% elsif @buyer_company %>
+                <span class="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                  Company
+                </span>
+              <% end %>
+            </h3>
+          </div>
+          <div class="border-t border-gray-200 px-4 py-5 sm:px-6">
+            <% buyer = @buyer_company || @buyer_contact %>
+            <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+              <div>
+                <dt class="text-sm font-medium text-gray-500">Company Name</dt>
+                <dd class="mt-1 text-sm text-gray-900">
+                  <% if @buyer_company %>
+                    <%= link_to (buyer[:corporate_name] || buyer[:name]), company_path(buyer[:id]), class: "text-indigo-600 hover:text-indigo-500" %>
+                  <% else %>
+                    <%= buyer[:company_name] || buyer[:legal_name] || buyer[:name] %>
+                  <% end %>
+                </dd>
+              </div>
+              <div>
+                <dt class="text-sm font-medium text-gray-500">Tax ID</dt>
+                <dd class="mt-1 text-sm text-gray-900"><%= buyer[:tax_id] || '-' %></dd>
+              </div>
+              <div>
+                <dt class="text-sm font-medium text-gray-500">Email</dt>
+                <dd class="mt-1 text-sm text-gray-900">
+                  <% if buyer[:email] %>
+                    <a href="mailto:<%= buyer[:email] %>" class="text-indigo-600 hover:text-indigo-500">
+                      <%= buyer[:email] %>
+                    </a>
+                  <% else %>
+                    -
+                  <% end %>
+                </dd>
+              </div>
+              <div>
+                <dt class="text-sm font-medium text-gray-500">Phone</dt>
+                <dd class="mt-1 text-sm text-gray-900"><%= buyer[:phone] || '-' %></dd>
+              </div>
+              <% if @buyer_contact && @buyer_contact[:contact_person] %>
+                <div>
+                  <dt class="text-sm font-medium text-gray-500">Contact Person</dt>
+                  <dd class="mt-1 text-sm text-gray-900"><%= @buyer_contact[:contact_person] %></dd>
+                </div>
+              <% end %>
+              <% if buyer[:address] %>
+                <div class="sm:col-span-2">
+                  <dt class="text-sm font-medium text-gray-500">Address</dt>
+                  <dd class="mt-1 text-sm text-gray-900">
+                    <%= buyer[:address][:street_address] if buyer[:address][:street_address] %><br>
+                    <%= buyer[:address][:city] if buyer[:address][:city] %>
+                    <%= buyer[:address][:postal_code] if buyer[:address][:postal_code] %><br>
+                    <%= buyer[:address][:region] if buyer[:address][:region] %>
+                    <%= buyer[:address][:country_code] if buyer[:address][:country_code] %>
+                  </dd>
+                </div>
+              <% end %>
+            </dl>
+          </div>
+        </div>
+      <% end %>
+
       <!-- Invoice Details -->
       <div class="bg-white shadow rounded-lg">
         <div class="px-4 py-5 sm:px-6">
@@ -86,13 +221,47 @@
               <dd class="mt-1 text-sm text-gray-900"><%= @invoice[:invoice_number] %></dd>
             </div>
             <div>
+              <dt class="text-sm font-medium text-gray-500">Display Number</dt>
+              <dd class="mt-1 text-sm text-gray-900"><%= @invoice[:display_number] || @invoice[:invoice_number] %></dd>
+            </div>
+            <% if @invoice[:proforma_number] %>
+              <div>
+                <dt class="text-sm font-medium text-gray-500">Proforma Number</dt>
+                <dd class="mt-1 text-sm text-gray-900"><%= @invoice[:proforma_number] %></dd>
+              </div>
+            <% end %>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Document Type</dt>
+              <dd class="mt-1 text-sm text-gray-900">
+                <%= @invoice[:document_type] %>
+                <% if @invoice[:document_class] %>
+                  (<%= @invoice[:document_class] %>)
+                <% end %>
+              </dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Invoice Series</dt>
+              <dd class="mt-1 text-sm text-gray-900">
+                <%= @invoice[:invoice_series_code] || '-' %>
+                <% if @invoice[:invoice_series_id] %>
+                  (ID: <%= @invoice[:invoice_series_id] %>)
+                <% end %>
+              </dd>
+            </div>
+            <div>
               <dt class="text-sm font-medium text-gray-500">Type</dt>
               <dd class="mt-1 text-sm text-gray-900"><%= @invoice[:invoice_type]&.humanize %></dd>
             </div>
             <div>
-              <dt class="text-sm font-medium text-gray-500">Invoice Date</dt>
+              <dt class="text-sm font-medium text-gray-500">Issue Date</dt>
               <dd class="mt-1 text-sm text-gray-900">
-                <%= @invoice[:date] ? Date.parse(@invoice[:date]).strftime("%B %d, %Y") : '-' %>
+                <%= @invoice[:issue_date] ? Date.parse(@invoice[:issue_date]).strftime("%B %d, %Y") : @invoice[:date] ? Date.parse(@invoice[:date]).strftime("%B %d, %Y") : '-' %>
+              </dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Operation Date</dt>
+              <dd class="mt-1 text-sm text-gray-900">
+                <%= @invoice[:operation_date] ? Date.parse(@invoice[:operation_date]).strftime("%B %d, %Y") : '-' %>
               </dd>
             </div>
             <div>
@@ -100,6 +269,18 @@
               <dd class="mt-1 text-sm text-gray-900">
                 <%= @invoice[:due_date] ? Date.parse(@invoice[:due_date]).strftime("%B %d, %Y") : '-' %>
               </dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Currency</dt>
+              <dd class="mt-1 text-sm text-gray-900"><%= @invoice[:currency_code] || 'EUR' %></dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Language</dt>
+              <dd class="mt-1 text-sm text-gray-900"><%= @invoice[:language_code] || 'es' %></dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Exchange Rate</dt>
+              <dd class="mt-1 text-sm text-gray-900"><%= @invoice[:exchange_rate] || '1.0' %></dd>
             </div>
             <div>
               <dt class="text-sm font-medium text-gray-500">Payment Terms</dt>
@@ -116,45 +297,6 @@
           </dl>
         </div>
       </div>
-
-      <!-- Customer Information -->
-      <% if @company %>
-        <div class="bg-white shadow rounded-lg">
-          <div class="px-4 py-5 sm:px-6">
-            <h3 class="text-lg font-medium text-gray-900">Customer Information</h3>
-          </div>
-          <div class="border-t border-gray-200 px-4 py-5 sm:px-6">
-            <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
-              <div>
-                <dt class="text-sm font-medium text-gray-500">Company</dt>
-                <dd class="mt-1 text-sm text-gray-900">
-                  <%= link_to @company[:name], company_path(@company[:id]), class: "text-indigo-600 hover:text-indigo-500" %>
-                </dd>
-              </div>
-              <div>
-                <dt class="text-sm font-medium text-gray-500">Tax ID</dt>
-                <dd class="mt-1 text-sm text-gray-900"><%= @company[:tax_id] || '-' %></dd>
-              </div>
-              <div>
-                <dt class="text-sm font-medium text-gray-500">Email</dt>
-                <dd class="mt-1 text-sm text-gray-900">
-                  <% if @company[:email] %>
-                    <a href="mailto:<%= @company[:email] %>" class="text-indigo-600 hover:text-indigo-500">
-                      <%= @company[:email] %>
-                    </a>
-                  <% else %>
-                    -
-                  <% end %>
-                </dd>
-              </div>
-              <div>
-                <dt class="text-sm font-medium text-gray-500">Phone</dt>
-                <dd class="mt-1 text-sm text-gray-900"><%= @company[:phone] || '-' %></dd>
-              </div>
-            </dl>
-          </div>
-        </div>
-      <% end %>
 
       <!-- Line Items -->
       <div class="bg-white shadow rounded-lg">
@@ -189,13 +331,13 @@
               <% (@invoice[:invoice_lines] || []).each do |line| %>
                 <tr>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <%= line[:description] %>
+                    <%= line[:description] || line[:item_description] %>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <%= line[:quantity] %>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    €<%= number_with_delimiter(line[:unit_price] || 0, delimiter: ',') %>
+                    €<%= number_with_delimiter(line[:unit_price] || line[:unit_price_without_tax] || 0, delimiter: ',') %>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <%= line[:tax_rate] %>%
@@ -204,34 +346,225 @@
                     <%= line[:discount_percentage] || 0 %>%
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                    €<%= number_with_delimiter(line[:total] || 0, delimiter: ',') %>
+                    €<%= number_with_delimiter(line[:total] || line[:gross_amount] || 0, delimiter: ',') %>
                   </td>
                 </tr>
               <% end %>
             </tbody>
-            <tfoot>
-              <tr>
-                <th colspan="5" class="px-6 py-3 text-right text-sm font-medium text-gray-500">Subtotal:</th>
-                <td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900 text-right">
-                  €<%= number_with_delimiter(@invoice[:subtotal] || 0, delimiter: ',') %>
-                </td>
-              </tr>
-              <tr>
-                <th colspan="5" class="px-6 py-3 text-right text-sm font-medium text-gray-500">Tax:</th>
-                <td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900 text-right">
-                  €<%= number_with_delimiter(@invoice[:total_tax] || 0, delimiter: ',') %>
-                </td>
-              </tr>
-              <tr class="bg-gray-50">
-                <th colspan="5" class="px-6 py-3 text-right text-base font-medium text-gray-900">Total:</th>
-                <td class="px-6 py-3 whitespace-nowrap text-base font-medium text-gray-900 text-right">
-                  €<%= number_with_delimiter(@invoice[:total] || 0, delimiter: ',') %>
-                </td>
-              </tr>
-            </tfoot>
           </table>
         </div>
       </div>
+
+      <!-- Financial Summary -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:px-6">
+          <h3 class="text-lg font-medium text-gray-900">Financial Summary</h3>
+        </div>
+        <div class="border-t border-gray-200 px-4 py-5 sm:px-6">
+          <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Total Gross Amount</dt>
+              <dd class="mt-1 text-sm text-gray-900">€<%= number_with_delimiter(@invoice[:total_gross_amount] || @invoice[:subtotal] || 0, delimiter: ',') %></dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">General Discounts</dt>
+              <dd class="mt-1 text-sm text-gray-900">€<%= number_with_delimiter(@invoice[:total_general_discounts] || 0, delimiter: ',') %></dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">General Surcharges</dt>
+              <dd class="mt-1 text-sm text-gray-900">€<%= number_with_delimiter(@invoice[:total_general_surcharges] || 0, delimiter: ',') %></dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Gross Amount Before Taxes</dt>
+              <dd class="mt-1 text-sm text-gray-900">€<%= number_with_delimiter(@invoice[:total_gross_amount_before_taxes] || 0, delimiter: ',') %></dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Tax Outputs</dt>
+              <dd class="mt-1 text-sm text-gray-900">€<%= number_with_delimiter(@invoice[:total_tax_outputs] || @invoice[:total_tax] || 0, delimiter: ',') %></dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Tax Withheld</dt>
+              <dd class="mt-1 text-sm text-gray-900">€<%= number_with_delimiter(@invoice[:total_tax_withheld] || 0, delimiter: ',') %></dd>
+            </div>
+            <div class="bg-gray-50 p-3 rounded">
+              <dt class="text-sm font-medium text-gray-900">Total Invoice</dt>
+              <dd class="mt-1 text-lg font-bold text-gray-900">€<%= number_with_delimiter(@invoice[:total_invoice] || @invoice[:total] || 0, delimiter: ',') %></dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Outstanding Amount</dt>
+              <dd class="mt-1 text-sm text-gray-900">€<%= number_with_delimiter(@invoice[:total_outstanding_amount] || 0, delimiter: ',') %></dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Executable Amount</dt>
+              <dd class="mt-1 text-sm text-gray-900">€<%= number_with_delimiter(@invoice[:total_executeable_amount] || 0, delimiter: ',') %></dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Reimbursable Expenses</dt>
+              <dd class="mt-1 text-sm text-gray-900">€<%= number_with_delimiter(@invoice[:total_reimbursable_expenses] || 0, delimiter: ',') %></dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Financial Expenses</dt>
+              <dd class="mt-1 text-sm text-gray-900">€<%= number_with_delimiter(@invoice[:total_financial_expenses] || 0, delimiter: ',') %></dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Payment in Kind Amount</dt>
+              <dd class="mt-1 text-sm text-gray-900">€<%= number_with_delimiter(@invoice[:payment_in_kind_amount] || 0, delimiter: ',') %></dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Withholding Amount</dt>
+              <dd class="mt-1 text-sm text-gray-900">€<%= number_with_delimiter(@invoice[:withholding_amount] || 0, delimiter: ',') %></dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+
+      <!-- Document Metadata -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:px-6">
+          <h3 class="text-lg font-medium text-gray-900">Document Metadata</h3>
+        </div>
+        <div class="border-t border-gray-200 px-4 py-5 sm:px-6">
+          <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Created At</dt>
+              <dd class="mt-1 text-sm text-gray-900">
+                <%= @invoice[:created_at] ? Time.parse(@invoice[:created_at]).strftime("%B %d, %Y at %H:%M") : '-' %>
+              </dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Updated At</dt>
+              <dd class="mt-1 text-sm text-gray-900">
+                <%= @invoice[:updated_at] ? Time.parse(@invoice[:updated_at]).strftime("%B %d, %Y at %H:%M") : '-' %>
+              </dd>
+            </div>
+            <% if @invoice[:issued_at] %>
+              <div>
+                <dt class="text-sm font-medium text-gray-500">Issued At</dt>
+                <dd class="mt-1 text-sm text-gray-900">
+                  <%= Time.parse(@invoice[:issued_at]).strftime("%B %d, %Y at %H:%M") %>
+                </dd>
+              </div>
+            <% end %>
+            <% if @invoice[:sent_at] %>
+              <div>
+                <dt class="text-sm font-medium text-gray-500">Sent At</dt>
+                <dd class="mt-1 text-sm text-gray-900">
+                  <%= Time.parse(@invoice[:sent_at]).strftime("%B %d, %Y at %H:%M") %>
+                </dd>
+              </div>
+            <% end %>
+            <% if @invoice[:paid_at] %>
+              <div>
+                <dt class="text-sm font-medium text-gray-500">Paid At</dt>
+                <dd class="mt-1 text-sm text-gray-900">
+                  <%= Time.parse(@invoice[:paid_at]).strftime("%B %d, %Y at %H:%M") %>
+                </dd>
+              </div>
+            <% end %>
+            <% if @invoice[:cancelled_at] %>
+              <div>
+                <dt class="text-sm font-medium text-gray-500">Cancelled At</dt>
+                <dd class="mt-1 text-sm text-gray-900">
+                  <%= Time.parse(@invoice[:cancelled_at]).strftime("%B %d, %Y at %H:%M") %>
+                </dd>
+              </div>
+            <% end %>
+            <% if @invoice[:frozen_at] %>
+              <div>
+                <dt class="text-sm font-medium text-gray-500">Frozen At</dt>
+                <dd class="mt-1 text-sm text-gray-900">
+                  <%= Time.parse(@invoice[:frozen_at]).strftime("%B %d, %Y at %H:%M") %>
+                </dd>
+              </div>
+            <% end %>
+            <% if @invoice[:frozen_by_id] %>
+              <div>
+                <dt class="text-sm font-medium text-gray-500">Frozen By</dt>
+                <dd class="mt-1 text-sm text-gray-900">User ID: <%= @invoice[:frozen_by_id] %></dd>
+              </div>
+            <% end %>
+            <% if @invoice[:frozen_reason] %>
+              <div>
+                <dt class="text-sm font-medium text-gray-500">Frozen Reason</dt>
+                <dd class="mt-1 text-sm text-gray-900"><%= @invoice[:frozen_reason] %></dd>
+              </div>
+            <% end %>
+            <% if @invoice[:frozen_hash] %>
+              <div>
+                <dt class="text-sm font-medium text-gray-500">Frozen Hash</dt>
+                <dd class="mt-1 text-sm text-gray-900 font-mono text-xs"><%= @invoice[:frozen_hash] %></dd>
+              </div>
+            <% end %>
+            <% if @invoice[:related_invoice_id] %>
+              <div>
+                <dt class="text-sm font-medium text-gray-500">Related Invoice</dt>
+                <dd class="mt-1 text-sm text-gray-900">
+                  <%= link_to "Invoice ##{@invoice[:related_invoice_id]}", invoice_path(@invoice[:related_invoice_id]), class: "text-indigo-600 hover:text-indigo-500" %>
+                </dd>
+              </div>
+            <% end %>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Can Be Modified</dt>
+              <dd class="mt-1 text-sm text-gray-900">
+                <% if @invoice[:can_be_modified] %>
+                  <span class="text-green-600">Yes</span>
+                <% else %>
+                  <span class="text-red-600">No</span>
+                <% end %>
+              </dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Can Be Converted</dt>
+              <dd class="mt-1 text-sm text-gray-900">
+                <% if @invoice[:can_be_converted] %>
+                  <span class="text-green-600">Yes</span>
+                <% else %>
+                  <span class="text-red-600">No</span>
+                <% end %>
+              </dd>
+            </div>
+            <% if @invoice[:has_tax_validity] %>
+              <div>
+                <dt class="text-sm font-medium text-gray-500">Tax Validity</dt>
+                <dd class="mt-1 text-sm text-gray-900">
+                  <span class="text-green-600">Valid</span>
+                </dd>
+              </div>
+            <% end %>
+          </dl>
+        </div>
+      </div>
+
+      <!-- Additional Information -->
+      <% if @invoice[:additional_information].present? %>
+        <div class="bg-white shadow rounded-lg">
+          <div class="px-4 py-5 sm:px-6">
+            <h3 class="text-lg font-medium text-gray-900">Additional Information</h3>
+          </div>
+          <div class="border-t border-gray-200 px-4 py-5 sm:px-6">
+            <p class="text-sm text-gray-900"><%= @invoice[:additional_information] %></p>
+          </div>
+        </div>
+      <% end %>
+
+      <!-- Metadata (if present) -->
+      <% if @invoice[:metadata].present? && @invoice[:metadata].any? %>
+        <div class="bg-white shadow rounded-lg">
+          <div class="px-4 py-5 sm:px-6">
+            <h3 class="text-lg font-medium text-gray-900">Metadata</h3>
+          </div>
+          <div class="border-t border-gray-200 px-4 py-5 sm:px-6">
+            <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+              <% @invoice[:metadata].each do |key, value| %>
+                <div>
+                  <dt class="text-sm font-medium text-gray-500"><%= key.humanize %></dt>
+                  <dd class="mt-1 text-sm text-gray-900"><%= value %></dd>
+                </div>
+              <% end %>
+            </dl>
+          </div>
+        </div>
+      <% end %>
 
       <!-- Notes -->
       <% if @invoice[:notes].present? || @invoice[:internal_notes].present? %>
@@ -273,7 +606,7 @@
               </svg>
               Manage Workflow
             <% end %>
-            
+
             <button type="button" class="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
               Duplicate Invoice
             </button>
@@ -323,9 +656,9 @@
     <div class="fixed inset-0 transition-opacity" aria-hidden="true">
       <div class="absolute inset-0 bg-gray-500 bg-opacity-75"></div>
     </div>
-    
+
     <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-    
+
     <div class="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
       <%= form_with url: send_email_invoice_path(@invoice[:id]), method: :post, local: true do |f| %>
         <div>
@@ -334,16 +667,16 @@
           </h3>
           <div class="mt-4">
             <%= f.label :recipient_email, "Recipient Email", class: "block text-sm font-medium text-gray-700" %>
-            <%= f.email_field :recipient_email, 
-                value: (@company ? @company[:email] : ""),
+            <%= f.email_field :recipient_email,
+                value: ((@buyer_company && @buyer_company[:email]) || (@buyer_contact && @buyer_contact[:email]) || ""),
                 class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
                 required: true %>
           </div>
         </div>
         <div class="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
-          <%= f.submit "Send Email", 
+          <%= f.submit "Send Email",
               class: "w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:col-start-2 sm:text-sm" %>
-          <button type="button" 
+          <button type="button"
                   onclick="document.getElementById('email-modal').classList.add('hidden')"
                   class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:col-start-1 sm:text-sm">
             Cancel

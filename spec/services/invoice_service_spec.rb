@@ -247,6 +247,92 @@ RSpec.describe InvoiceService do
       result = described_class.create(invoice_params, token: token)
       expect(result[:data][:id]).to eq('1')
     end
+
+    context 'with company contact as buyer' do
+      let(:contact_invoice_params) do
+        {
+          seller_party_id: 1,
+          buyer_company_contact_id: 8,
+          invoice_type: 'proforma',
+          date: Date.current.to_s,
+          due_date: 30.days.from_now.to_s,
+          invoice_lines_attributes: [
+            { description: 'Service', quantity: 1, unit_price: 100, tax_rate: 21 }
+          ]
+        }
+      end
+
+      before do
+        # Expected JSON API format with buyer_company_contact relationship
+        expected_body = {
+          data: {
+            type: 'invoices',
+            attributes: {
+              invoice_type: 'proforma',
+              date: Date.current.to_s,
+              due_date: 30.days.from_now.to_s
+            },
+            relationships: {
+              seller_party: {
+                data: { type: 'companies', id: '1' }
+              },
+              buyer_company_contact: {
+                data: { type: 'company_contacts', id: '8' }
+              }
+            }
+          }
+        }
+
+        # Mock the initial invoice creation (without line items)
+        stub_request(:post, 'http://albaranes-api:3000/api/v1/invoices')
+          .with(
+            body: expected_body.to_json,
+            headers: { 'Authorization' => "Bearer #{token}" }
+          )
+          .to_return(status: 201, body: { data: { id: '2' } }.to_json)
+
+        # Mock the line item creation
+        expected_line_body = {
+          data: {
+            type: 'invoice_lines',
+            attributes: {
+              item_description: 'Service',
+              unit_price_without_tax: 100,
+              quantity: 1,
+              tax_rate: 21,
+              discount_percentage: nil,
+              gross_amount: 100.0
+            }
+          }
+        }
+
+        stub_request(:post, 'http://albaranes-api:3000/api/v1/invoices/2/lines')
+          .with(
+            body: expected_line_body.to_json,
+            headers: { 'Authorization' => "Bearer #{token}" }
+          )
+          .to_return(status: 201, body: { id: 20 }.to_json)
+
+        # Mock the tax recalculation
+        stub_request(:post, 'http://albaranes-api:3000/api/v1/invoices/2/taxes/recalculate')
+          .with(headers: { 'Authorization' => "Bearer #{token}" })
+          .to_return(status: 200, body: {}.to_json)
+      end
+
+      it 'creates invoice with company contact relationship' do
+        result = described_class.create(contact_invoice_params, token: token)
+        expect(result[:data][:id]).to eq('2')
+
+        # Verify the correct API call was made with buyer_company_contact relationship
+        expect(WebMock).to have_requested(:post, 'http://albaranes-api:3000/api/v1/invoices')
+          .with { |req|
+            body = JSON.parse(req.body)
+            expect(body['data']['relationships']['buyer_company_contact']['data']['type']).to eq('company_contacts')
+            expect(body['data']['relationships']['buyer_company_contact']['data']['id']).to eq('8')
+            expect(body['data']['relationships']).not_to have_key('buyer_party')
+          }
+      end
+    end
   end
   
   describe '.update' do
