@@ -41,12 +41,12 @@
           <%= form.label :invoice_series_id, "Invoice Series", class: "block text-sm font-medium text-gray-700" %>
           <%= form.select :invoice_series_id,
               options_for_select(
-                (@invoice_series || []).map { |series| ["#{series[:series_code]} - #{series[:series_name]}", series[:id]] },
-                invoice[:invoice_series_id]
+                (@invoice_series || []).map { |series| ["#{series[:series_code]} - #{series[:series_name]}", series[:id].to_s] },
+                invoice[:invoice_series_id]&.to_s
               ),
               { include_blank: 'Select invoice series' },
               class: field_class("invoice_series_id", "mt-1 block w-full rounded-md shadow-sm focus:ring-indigo-500 sm:text-sm", @errors),
-              data: { 
+              data: {
                 action: "change->invoice-form#onSeriesChange",
                 "invoice-form-target": "seriesSelect"
               },

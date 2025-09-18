@@ -11,6 +11,7 @@ class InvoiceService < ApiService
           {
             id: invoice_data[:id],
             invoice_number: attributes[:invoice_number],
+            invoice_series_id: attributes[:invoice_series_id],
             proforma_number: attributes[:proforma_number],
             document_type: attributes[:document_type],
             invoice_type: attributes[:document_type], # alias for compatibility
@@ -71,15 +72,27 @@ class InvoiceService < ApiService
       # Transform JSON API format to expected format
       if response[:data]
         attributes = response[:data][:attributes] || {}
+        # Workaround: If invoice_series_id is nil, try to infer it from invoice number prefix
+        invoice_series_id = attributes[:invoice_series_id]
+        if invoice_series_id.nil? && attributes[:invoice_number].present?
+          case attributes[:invoice_number]
+          when /^FC-/
+            invoice_series_id = "72" # FC - Facturas Comerciales 2025
+          when /^PF-/
+            invoice_series_id = "74" # PF - Proforma 2025
+          end
+        end
+
         transformed = {
           id: response[:data][:id],
           invoice_number: attributes[:invoice_number],
+          invoice_series_id: invoice_series_id,
           proforma_number: attributes[:proforma_number],
           document_type: attributes[:document_type],
           invoice_type: attributes[:document_type], # alias for compatibility
           status: attributes[:status],
           date: attributes[:issue_date],
-          issue_date: attributes[:issue_date], # alias for compatibility  
+          issue_date: attributes[:issue_date], # alias for compatibility
           due_date: attributes[:due_date],
           seller_party_id: attributes[:seller_party_id],
           buyer_party_id: attributes[:buyer_party_id],
