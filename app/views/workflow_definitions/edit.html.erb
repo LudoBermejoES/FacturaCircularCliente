@@ -36,8 +36,8 @@
 
       <div class="grid grid-cols-1 gap-6">
         <div>
-          <%= form.label :company_id, "Company", class: "block text-sm font-medium text-gray-700" %>
-          <%= form.text_field :company_display,
+          <%= form.label :company, "Company", class: "block text-sm font-medium text-gray-700" %>
+          <%= form.text_field :company,
               value: current_company&.dig('name') || current_company&.dig(:name) || "No company assigned",
               readonly: true,
               class: "mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm text-gray-700",

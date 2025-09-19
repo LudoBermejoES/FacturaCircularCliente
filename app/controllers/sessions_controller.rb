@@ -27,15 +27,20 @@ class SessionsController < ApplicationController
     Rails.logger.info "DEBUG: AuthService returned: #{auth_response ? 'SUCCESS' : 'FAILURE'}"
     
     if auth_response
+      Rails.logger.info "DEBUG: Auth successful, storing session"
+      Rails.logger.info "DEBUG: Auth response keys: #{auth_response.keys.inspect}"
       store_session(auth_response)
-      
+
       # If user has multiple companies but no default was selected, show company selector
       if auth_response[:companies]&.size.to_i > 1 && auth_response[:company_id].nil?
+        Rails.logger.info "DEBUG: Redirecting to company selector"
         redirect_to select_company_path, notice: 'Please select a company to continue'
       else
+        Rails.logger.info "DEBUG: Redirecting to dashboard"
         redirect_to dashboard_path, notice: 'Successfully logged in!'
       end
     else
+      Rails.logger.info "DEBUG: Auth failed, auth_response was nil/false"
       flash.now[:alert] = 'Invalid email or password'
       render :new, status: :unprocessable_content
     end

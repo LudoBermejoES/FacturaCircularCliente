@@ -41,18 +41,46 @@ class WorkflowDefinitionsController < ApplicationController
   end
 
   def create
+    Rails.logger.info "DEBUG: create - method started"
+    Rails.logger.info "DEBUG: create - params: #{params.inspect}"
+
     # Override company_id with current user's company to ensure data integrity
     params_with_company = workflow_definition_params.merge(
       company_id: current_company_id
     )
 
-    @workflow_definition = WorkflowService.create_definition(
-      params_with_company,
-      token: current_user_token
-    )
-    flash[:success] = "Workflow definition created successfully"
-    redirect_to workflow_definition_path(@workflow_definition[:id] || @workflow_definition['id'])
+    Rails.logger.info "DEBUG: create - calling WorkflowService.create_definition with params: #{params_with_company.inspect}"
+    Rails.logger.info "DEBUG: create - current_user_token: #{current_user_token.present? ? 'present' : 'missing'}"
+
+    begin
+      @workflow_definition = WorkflowService.create_definition(
+        params_with_company,
+        token: current_user_token
+      )
+      Rails.logger.info "DEBUG: create - success, redirecting with workflow_definition: #{@workflow_definition.inspect}"
+      flash[:success] = "Workflow definition created successfully"
+      redirect_to workflow_definition_path(@workflow_definition[:id] || @workflow_definition['id'])
+    rescue => e
+      Rails.logger.info "DEBUG: create - caught exception class: #{e.class.name}"
+      Rails.logger.info "DEBUG: create - exception message: #{e.message}"
+      Rails.logger.info "DEBUG: create - exception backtrace: #{e.backtrace.first(5).join("\n")}"
+      raise
+    end
+  rescue ApiService::ValidationError => e
+    Rails.logger.info "DEBUG: create - caught ValidationError: #{e.message}, errors: #{e.errors}"
+    flash.now[:error] = "Failed to create workflow definition"
+    if e.errors.is_a?(Hash) && e.errors[:name]
+      flash.now[:error] += ": #{e.errors[:name].first}"
+    elsif e.errors.is_a?(Hash) && e.errors['name']
+      flash.now[:error] += ": #{e.errors['name'].first}"
+    else
+      flash.now[:error] += ": #{e.message}"
+    end
+    @workflow_definition = workflow_definition_params
+    @page_title = "New Workflow Definition"
+    render :new
   rescue ApiService::ApiError => e
+    Rails.logger.info "DEBUG: create - caught ApiService::ApiError: #{e.message}"
     flash.now[:error] = "Failed to create workflow definition: #{e.message}"
     @workflow_definition = workflow_definition_params
     @page_title = "New Workflow Definition"

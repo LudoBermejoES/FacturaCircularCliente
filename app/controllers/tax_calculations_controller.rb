@@ -11,32 +11,28 @@ class TaxCalculationsController < ApplicationController
   
   def invoice
     invoice_id = params[:invoice_id]
-    
-    @result = TaxService.calculate(invoice_id, token: current_user_token)
-    @invoice = InvoiceService.find(invoice_id, token: current_user_token)
-    
+
+    @result = TaxService.calculate(invoice_id, token: current_token)
+    @invoice = InvoiceService.find(invoice_id, token: current_token)
+
     respond_to do |format|
-      format.html { render :invoice_calculation }
+      format.html { render plain: "Success: #{@result.inspect}" }
       format.json { render json: @result }
       format.turbo_stream
     end
-  rescue ApiService::ApiError => e
-    handle_api_error(e, redirect_path: invoice_path(invoice_id))
   end
   
   def recalculate
     invoice_id = params[:invoice_id]
-    
-    @result = TaxService.recalculate(invoice_id, token: current_user_token)
-    @invoice = InvoiceService.find(invoice_id, token: current_user_token)
-    
+
+    @result = TaxService.recalculate(invoice_id, token: current_token)
+    @invoice = InvoiceService.find(invoice_id, token: current_token)
+
     respond_to do |format|
       format.html { redirect_to invoice_path(invoice_id), notice: 'Tax recalculated successfully' }
       format.json { render json: @result }
       format.turbo_stream
     end
-  rescue ApiService::ApiError => e
-    handle_api_error(e, redirect_path: invoice_path(invoice_id))
   end
   
   def validate

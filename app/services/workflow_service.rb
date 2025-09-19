@@ -27,17 +27,22 @@ class WorkflowService < ApiService
   end
 
   def self.definition(definition_id, token:)
-    get("/workflow_definitions/#{definition_id}", token: token)
+    response = get("/workflow_definitions/#{definition_id}", token: token)
+    transform_definition_response(response)
   end
 
   def self.create_definition(params, token:)
+    Rails.logger.info "DEBUG: WorkflowService.create_definition called with params: #{params.inspect}"
     body = {
       data: {
         attributes: params
       }
     }
-    result = post('/workflow_definitions', body: body, token: token)
-    Rails.logger.info "DEBUG: WorkflowService.create_definition returned: #{result.inspect}"
+    Rails.logger.info "DEBUG: WorkflowService.create_definition posting to API with body: #{body.inspect}"
+    response = post('/workflow_definitions', body: body, token: token)
+    Rails.logger.info "DEBUG: WorkflowService.create_definition raw response: #{response.inspect}"
+    result = transform_definition_response(response)
+    Rails.logger.info "DEBUG: WorkflowService.create_definition transformed result: #{result.inspect}"
     result
   end
 
@@ -47,7 +52,8 @@ class WorkflowService < ApiService
         attributes: params
       }
     }
-    put("/workflow_definitions/#{definition_id}", body: body, token: token)
+    response = put("/workflow_definitions/#{definition_id}", body: body, token: token)
+    transform_definition_response(response)
   end
 
   def self.delete_definition(definition_id, token:)
@@ -115,4 +121,29 @@ class WorkflowService < ApiService
   # - templates, create_template, apply_template (workflow templates)
   #
   # The API uses workflow_definitions instead of rules/templates.
+
+  private
+
+  def self.transform_definition_response(response)
+    return response unless response.is_a?(Hash) && response[:data]
+
+    data = response[:data]
+    attributes = data[:attributes] || {}
+
+    {
+      id: data[:id],
+      name: attributes[:name],
+      code: attributes[:code],
+      description: attributes[:description],
+      company_id: attributes[:company_id],
+      is_active: attributes[:is_active],
+      is_default: attributes[:is_default],
+      is_global: attributes[:is_global],
+      version: attributes[:version],
+      created_at: attributes[:created_at],
+      updated_at: attributes[:updated_at],
+      states: attributes[:states] || [],
+      transitions: attributes[:transitions] || []
+    }
+  end
 end

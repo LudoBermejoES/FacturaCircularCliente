@@ -130,22 +130,34 @@ class CompanyContactsService < ApiService
     # Get active contacts for a company (useful for invoice creation)
     def active_contacts(company_id:, token:)
       response = get("/companies/#{company_id}/contacts", token: token, params: { filter: { is_active: true } })
-      
+
       # Transform JSON API format to expected format
       contacts = []
       if response[:data].is_a?(Array)
         contacts = response[:data].map do |contact_data|
           attributes = contact_data[:attributes] || {}
+
+          # Use person_name if available, fallback to name
+          name = attributes[:person_name] || attributes[:name]
+
+          # Construct full name from name parts
+          name_parts = [
+            attributes[:person_name] || attributes[:name],
+            attributes[:first_surname],
+            attributes[:second_surname]
+          ].compact.reject(&:empty?)
+          full_name = name_parts.join(' ')
+
           {
             id: contact_data[:id].to_i,
-            name: attributes[:name],
+            name: name,
             email: attributes[:email],
             phone: attributes[:telephone] || attributes[:phone],
-            full_name: "#{attributes[:name]} #{attributes[:legal_name]}".strip.squeeze(' ')
+            full_name: full_name
           }
         end
       end
-      
+
       contacts
     end
   end

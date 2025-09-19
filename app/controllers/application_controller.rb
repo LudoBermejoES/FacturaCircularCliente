@@ -35,17 +35,16 @@ class ApplicationController < ActionController::Base
   end
   
   def authenticate_user!
-    Rails.logger.info "DEBUG: authenticate_user! called for #{request.path}"
     return if request.path == login_path # Don't authenticate on login page itself
-    
+
     unless logged_in?
-      Rails.logger.info "DEBUG: User not logged in, redirecting to login"
       redirect_to login_path, alert: 'Please sign in to continue'
+      return false # Halt the action chain
     end
   rescue => e
-    Rails.logger.error "DEBUG: authenticate_user! error: #{e.message}"
-    Rails.logger.error "DEBUG: authenticate_user! backtrace: #{e.backtrace.first(10).join('\n')}"
-    raise e
+    Rails.logger.error "Authentication error: #{e.message}"
+    redirect_to login_path, alert: 'Authentication error occurred'
+    return false
   end
   
   def authenticate_api_user!
@@ -78,19 +77,13 @@ class ApplicationController < ActionController::Base
   end
   
   def logged_in?
-    Rails.logger.info "DEBUG: logged_in? called"
     has_token = current_token.present?
-    Rails.logger.info "DEBUG: current_token present: #{has_token}"
-    
     return false unless has_token
-    
+
     token_valid = valid_token?
-    Rails.logger.info "DEBUG: valid_token?: #{token_valid}"
-    
     has_token && token_valid
   rescue => e
-    Rails.logger.error "DEBUG: logged_in? error: #{e.message}"
-    Rails.logger.error "DEBUG: logged_in? backtrace: #{e.backtrace.first(5).join('\n')}"
+    Rails.logger.error "logged_in? error: #{e.message}"
     false
   end
   
@@ -99,7 +92,15 @@ class ApplicationController < ActionController::Base
   end
   
   def current_token
-    @current_token ||= session[:access_token]
+    new_token = session[:access_token]
+
+    # Clear cache if token changed
+    if @current_token != new_token
+      @token_valid_cache = nil
+      @current_token = new_token
+    end
+
+    @current_token
   end
   
   # Alias for current_token
@@ -134,28 +135,25 @@ class ApplicationController < ActionController::Base
   end
   
   def valid_token?
-    Rails.logger.info "DEBUG: valid_token? called"
     return false unless current_token.present?
-    
-    # Cache token validation result for the duration of the request
-    return @token_valid_cache if defined?(@token_valid_cache)
-    
+
+    # Cache token validation result for the duration of the request (except in tests)
+    if !Rails.env.test? && defined?(@token_valid_cache)
+      return @token_valid_cache
+    end
+
     begin
-      Rails.logger.info "DEBUG: Calling AuthService.validate_token"
       result = AuthService.validate_token(current_token)
-      Rails.logger.info "DEBUG: AuthService.validate_token returned: #{result.inspect}"
-      
-      if result
+
+      if result && result[:valid]
         @token_valid_cache = true
         true
       else
-        Rails.logger.info "DEBUG: Token invalid, trying refresh"
         @token_valid_cache = try_token_refresh
         @token_valid_cache
       end
     rescue => e
-      Rails.logger.error "DEBUG: valid_token? error: #{e.message}"
-      Rails.logger.error "DEBUG: valid_token? backtrace: #{e.backtrace.first(5).join('\n')}"
+      Rails.logger.error "valid_token? error: #{e.message}"
       @token_valid_cache = false
       false
     end

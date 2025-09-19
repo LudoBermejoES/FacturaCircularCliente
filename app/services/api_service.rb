@@ -42,11 +42,16 @@ class ApiService
     def authenticated_request(method, endpoint, token: nil, body: nil, query: nil)
       options = build_request_options(token: token, body: body, query: query)
       url = "#{BASE_URL}#{endpoint}"
-      
+
       Rails.logger.info "API Request: #{method.upcase} #{url}"
-      
+      Rails.logger.info "API Request Body: #{body.inspect}" if body
+      Rails.logger.info "API Request Headers: #{options[:headers].inspect}"
+
       response = HTTParty.send(method, url, options)
-      
+
+      Rails.logger.info "API Response Code: #{response.code}"
+      Rails.logger.info "API Response Body (first 500 chars): #{response.body.to_s[0..500]}" if response.body
+
       handle_response(response)
     rescue HTTParty::Error => e
       Rails.logger.error "API Request Failed: #{e.message}"
