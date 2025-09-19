@@ -54,12 +54,19 @@ class SlaTrackingTest < ApplicationSystemTestCase
   end
 
   test "displays SLA indicator on invoices index page" do
-    InvoiceService.stubs(:list).returns([
-      @invoice_with_sla,
-      @overdue_invoice,
-      @invoice_without_sla
-    ])
+    # Use correct service method and response format
+    InvoiceService.stubs(:all).returns({
+      invoices: [
+        @invoice_with_sla,
+        @overdue_invoice,
+        @invoice_without_sla
+      ],
+      meta: { total: 3, page: 1, pages: 1 }
+    })
     InvoiceService.stubs(:statistics).returns({})
+
+    # Add authentication
+    sign_in_for_system_test(role: "manager", company_id: 1)
 
     visit invoices_path
 
@@ -83,8 +90,14 @@ class SlaTrackingTest < ApplicationSystemTestCase
   end
 
   test "displays SLA warning indicator" do
-    InvoiceService.stubs(:list).returns([@warning_invoice])
+    InvoiceService.stubs(:all).returns({
+      invoices: [@warning_invoice],
+      meta: { total: 1, page: 1, pages: 1 }
+    })
     InvoiceService.stubs(:statistics).returns({})
+
+    # Add authentication
+    sign_in_for_system_test(role: "manager", company_id: 1)
 
     visit invoices_path
 
@@ -96,8 +109,14 @@ class SlaTrackingTest < ApplicationSystemTestCase
 
   test "displays detailed SLA information on workflow page" do
     InvoiceService.stubs(:find).returns(@invoice_with_sla)
-    WorkflowService.stubs(:available_transitions).returns([])
+    # Fix the response format to match what the controller expects
+    WorkflowService.stubs(:available_transitions).returns({
+      available_transitions: []
+    })
     WorkflowService.stubs(:history).returns([])
+
+    # Add authentication
+    sign_in_for_system_test(role: "manager", company_id: 1)
 
     visit invoice_workflow_path(@invoice_with_sla[:id])
 
@@ -116,8 +135,13 @@ class SlaTrackingTest < ApplicationSystemTestCase
 
   test "displays overdue SLA details on workflow page" do
     InvoiceService.stubs(:find).returns(@overdue_invoice)
-    WorkflowService.stubs(:available_transitions).returns([])
+    WorkflowService.stubs(:available_transitions).returns({
+      available_transitions: []
+    })
     WorkflowService.stubs(:history).returns([])
+
+    # Add authentication
+    sign_in_for_system_test(role: "manager", company_id: 1)
 
     visit invoice_workflow_path(@overdue_invoice[:id])
 
@@ -132,8 +156,13 @@ class SlaTrackingTest < ApplicationSystemTestCase
 
   test "handles invoice without SLA deadline on workflow page" do
     InvoiceService.stubs(:find).returns(@invoice_without_sla)
-    WorkflowService.stubs(:available_transitions).returns([])
+    WorkflowService.stubs(:available_transitions).returns({
+      available_transitions: []
+    })
     WorkflowService.stubs(:history).returns([])
+
+    # Add authentication
+    sign_in_for_system_test(role: "manager", company_id: 1)
 
     visit invoice_workflow_path(@invoice_without_sla[:id])
 
@@ -147,12 +176,18 @@ class SlaTrackingTest < ApplicationSystemTestCase
 
   test "SLA indicator updates styling based on time remaining" do
     # This test verifies the CSS classes are applied correctly
-    InvoiceService.stubs(:list).returns([
-      @invoice_with_sla,
-      @overdue_invoice,
-      @warning_invoice
-    ])
+    InvoiceService.stubs(:all).returns({
+      invoices: [
+        @invoice_with_sla,
+        @overdue_invoice,
+        @warning_invoice
+      ],
+      meta: { total: 3, page: 1, pages: 1 }
+    })
     InvoiceService.stubs(:statistics).returns({})
+
+    # Add authentication
+    sign_in_for_system_test(role: "manager", company_id: 1)
 
     visit invoices_path
 
@@ -186,8 +221,13 @@ class SlaTrackingTest < ApplicationSystemTestCase
     }
 
     InvoiceService.stubs(:find).returns(halfway_invoice)
-    WorkflowService.stubs(:available_transitions).returns([])
+    WorkflowService.stubs(:available_transitions).returns({
+      available_transitions: []
+    })
     WorkflowService.stubs(:history).returns([])
+
+    # Add authentication
+    sign_in_for_system_test(role: "manager", company_id: 1)
 
     visit invoice_workflow_path(halfway_invoice[:id])
 
@@ -206,8 +246,13 @@ class SlaTrackingTest < ApplicationSystemTestCase
     }
 
     InvoiceService.stubs(:find).returns(invoice_no_workflow)
-    WorkflowService.stubs(:available_transitions).returns([])
+    WorkflowService.stubs(:available_transitions).returns({
+      available_transitions: []
+    })
     WorkflowService.stubs(:history).returns([])
+
+    # Add authentication
+    sign_in_for_system_test(role: "manager", company_id: 1)
 
     visit invoice_workflow_path(invoice_no_workflow[:id])
 

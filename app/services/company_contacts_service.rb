@@ -138,10 +138,10 @@ class CompanyContactsService < ApiService
           attributes = contact_data[:attributes] || {}
           {
             id: contact_data[:id].to_i,
-            name: attributes[:person_name] || attributes[:name],
+            name: attributes[:name],
             email: attributes[:email],
             phone: attributes[:telephone] || attributes[:phone],
-            full_name: "#{attributes[:person_name] || attributes[:name]} #{attributes[:first_surname]} #{attributes[:second_surname]}".strip.squeeze(' ')
+            full_name: "#{attributes[:name]} #{attributes[:legal_name]}".strip.squeeze(' ')
           }
         end
       end

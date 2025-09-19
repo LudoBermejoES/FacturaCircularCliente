@@ -147,6 +147,7 @@ class WorkflowVisualizationTest < ApplicationSystemTestCase
     WorkflowService.stubs(:definition_states).returns([])
     WorkflowService.stubs(:definition_transitions).returns([])
 
+    sign_in_for_system_test(role: "admin", company_id: 1)
     visit workflow_definition_path(empty_workflow['id'])
 
     assert_text "Workflow Visualization"
@@ -163,6 +164,7 @@ class WorkflowVisualizationTest < ApplicationSystemTestCase
     WorkflowService.stubs(:definition_states).returns(single_state)
     WorkflowService.stubs(:definition_transitions).returns([])
 
+    sign_in_for_system_test(role: "admin", company_id: 1)
     visit workflow_definition_path(@workflow_definition['id'])
 
     assert_text "1 states, 0 transitions"
@@ -189,6 +191,7 @@ class WorkflowVisualizationTest < ApplicationSystemTestCase
     WorkflowService.stubs(:definition_states).returns(states_with_error)
     WorkflowService.stubs(:definition_transitions).returns(@transitions)
 
+    sign_in_for_system_test(role: "admin", company_id: 1)
     visit workflow_definition_path(@workflow_definition['id'])
 
     assert_text "Error State"

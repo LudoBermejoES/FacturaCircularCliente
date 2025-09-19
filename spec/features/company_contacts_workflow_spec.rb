@@ -271,9 +271,9 @@ RSpec.feature 'Company Contacts Workflow', type: :feature, driver: :rack_test do
       expect(page).to have_content('New Invoice')
       
       # Fill in required fields
-      select 'Test Company', from: 'From (Seller)'
-      select 'Test Company', from: 'To (Customer)'
-      select 'FC - Facturas', from: 'Invoice Series'
+      select 'Test Company', from: 'invoice_seller_party_id'
+      select 'Test Company (Company)', from: 'buyer_selection'
+      select 'FC - Facturas', from: 'invoice_invoice_series_id'
       
       # Add invoice line using the actual table structure
       within('tbody') do
@@ -306,10 +306,10 @@ RSpec.feature 'Company Contacts Workflow', type: :feature, driver: :rack_test do
       expect(page).not_to have_select('Contact Person', visible: true)
       
       # Form should have customer dropdown available
-      expect(page).to have_select('To (Customer)')
+      expect(page).to have_select('buyer_selection')
       
       # User can select companies from the dropdown
-      expect(page).to have_select('To (Customer)', with_options: ['Test Company', 'Other Company'])
+      expect(page).to have_select('buyer_selection', with_options: ['Test Company (Company)', 'Other Company (Company)'])
       
       # Contact field exists but is hidden initially (static test, no JS)
       contact_field = find('[data-invoice-form-target="contactField"]', visible: false)
@@ -333,9 +333,9 @@ RSpec.feature 'Company Contacts Workflow', type: :feature, driver: :rack_test do
       visit new_invoice_path
       
       # Fill required fields but don't select contact
-      select 'Test Company', from: 'From (Seller)'
-      select 'Other Company', from: 'To (Customer)'  # Company with no contacts
-      select 'FC - Facturas', from: 'Invoice Series'
+      select 'Test Company', from: 'invoice_seller_party_id'
+      select 'Other Company (Company)', from: 'buyer_selection'  # Company with no contacts
+      select 'FC - Facturas', from: 'invoice_invoice_series_id'
       
       within('tbody') do
         fill_in 'invoice[invoice_lines][0][description]', with: 'Test Product'
@@ -478,14 +478,14 @@ RSpec.feature 'Company Contacts Workflow', type: :feature, driver: :rack_test do
       visit new_invoice_path
       
       # Select buyer company using correct field names
-      select 'Test Company', from: 'To (Customer)'
+      select 'Test Company (Company)', from: 'buyer_selection'
       
       # Contact dropdown should not appear or should be empty
       expect(page).not_to have_select('Contact Person', with_options: ['John'])
       
       # User should still be able to create invoice
-      select 'Test Company', from: 'From (Seller)'
-      select 'FC - Facturas', from: 'Invoice Series'
+      select 'Test Company', from: 'invoice_seller_party_id'
+      select 'FC - Facturas', from: 'invoice_invoice_series_id'
       
       within('tbody') do
         fill_in 'invoice[invoice_lines][0][description]', with: 'Test Product'

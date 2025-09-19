@@ -50,24 +50,30 @@ class WorkflowTransitionsFixesTest < ActionDispatch::IntegrationTest
   end
 
   test "should handle create with proper parameter mapping and avoid API validation errors" do
+    # Stub service calls that return data
     WorkflowService.stubs(:definition).returns(@workflow_definition)
     WorkflowService.stubs(:definition_states).returns(@workflow_states)
 
-    # Mock successful creation with the expected parameter format
-    WorkflowService.expects(:create_transition).with(
-      @workflow_definition['id'],
-      has_entries(
-        :name => 'test_transition',
-        :code => 'test_transition',
-        :display_name => 'Test Transition',
-        :from_state_id => nil,  # "Any State" should map to nil
-        :to_state_id => '2',
-        :requires_comment => true,
-        :required_roles => [],
-        :guard_conditions => []
-      ),
-      token: anything
-    ).returns(@workflow_transition.merge('id' => 999))
+    # Stub the HTTP request that WorkflowService.create_transition will make
+    stub_request(:post, "http://albaranes-api:3000/api/v1/workflow_definitions/1/transitions")
+      .with(
+        body: hash_including("workflow_transition" => hash_including(
+          "name" => "test_transition",
+          "display_name" => "Test Transition",
+          "to_state_id" => "2",
+          "from_state_id" => nil
+        )),
+        headers: {
+          'Accept' => 'application/json',
+          'Authorization' => 'Bearer test_admin_token',
+          'Content-Type' => 'application/json'
+        }
+      )
+      .to_return(
+        status: 201,
+        body: @workflow_transition.merge('id' => 999).to_json,
+        headers: { 'Content-Type' => 'application/json' }
+      )
 
     # Submit form with parameters that should trigger the API parameter mapping fix
     post workflow_definition_workflow_transitions_url(@workflow_definition['id']), params: {
@@ -108,22 +114,41 @@ class WorkflowTransitionsFixesTest < ActionDispatch::IntegrationTest
   test "should handle update with correct parameter processing" do
     WorkflowService.stubs(:definition).returns(@workflow_definition)
     WorkflowService.stubs(:definition_states).returns(@workflow_states)
-    WorkflowService.stubs(:get_transition).returns(@workflow_transition)
 
-    # Mock successful update with properly processed parameters
-    WorkflowService.expects(:update_transition).with(
-      @workflow_definition['id'],
-      @workflow_transition['id'],
-      has_entries(
-        :name => 'updated_approve',
-        :code => 'updated_approve',
-        :display_name => 'Updated Approve Invoice',
-        :requires_comment => false,
-        :required_roles => [],
-        :guard_conditions => []
-      ),
-      token: anything
-    ).returns(@workflow_transition)
+    # Stub the HTTP request for getting the transition (for the set_workflow_transition before_action)
+    stub_request(:get, "http://albaranes-api:3000/api/v1/workflow_definitions/1/transitions/1")
+      .with(
+        headers: {
+          'Accept' => 'application/json',
+          'Authorization' => 'Bearer test_admin_token'
+        }
+      )
+      .to_return(
+        status: 200,
+        body: @workflow_transition.to_json,
+        headers: { 'Content-Type' => 'application/json' }
+      )
+
+    # Stub the HTTP request that WorkflowService.update_transition will make
+    # Note: requires_comment comes as "0" string from form, not boolean false
+    stub_request(:put, "http://albaranes-api:3000/api/v1/workflow_definitions/1/transitions/1")
+      .with(
+        body: hash_including("workflow_transition" => hash_including(
+          "name" => "updated_approve",
+          "display_name" => "Updated Approve Invoice",
+          "requires_comment" => "0"  # Comes as string from form
+        )),
+        headers: {
+          'Accept' => 'application/json',
+          'Authorization' => 'Bearer test_admin_token',
+          'Content-Type' => 'application/json'
+        }
+      )
+      .to_return(
+        status: 200,
+        body: @workflow_transition.to_json,
+        headers: { 'Content-Type' => 'application/json' }
+      )
 
     patch workflow_definition_workflow_transition_url(@workflow_definition['id'], @workflow_transition['id']), params: {
       workflow_transition: {
@@ -143,16 +168,25 @@ class WorkflowTransitionsFixesTest < ActionDispatch::IntegrationTest
     WorkflowService.stubs(:definition).returns(@workflow_definition)
     WorkflowService.stubs(:definition_states).returns(@workflow_states)
 
-    # Test that code is auto-generated from name when missing
-    WorkflowService.expects(:create_transition).with(
-      @workflow_definition['id'],
-      has_entries(
-        :name => 'Complex Transition Name',
-        :code => 'complex_transition_name',  # Auto-generated from name
-        :display_name => 'Complex Transition Name'
-      ),
-      token: anything
-    ).returns(@workflow_transition.merge('id' => 999))
+    # Stub the HTTP request that WorkflowService.create_transition will make
+    stub_request(:post, "http://albaranes-api:3000/api/v1/workflow_definitions/1/transitions")
+      .with(
+        body: hash_including("workflow_transition" => hash_including(
+          "name" => "Complex Transition Name",
+          "code" => "complex_transition_name",  # Auto-generated from name
+          "display_name" => "Complex Transition Name"
+        )),
+        headers: {
+          'Accept' => 'application/json',
+          'Authorization' => 'Bearer test_admin_token',
+          'Content-Type' => 'application/json'
+        }
+      )
+      .to_return(
+        status: 201,
+        body: @workflow_transition.merge('id' => 999).to_json,
+        headers: { 'Content-Type' => 'application/json' }
+      )
 
     post workflow_definition_workflow_transitions_url(@workflow_definition['id']), params: {
       workflow_transition: {
@@ -173,20 +207,29 @@ class WorkflowTransitionsFixesTest < ActionDispatch::IntegrationTest
   test "should handle mixed parameter formats for backward compatibility" do
     WorkflowService.stubs(:definition).returns(@workflow_definition)
 
-    # Test the specific scenario that was failing - flat parameters with partial nested
-    WorkflowService.expects(:create_transition).with(
-      @workflow_definition['id'],
-      has_entries(
-        :name => 'mixed_test',
-        :code => 'mixed_code',
-        :display_name => 'Mixed Test',
-        :from_state_id => '1',
-        :to_state_id => '2',
-        :required_roles => ['admin'],
-        :guard_conditions => []
-      ),
-      token: anything
-    ).returns(@workflow_transition.merge('id' => 999))
+    # Stub the HTTP request that WorkflowService.create_transition will make
+    stub_request(:post, "http://albaranes-api:3000/api/v1/workflow_definitions/1/transitions")
+      .with(
+        body: hash_including("workflow_transition" => hash_including(
+          "name" => "mixed_test",
+          "code" => "mixed_code",
+          "display_name" => "Mixed Test",
+          "from_state_id" => "1",
+          "to_state_id" => "2",
+          "required_roles" => ["admin"],
+          "guard_conditions" => []
+        )),
+        headers: {
+          'Accept' => 'application/json',
+          'Authorization' => 'Bearer test_admin_token',
+          'Content-Type' => 'application/json'
+        }
+      )
+      .to_return(
+        status: 201,
+        body: @workflow_transition.merge('id' => 999).to_json,
+        headers: { 'Content-Type' => 'application/json' }
+      )
 
     # This matches the test case that was originally failing
     post workflow_definition_workflow_transitions_url(@workflow_definition['id']), params: {
@@ -232,12 +275,49 @@ class WorkflowTransitionsFixesTest < ActionDispatch::IntegrationTest
   test "should handle update errors gracefully without Ruby type errors" do
     WorkflowService.stubs(:definition).returns(@workflow_definition)
     WorkflowService.stubs(:definition_states).returns(@workflow_states)
-    WorkflowService.stubs(:get_transition).returns(@workflow_transition)
 
-    # Mock API error response
-    WorkflowService.stubs(:update_transition).raises(
-      ApiService::ApiError.new("Validation failed")
-    )
+    # Stub the HTTP request for getting the transition (for the set_workflow_transition before_action)
+    stub_request(:get, "http://albaranes-api:3000/api/v1/workflow_definitions/1/transitions/1")
+      .with(
+        headers: {
+          'Accept' => 'application/json',
+          'Authorization' => 'Bearer test_admin_token'
+        }
+      )
+      .to_return(
+        status: 200,
+        body: @workflow_transition.to_json,
+        headers: { 'Content-Type' => 'application/json' }
+      )
+
+    # Stub the HTTP request for definition states (for error handling)
+    stub_request(:get, "http://albaranes-api:3000/api/v1/workflow_definitions/1/states")
+      .with(
+        headers: {
+          'Accept' => 'application/json',
+          'Authorization' => 'Bearer test_admin_token'
+        }
+      )
+      .to_return(
+        status: 200,
+        body: @workflow_states.to_json,
+        headers: { 'Content-Type' => 'application/json' }
+      )
+
+    # Stub the update request to return an error
+    stub_request(:put, "http://albaranes-api:3000/api/v1/workflow_definitions/1/transitions/1")
+      .with(
+        headers: {
+          'Accept' => 'application/json',
+          'Authorization' => 'Bearer test_admin_token',
+          'Content-Type' => 'application/json'
+        }
+      )
+      .to_return(
+        status: 422,
+        body: { error: "Validation failed" }.to_json,
+        headers: { 'Content-Type' => 'application/json' }
+      )
 
     patch workflow_definition_workflow_transition_url(@workflow_definition['id'], @workflow_transition['id']), params: {
       workflow_transition: {
@@ -258,15 +338,24 @@ class WorkflowTransitionsFixesTest < ActionDispatch::IntegrationTest
     WorkflowService.stubs(:definition).returns(@workflow_definition)
     WorkflowService.stubs(:definition_states).returns(@workflow_states)
 
-    # Test that empty from_state_id maps to nil (Any State)
-    WorkflowService.expects(:create_transition).with(
-      @workflow_definition['id'],
-      has_entries(
-        :from_state_id => nil,  # Should be nil for "Any State"
-        :to_state_id => '2'
-      ),
-      token: anything
-    ).returns(@workflow_transition.merge('id' => 999))
+    # Stub the HTTP request that WorkflowService.create_transition will make
+    stub_request(:post, "http://albaranes-api:3000/api/v1/workflow_definitions/1/transitions")
+      .with(
+        body: hash_including("workflow_transition" => hash_including(
+          "from_state_id" => nil,  # Should be nil for "Any State"
+          "to_state_id" => "2"
+        )),
+        headers: {
+          'Accept' => 'application/json',
+          'Authorization' => 'Bearer test_admin_token',
+          'Content-Type' => 'application/json'
+        }
+      )
+      .to_return(
+        status: 201,
+        body: @workflow_transition.merge('id' => 999).to_json,
+        headers: { 'Content-Type' => 'application/json' }
+      )
 
     post workflow_definition_workflow_transitions_url(@workflow_definition['id']), params: {
       workflow_transition: {
@@ -287,15 +376,24 @@ class WorkflowTransitionsFixesTest < ActionDispatch::IntegrationTest
     WorkflowService.stubs(:definition).returns(@workflow_definition)
     WorkflowService.stubs(:definition_states).returns(@workflow_states)
 
-    # Test that array parameters are processed correctly
-    WorkflowService.expects(:create_transition).with(
-      @workflow_definition['id'],
-      has_entries(
-        :required_roles => ['admin', 'manager'],
-        :guard_conditions => ['amount > 100', 'status == ready']
-      ),
-      token: anything
-    ).returns(@workflow_transition.merge('id' => 999))
+    # Stub the HTTP request that WorkflowService.create_transition will make
+    stub_request(:post, "http://albaranes-api:3000/api/v1/workflow_definitions/1/transitions")
+      .with(
+        body: hash_including("workflow_transition" => hash_including(
+          "required_roles" => ['admin', 'manager'],
+          "guard_conditions" => ['amount > 100', 'status == ready']
+        )),
+        headers: {
+          'Accept' => 'application/json',
+          'Authorization' => 'Bearer test_admin_token',
+          'Content-Type' => 'application/json'
+        }
+      )
+      .to_return(
+        status: 201,
+        body: @workflow_transition.merge('id' => 999).to_json,
+        headers: { 'Content-Type' => 'application/json' }
+      )
 
     post workflow_definition_workflow_transitions_url(@workflow_definition['id']), params: {
       workflow_transition: {

@@ -54,6 +54,17 @@ class WorkflowsController < ApplicationController
         @invoice = InvoiceService.find(@invoice[:id], token: current_user_token)
         @history = WorkflowService.history(token: current_user_token, params: { invoice_id: @invoice[:id] })
 
+        # Ensure current workflow state is included in @invoice data
+        if @invoice[:has_workflow] && !@invoice[:current_state]
+          # If the API didn't return current workflow state, we need to get it
+          # For now, we'll use a fallback approach by checking available transitions
+          current_response = WorkflowService.available_transitions(@invoice[:id], token: current_user_token)
+          if current_response && current_response[:current_state]
+            @invoice[:current_state] = current_response[:current_state][:code]
+            @invoice[:current_state_name] = current_response[:current_state][:name]
+          end
+        end
+
         # Get available transitions and transform them
         response = WorkflowService.available_transitions(
           @invoice[:id],

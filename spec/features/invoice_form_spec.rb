@@ -95,10 +95,11 @@ RSpec.feature 'Invoice Form Interactions', type: :feature do
     expect(page).to have_content('New Invoice')
     
     # Fill in basic invoice information (using actual field IDs from the form)
-    fill_in 'invoice_invoice_number', with: 'INV-2024-001'
+    # Invoice number is auto-generated
+    select 'FC - Facturas Comerciales', from: 'invoice_invoice_series_id'
     select 'Test Company', from: 'invoice_seller_party_id'
-    select 'Test Company', from: 'invoice_buyer_party_id'
-    fill_in 'invoice_issue_date', with: Date.current.strftime('%Y-%m-%d')
+    select 'Test Company (Company)', from: 'buyer_selection'
+    fill_in 'Invoice Date', with: Date.current.strftime('%Y-%m-%d')
     
     # The form should have at least one default line item row to fill in
     # Fill in the default line item (JavaScript-free approach)
@@ -120,9 +121,10 @@ RSpec.feature 'Invoice Form Interactions', type: :feature do
     visit new_invoice_path
     
     # Fill basic info to verify form is working
-    fill_in 'invoice_invoice_number', with: 'INV-2024-002' 
+    # Invoice number is auto-generated
+    select 'FC - Facturas Comerciales', from: 'invoice_invoice_series_id'
     select 'Test Company', from: 'invoice_seller_party_id'
-    select 'Test Company', from: 'invoice_buyer_party_id'
+    select 'Test Company (Company)', from: 'buyer_selection'
     
     # Verify form has the expected structure
     expect(page).to have_content('Line Items')
@@ -147,23 +149,24 @@ RSpec.feature 'Invoice Form Interactions', type: :feature do
 
   scenario 'User can access invoice form fields' do
     visit new_invoice_path
-    
+
     # Fill basic form info
-    fill_in 'invoice_invoice_number', with: 'INV-2024-003'
+    # Invoice number is auto-generated
+    select 'FC - Facturas', from: 'invoice_invoice_series_id'
     select 'Test Company', from: 'invoice_seller_party_id'
-    select 'Test Company', from: 'invoice_buyer_party_id'
-    
+    select 'Test Company (Company)', from: 'buyer_selection'
+
     # Verify all form sections are present
     expect(page).to have_content('Invoice Information')
     expect(page).to have_content('Line Items')
     expect(page).to have_content('Additional Information')
-    
+
     # Should have form controls available
-    expect(page).to have_select('invoice_invoice_type')
-    expect(page).to have_select('invoice_status')
-    expect(page).to have_field('invoice_issue_date')
-    expect(page).to have_field('invoice_due_date')
-    
+    expect(page).to have_select('invoice[invoice_type]')
+    expect(page).to have_select('invoice[status]')
+    expect(page).to have_field('invoice[issue_date]')
+    expect(page).to have_field('invoice[due_date]')
+
     # Should have line item inputs
     expect(page).to have_css('input[placeholder="Item description"]')
     expect(page).to have_css('input[name*="[quantity]"]')
@@ -172,10 +175,11 @@ RSpec.feature 'Invoice Form Interactions', type: :feature do
 
   scenario 'User can fill discount and tax fields' do
     visit new_invoice_path
-    
-    fill_in 'invoice_invoice_number', with: 'INV-DISCOUNT'
+
+    # Invoice number is auto-generated
+    select 'FC - Facturas Comerciales', from: 'invoice_invoice_series_id'
     select 'Test Company', from: 'invoice_seller_party_id'
-    select 'Test Company', from: 'invoice_buyer_party_id'
+    select 'Test Company (Company)', from: 'buyer_selection'
     
     # Fill line item including discount and tax fields
     within(first('tbody tr')) do
@@ -202,9 +206,10 @@ RSpec.feature 'Invoice Form Interactions', type: :feature do
     visit new_invoice_path
     
     # Fill minimal required data
-    fill_in 'invoice_invoice_number', with: 'MIN-001'
+    # Invoice number is auto-generated
+    select 'FC - Facturas Comerciales', from: 'invoice_invoice_series_id'
     select 'Test Company', from: 'invoice_seller_party_id'
-    select 'Test Company', from: 'invoice_buyer_party_id' 
+    select 'Test Company (Company)', from: 'buyer_selection' 
     
     # Fill one line item with minimal data
     within(first('tbody tr')) do
@@ -276,7 +281,9 @@ RSpec.feature 'Invoice Form Interactions', type: :feature do
     invoice_number_field = find('input[data-invoice-form-target="invoiceNumber"]')
     expect(invoice_number_field.value).to eq('INV-EXISTING')
     expect(page).to have_select('invoice_seller_party_id', options: ['Select seller company', 'Test Company', 'Another Company'])
-    expect(page).to have_select('invoice_buyer_party_id', options: ['Select customer company', 'Test Company', 'Another Company'])
+    # Verify buyer selection dropdown has expected options (more options may be available)
+    expect(page).to have_select('buyer_selection')
+    expect(page).to have_select('buyer_selection', with_options: ['Test Company (Company)', 'Another Company (Company)'])
     # For form inputs, we need to check by placeholders or actual field contents
     within first('.line-item') do
       expect(find('input[placeholder="Item description"]').value).to eq('Original Service')
@@ -302,9 +309,10 @@ RSpec.feature 'Invoice Form Interactions', type: :feature do
     visit new_invoice_path
     
     # Fill form with edge case data (negative price)
-    fill_in 'invoice_invoice_number', with: 'EDGE-001'
+    # Invoice number is auto-generated
+    select 'FC - Facturas Comerciales', from: 'invoice_invoice_series_id'
     select 'Test Company', from: 'invoice_seller_party_id'
-    select 'Test Company', from: 'invoice_buyer_party_id'
+    select 'Test Company (Company)', from: 'buyer_selection'
     
     # Fill line item with negative price
     within(first('tbody tr')) do
