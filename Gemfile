@@ -59,7 +59,7 @@ end
 
 group :test do
   # Minimal database for tests only (stateless client doesn't need DB in production)
-  gem "sqlite3", "~> 2.2"
+  gem "sqlite3", "~> 2.7"
 end
 
 group :development do
