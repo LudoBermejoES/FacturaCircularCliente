@@ -40,7 +40,7 @@ RSpec.describe InvoiceService, '.find' do
   end
 
   before do
-    stub_request(:get, "http://albaranes-api:3000/api/v1/invoices/#{invoice_id}")
+    stub_request(:get, "http://albaranes-api:3000/api/v1/invoices/#{invoice_id}?include=invoice_lines,invoice_taxes")
       .with(headers: { 'Authorization' => "Bearer #{token}" })
       .to_return(status: 200, body: api_response.to_json, headers: { 'Content-Type' => 'application/json' })
   end
@@ -83,17 +83,17 @@ RSpec.describe InvoiceService, '.find' do
         id: "1",
         type: "invoice_lines",
         attributes: {
-          description: "Test Service",
+          item_description: "Test Service",
           quantity: 1.0,
-          unit_price: 100.0,
+          unit_price_without_tax: 100.0,
           tax_rate: 21.0,
-          discount_percentage: 0.0,
-          total: 100.0
+          discount_rate: 0.0,
+          gross_amount: 100.0
         }
       }
     ]
     
-    stub_request(:get, "http://albaranes-api:3000/api/v1/invoices/#{invoice_id}")
+    stub_request(:get, "http://albaranes-api:3000/api/v1/invoices/#{invoice_id}?include=invoice_lines,invoice_taxes")
       .with(headers: { 'Authorization' => "Bearer #{token}" })
       .to_return(status: 200, body: api_response_with_lines.to_json, headers: { 'Content-Type' => 'application/json' })
     

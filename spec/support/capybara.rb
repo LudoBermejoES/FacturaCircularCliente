@@ -88,7 +88,7 @@ RSpec.configure do |config|
     if example.metadata[:server_test]
       # Only use server-based testing when explicitly requested and working
       Capybara.current_driver = :selenium_remote
-      
+
       # Allow dynamic app_host configuration for server tests
       if ENV['HUB_URL'].present?
         Capybara.app_host = nil  # Let Capybara auto-configure

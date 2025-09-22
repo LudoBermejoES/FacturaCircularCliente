@@ -67,7 +67,7 @@ class InvoiceService < ApiService
     end
     
     def find(id, token:)
-      response = get("/invoices/#{id}", token: token)
+      response = get("/invoices/#{id}?include=invoice_lines,invoice_taxes", token: token)
       Rails.logger.info "DEBUG: InvoiceService.find - Raw API response: #{response.inspect}"
       
       # Transform JSON API format to expected format
@@ -126,14 +126,20 @@ class InvoiceService < ApiService
           payment_method: attributes[:payment_method],
           invoice_lines: response[:included]&.select { |item| item[:type] == 'invoice_lines' }&.map do |line|
             line_attrs = line[:attributes] || {}
+            quantity = line_attrs[:quantity].to_f
+            unit_price = line_attrs[:unit_price_without_tax].to_f
             {
               id: line[:id],
-              description: line_attrs[:description],
-              quantity: line_attrs[:quantity],
-              unit_price: line_attrs[:unit_price],
-              tax_rate: line_attrs[:tax_rate],
-              discount_percentage: line_attrs[:discount_percentage],
-              total: line_attrs[:total] || (line_attrs[:quantity].to_f * line_attrs[:unit_price].to_f)
+              description: line_attrs[:item_description],
+              item_description: line_attrs[:item_description], # For view compatibility
+              quantity: quantity,
+              unit_price: unit_price,
+              unit_price_without_tax: unit_price, # For view compatibility
+              tax_rate: 21.0, # Default tax rate (could be computed from invoice_taxes)
+              discount_percentage: line_attrs[:discount_rate] || 0,
+              discount_rate: line_attrs[:discount_rate], # For view compatibility
+              gross_amount: line_attrs[:gross_amount],
+              total: line_attrs[:gross_amount] || (quantity * unit_price)
             }
           end || []
         }
@@ -147,50 +153,10 @@ class InvoiceService < ApiService
     end
     
     def create(params, token:)
-      # Extract line items before creating invoice
-      line_items = params.delete(:invoice_lines_attributes) || []
-      
-      # Convert to JSON API format
+      # Convert to JSON API format (line items are now handled by the backend automatically)
       json_api_params = format_for_api(params)
       response = post('/invoices', token: token, body: json_api_params)
-      
-      # Add line items to the created invoice if any exist
-      if response[:data] && response[:data][:id] && line_items.any?
-        invoice_id = response[:data][:id]
-        line_items.each do |line_item|
-          begin
-            # Remove nil values and ensure proper format
-            clean_line_item = line_item.compact
-            
-            # Map client field names to API field names
-            api_line_item = {
-              item_description: clean_line_item[:description] || clean_line_item['description'],
-              unit_price_without_tax: clean_line_item[:unit_price] || clean_line_item['unit_price'],
-              quantity: clean_line_item[:quantity] || clean_line_item['quantity'],
-              tax_rate: clean_line_item[:tax_rate] || clean_line_item['tax_rate'],
-              discount_percentage: clean_line_item[:discount_percentage] || clean_line_item['discount_percentage']
-            }
-            
-            # Calculate gross_amount (unit_price * quantity)
-            unit_price = api_line_item[:unit_price_without_tax].to_f
-            quantity = api_line_item[:quantity].to_f
-            api_line_item[:gross_amount] = (unit_price * quantity).round(2)
-            
-            Rails.logger.info "DEBUG: Adding line item to invoice #{invoice_id}: #{api_line_item.inspect}"
-            add_line_item(invoice_id, api_line_item, token: token)
-            Rails.logger.info "DEBUG: Line item added successfully"
-          rescue => e
-            Rails.logger.error "DEBUG: Error adding line item: #{e.class} - #{e.message}"
-            # Continue with other line items, don't fail the entire invoice creation
-          end
-        end
-        
-        # Recalculate taxes after all line items have been added
-        Rails.logger.info "DEBUG: Recalculating taxes for invoice #{invoice_id}"
-        recalculate_taxes(invoice_id, token: token)
-        Rails.logger.info "DEBUG: Tax recalculation completed"
-      end
-      
+
       response
     end
     

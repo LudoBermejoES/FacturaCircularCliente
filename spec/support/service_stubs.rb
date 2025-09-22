@@ -57,6 +57,7 @@ module ServiceStubs
     ]
 
     allow(CompanyContactsService).to receive(:all).and_return({ contacts: mock_contacts })
+    allow(CompanyContactsService).to receive(:active_contacts).and_return(mock_contacts)
   end
 
   # Workflow service stubs

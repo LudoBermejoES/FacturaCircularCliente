@@ -68,6 +68,10 @@ class SessionsController < ApplicationController
   private
   
   def store_session(auth_response)
+    Rails.logger.info "DEBUG: store_session called"
+    Rails.logger.info "DEBUG: Session ID before storing: #{session.id rescue 'NO_SESSION'}"
+    Rails.logger.info "DEBUG: Session keys before storing: #{session.keys.inspect}"
+
     session[:access_token] = auth_response[:access_token]
     session[:refresh_token] = auth_response[:refresh_token]
     session[:user_id] = auth_response[:user][:id] if auth_response[:user]
@@ -75,6 +79,12 @@ class SessionsController < ApplicationController
     session[:user_name] = auth_response[:user][:name] if auth_response[:user]
     session[:company_id] = auth_response[:company_id]
     session[:companies] = auth_response[:companies]
+
+    Rails.logger.info "DEBUG: Session ID after storing: #{session.id rescue 'NO_SESSION'}"
+    Rails.logger.info "DEBUG: Session keys after storing: #{session.keys.inspect}"
+    Rails.logger.info "DEBUG: Stored token: #{session[:access_token].present? ? session[:access_token][0..20] + '...' : 'nil'}"
+    Rails.logger.info "DEBUG: Stored user_id: #{session[:user_id]}"
+    Rails.logger.info "DEBUG: Stored company_id: #{session[:company_id]}"
   end
   
   def clear_session

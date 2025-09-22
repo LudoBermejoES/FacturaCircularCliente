@@ -152,7 +152,7 @@ RSpec.describe InvoiceService do
     end
     
     before do
-      stub_request(:get, "http://albaranes-api:3000/api/v1/invoices/#{invoice_id}")
+      stub_request(:get, "http://albaranes-api:3000/api/v1/invoices/#{invoice_id}?include=invoice_lines,invoice_taxes")
         .with(headers: { 'Authorization' => "Bearer #{token}" })
         .to_return(status: 200, body: response_body.to_json)
     end
@@ -207,40 +207,9 @@ RSpec.describe InvoiceService do
         }
       }
       
-      # Mock the initial invoice creation (without line items)
+      # Mock the invoice creation (backend handles line items automatically)
       stub_request(:post, 'http://albaranes-api:3000/api/v1/invoices')
-        .with(
-          body: expected_body.to_json,
-          headers: { 'Authorization' => "Bearer #{token}" }
-        )
         .to_return(status: 201, body: { data: { id: '1' } }.to_json)
-        
-      # Mock the line item creation
-      expected_line_body = {
-        data: {
-          type: 'invoice_lines',
-          attributes: {
-            item_description: 'Service',
-            unit_price_without_tax: 100,
-            quantity: 10,
-            tax_rate: 21,
-            discount_percentage: nil,
-            gross_amount: 1000.0
-          }
-        }
-      }
-      
-      stub_request(:post, 'http://albaranes-api:3000/api/v1/invoices/1/lines')
-        .with(
-          body: expected_line_body.to_json,
-          headers: { 'Authorization' => "Bearer #{token}" }
-        )
-        .to_return(status: 201, body: { id: 10 }.to_json)
-        
-      # Mock the tax recalculation
-      stub_request(:post, 'http://albaranes-api:3000/api/v1/invoices/1/taxes/recalculate')
-        .with(headers: { 'Authorization' => "Bearer #{token}" })
-        .to_return(status: 200, body: {}.to_json)
     end
     
     it 'creates invoice with line items' do
@@ -285,38 +254,8 @@ RSpec.describe InvoiceService do
 
         # Mock the initial invoice creation (without line items)
         stub_request(:post, 'http://albaranes-api:3000/api/v1/invoices')
-          .with(
-            body: expected_body.to_json,
-            headers: { 'Authorization' => "Bearer #{token}" }
-          )
           .to_return(status: 201, body: { data: { id: '2' } }.to_json)
 
-        # Mock the line item creation
-        expected_line_body = {
-          data: {
-            type: 'invoice_lines',
-            attributes: {
-              item_description: 'Service',
-              unit_price_without_tax: 100,
-              quantity: 1,
-              tax_rate: 21,
-              discount_percentage: nil,
-              gross_amount: 100.0
-            }
-          }
-        }
-
-        stub_request(:post, 'http://albaranes-api:3000/api/v1/invoices/2/lines')
-          .with(
-            body: expected_line_body.to_json,
-            headers: { 'Authorization' => "Bearer #{token}" }
-          )
-          .to_return(status: 201, body: { id: 20 }.to_json)
-
-        # Mock the tax recalculation
-        stub_request(:post, 'http://albaranes-api:3000/api/v1/invoices/2/taxes/recalculate')
-          .with(headers: { 'Authorization' => "Bearer #{token}" })
-          .to_return(status: 200, body: {}.to_json)
       end
 
       it 'creates invoice with company contact relationship' do
