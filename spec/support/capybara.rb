@@ -61,20 +61,23 @@ Capybara.default_driver = :rack_test
 # Configure Capybara settings
 Capybara.configure do |config|
   config.default_max_wait_time = 10
-  config.server = :puma, { 
-    Silent: true, 
+  config.server = :puma, {
+    Silent: true,
     Threads: "1:1",
     workers: 0,  # Disable clustering for faster boot
     preload_app: false  # Disable app preloading to prevent initialization blocks
   }
-  
+
   # Allow external connections in Docker
   config.server_host = '0.0.0.0'
   config.server_port = 0  # Let Capybara choose available port automatically
-  
+
   # Set app host for remote browser if provided
   if ENV['TEST_APP_HOST'].present?
     config.app_host = ENV['TEST_APP_HOST']
+  else
+    # Force localhost for rack_test driver to avoid host blocking issues
+    config.app_host = 'http://localhost'
   end
 end
 

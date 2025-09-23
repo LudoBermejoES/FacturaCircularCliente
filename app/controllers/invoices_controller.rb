@@ -195,16 +195,29 @@ class InvoicesController < ApplicationController
   
   def edit
     @invoice[:invoice_lines] ||= [build_empty_line_item]
-    
+
+    Rails.logger.info "DEBUG: InvoicesController#edit - @invoice: #{@invoice.inspect}"
+    Rails.logger.info "DEBUG: InvoicesController#edit - workflow_definition_id: '#{@invoice[:workflow_definition_id]}'"
+    Rails.logger.info "DEBUG: InvoicesController#edit - @workflows will be loaded..."
+
     load_companies
     load_invoice_series
     load_all_company_contacts
+
+    Rails.logger.info "DEBUG: InvoicesController#edit - @workflows: #{@workflows.inspect}"
   end
   
   def update
     begin
+      Rails.logger.info "DEBUG: InvoicesController#update - Raw params: #{params.inspect}"
+      Rails.logger.info "DEBUG: InvoicesController#update - Invoice params: #{invoice_params.inspect}"
+      Rails.logger.info "DEBUG: InvoicesController#update - workflow_definition_id from params: '#{params[:invoice][:workflow_definition_id]}'"
+      Rails.logger.info "DEBUG: InvoicesController#update - workflow_definition_id from invoice_params: '#{invoice_params[:workflow_definition_id]}'"
+
       invoice_params_with_lines = process_invoice_params(invoice_params)
-      
+      Rails.logger.info "DEBUG: InvoicesController#update - Processed params: #{invoice_params_with_lines.inspect}"
+      Rails.logger.info "DEBUG: InvoicesController#update - workflow_definition_id in processed: '#{invoice_params_with_lines[:workflow_definition_id]}'"
+
       InvoiceService.update(@invoice[:id], invoice_params_with_lines, token: current_token)
       redirect_to invoice_path(@invoice[:id]), notice: 'Invoice updated successfully'
     rescue ApiService::ValidationError => e
@@ -415,8 +428,11 @@ class InvoicesController < ApplicationController
       :seller_party_id, :buyer_party_id, :buyer_company_contact_id, :notes, :internal_notes, :payment_method,
       :payment_terms, :currency, :exchange_rate, :workflow_definition_id,
       :discount_percentage, :discount_amount,
+      # Global financial fields
+      :total_general_discounts, :total_general_surcharges, :total_financial_expenses,
+      :total_reimbursable_expenses, :withholding_amount, :payment_in_kind_amount,
       invoice_lines: {},  # Allow nested hash structure
-      invoice_lines_attributes: [:description, :quantity, :unit_price, :tax_rate, :discount_percentage, :product_code]
+      invoice_lines_attributes: [:id, :line_number, :description, :quantity, :unit_price, :tax_rate, :discount_percentage, :product_code]
     )
     
     # Manual workaround for issue_date parameter filtering bug
@@ -442,22 +458,26 @@ class InvoicesController < ApplicationController
       end
     end
 
-    # Process invoice lines
-    if params[:invoice][:invoice_lines].present?
+    # Process invoice lines only if they exist and have meaningful content
+    if params[:invoice] && params[:invoice][:invoice_lines].present?
       lines = params[:invoice][:invoice_lines].values.map do |line|
         next if line[:description].blank? && line[:quantity].blank?
 
         {
+          id: line[:id],
+          line_number: line[:line_number],
           description: line[:description],
           quantity: line[:quantity].to_f,
           unit_price: line[:unit_price].to_f,
-          tax_rate: line[:tax_rate].to_f,
           discount_percentage: line[:discount_percentage].to_f,
-          product_code: line[:product_code]
+          tax_rate: line[:tax_rate].to_f
         }
       end.compact
 
-      processed_params[:invoice_lines_attributes] = lines
+      # Only add invoice_lines_attributes if we have actual lines
+      if lines.any?
+        processed_params[:invoice_lines_attributes] = lines
+      end
     end
 
     processed_params

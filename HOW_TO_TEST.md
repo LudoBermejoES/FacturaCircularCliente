@@ -17,14 +17,29 @@ cd /Users/ludo/code/albaranes/client
 # Service tests (RSpec)
 docker-compose exec web bash -c "RAILS_ENV=test bundle exec rspec spec/services/ --format progress"
 
-# Controller tests (Minitest)
-docker-compose exec web bash -c "RAILS_ENV=test bundle exec rails test test/controllers/"
+# Controller tests (RSpec)
+docker-compose exec web bash -c "RAILS_ENV=test bundle exec rspec spec/controllers/ --format progress"
 
 # Feature tests (RSpec)
-docker-compose exec web bash -c "RAILS_ENV=test bundle exec rspec spec/features/"
+docker-compose exec web bash -c "RAILS_ENV=test bundle exec rspec spec/features/ --format progress"
 
-# System tests (Browser-based)
-docker-compose exec web bash -c "RAILS_ENV=test bundle exec rails test test/system/"
+# Integration tests (RSpec)
+docker-compose exec web bash -c "RAILS_ENV=test bundle exec rspec spec/integration/ --format progress"
+
+# Request tests (RSpec)
+docker-compose exec web bash -c "RAILS_ENV=test bundle exec rspec spec/requests/ --format progress"
+
+# System tests (RSpec with Capybara)
+docker-compose exec web bash -c "RAILS_ENV=test bundle exec rspec spec/system/ --format progress"
+
+# Performance tests (RSpec)
+docker-compose exec web bash -c "RAILS_ENV=test bundle exec rspec spec/performance/ --format progress"
+
+# Security tests (RSpec)
+docker-compose exec web bash -c "RAILS_ENV=test bundle exec rspec spec/security/ --format progress"
+
+# All tests
+docker-compose exec web bash -c "RAILS_ENV=test bundle exec rspec --format progress"
 ```
 
 #### Specific Test Files
@@ -33,7 +48,7 @@ docker-compose exec web bash -c "RAILS_ENV=test bundle exec rails test test/syst
 docker-compose exec web bash -c "RAILS_ENV=test bundle exec rspec spec/services/workflow_service_spec.rb"
 
 # Individual controller test
-docker-compose exec web bash -c "RAILS_ENV=test bundle exec rails test test/controllers/workflow_definitions_controller_test.rb"
+docker-compose exec web bash -c "RAILS_ENV=test bundle exec rspec spec/controllers/workflow_definitions_controller_spec.rb"
 
 # Verbose output for debugging
 docker-compose exec web bash -c "RAILS_ENV=test bundle exec rspec spec/services/ -v"
@@ -47,7 +62,10 @@ cd /Users/ludo/code/albaranes/client
 RAILS_ENV=test bundle exec rspec spec/services/
 
 # Controller tests
-RAILS_ENV=test bundle exec rails test test/controllers/
+RAILS_ENV=test bundle exec rspec spec/controllers/
+
+# All tests
+RAILS_ENV=test bundle exec rspec
 ```
 
 ### ⚠️ Critical Environment Configuration
@@ -78,18 +96,18 @@ Tests for API client services that communicate with the backend:
 - Error handling for API failures
 - Parameter validation and sanitization
 
-### 🎮 Controller Tests (`test/controllers/`)
+### 🎮 Controller Tests (`spec/controllers/`)
 Tests for web controllers handling user interactions:
 
 - **ApplicationController**: Authentication, permissions, session management
 - **SessionsController**: Login/logout flows
 - **CompaniesController**: Company selection and management
-- **WorkflowDefinitionsController**: Workflow CRUD with company security
-- **InvoicesController**: Invoice form handling
-- **API Controllers**: Internal API endpoints
+- **InvoicesController**: Invoice form handling and workflow assignment
+- **DashboardController**: Main application dashboard
+- **HomeController**: Landing pages and public content
 
 **Key Testing Patterns:**
-- Authentication setup with `setup_authenticated_session`
+- RSpec authentication helpers with Devise
 - Form parameter validation
 - Redirect behavior verification
 - Permission-based access control
@@ -98,10 +116,11 @@ Tests for web controllers handling user interactions:
 ### 🌐 Feature Tests (`spec/features/`)
 End-to-end user workflow tests:
 
-- **AuthenticationFlow**: Complete login/logout scenarios
-- **User permissions and role-based access
-- **Multi-step form interactions
-- **Error handling in user workflows
+- **Authentication flows**: Complete login/logout scenarios
+- **Invoice management**: Creating and editing invoices
+- **User permissions**: Role-based access control
+- **Multi-step form interactions**: Complex form workflows
+- **Error handling**: User-facing error scenarios
 
 **Key Testing Patterns:**
 - Service mocking for external API calls
@@ -109,19 +128,46 @@ End-to-end user workflow tests:
 - Form submission and validation
 - Session persistence testing
 
-### 🖥️ System Tests (`test/system/`)
-Browser-based integration tests using Selenium:
+### 📡 Integration Tests (`spec/integration/`)
+Testing component integration and data flow:
 
-- **Form interactions**: Field validation, submissions
-- **JavaScript behavior**: Dynamic form elements
-- **Full user journeys**: Complete workflows
-- **Visual regression**: UI component behavior
+- **Service integration**: API client service interactions
+- **Authentication flow**: Login/logout integration
+- **Data transformation**: Request/response processing
+
+### 🔗 Request Tests (`spec/requests/`)
+Testing HTTP request/response cycles:
+
+- **API endpoint testing**: Internal API endpoints
+- **Authentication requirements**: Protected routes
+- **Parameter handling**: Request processing
+
+### 🖥️ System Tests (`spec/system/`)
+Browser-based integration tests using Capybara:
+
+- **SLA tracking**: Performance monitoring workflows
+- **Full user journeys**: Complete application workflows
+- **JavaScript behavior**: Dynamic UI interactions
 
 **Key Testing Patterns:**
-- Chrome driver for browser automation
-- Page object patterns for UI interactions
-- Capybara for DOM manipulation
-- Screenshot capture for debugging
+- Capybara for browser automation
+- Real browser testing scenarios
+- End-to-end workflow validation
+
+### ⚡ Performance Tests (`spec/performance/`)
+Performance and load testing:
+
+- **Response times**: API call performance
+- **Memory usage**: Resource consumption testing
+- **Scalability**: Load testing scenarios
+
+### 🔒 Security Tests (`spec/security/`)
+Security and vulnerability testing:
+
+- **Authentication security**: Session management
+- **Authorization checks**: Permission validation
+- **Input validation**: XSS and injection prevention
+- **CSRF protection**: Security token validation
 
 ## Testing Best Practices
 
@@ -139,13 +185,14 @@ expect(result[:key]).to eq(expected_value)
 
 ### Controller Test Patterns
 ```ruby
-# Authentication setup
-setup_authenticated_session(role: "admin", company_id: 1)
+# Authentication setup (with RSpec helpers)
+let(:current_user) { create(:user, role: "admin", company_id: 1) }
+before { sign_in current_user }
 
 # Request testing
 post endpoint_url, params: { model: { field: value } }
-assert_redirected_to expected_path
-assert_equal 'Success message', flash[:success]
+expect(response).to redirect_to(expected_path)
+expect(flash[:success]).to eq('Success message')
 ```
 
 ### Feature Test Patterns
@@ -164,7 +211,7 @@ expect(page).to have_content('Expected content')
 
 ### Common Issues and Solutions
 
-1. **Authentication Errors**: Ensure `setup_authenticated_session` is called
+1. **Authentication Errors**: Ensure proper RSpec authentication helpers are used
 2. **WebMock Mismatches**: Verify URL patterns match service calls exactly
 3. **JSON Parsing**: Check response format matches expected structure
 4. **Environment Issues**: Always use `RAILS_ENV=test`
@@ -191,18 +238,24 @@ docker-compose logs web
 
 ### Configuration Files
 - `config/environments/test.rb`: Test environment settings
-- `spec/rails_helper.rb`: RSpec configuration
-- `test/test_helper.rb`: Minitest configuration
+- `spec/rails_helper.rb`: RSpec configuration and helpers
+- `spec/spec_helper.rb`: Core RSpec configuration
+- `spec/support/`: Shared test helpers and configuration
 - `docker-compose.yml`: Container orchestration
 
 ### Authentication Test Helpers
-The test suite includes helpers for authentication setup:
+The test suite includes RSpec helpers for authentication setup:
 
 ```ruby
-# In test_helper.rb
-def setup_authenticated_session(role: "viewer", company_id: 1, companies: nil)
-  # Sets up user session with specified role and company access
+# In spec/rails_helper.rb or spec/support/
+RSpec.configure do |config|
+  config.include Devise::Test::ControllerHelpers, type: :controller
+  config.include Devise::Test::IntegrationHelpers, type: :feature
 end
+
+# Usage in specs
+let(:current_user) { create(:user, role: "viewer", company_id: 1) }
+before { sign_in current_user }
 ```
 
 This provides consistent authentication across all test types and ensures proper permission testing.

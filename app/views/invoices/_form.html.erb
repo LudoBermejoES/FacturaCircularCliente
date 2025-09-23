@@ -106,13 +106,23 @@
 
         <div>
           <%= form.label :workflow_definition_id, "Workflow", class: "block text-sm font-medium text-gray-700" %>
+          <%
+            # Find Simple Invoice Workflow and set as default
+            simple_workflow = (@workflows || []).find { |w|
+              (w[:name] || w['name']) == 'Simple Invoice Workflow' ||
+              (w[:code] || w['code']) == 'simple_invoice_workflow'
+            }
+            default_workflow_id = simple_workflow ? (simple_workflow[:id] || simple_workflow['id']).to_s : nil
+            selected_workflow = (invoice[:workflow_definition_id] || invoice['workflow_definition_id']).to_s.presence || default_workflow_id
+          %>
           <%= form.select :workflow_definition_id,
               options_for_select(
-                (@workflows || []).map { |workflow| [workflow[:name] || workflow['name'], workflow[:id]] },
-                invoice[:workflow_definition_id]
+                (@workflows || []).map { |workflow| [workflow[:name] || workflow['name'], (workflow[:id] || workflow['id']).to_s] },
+                selected_workflow
               ),
-              { include_blank: 'Select workflow (optional)' },
-              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+              { include_blank: 'Select workflow' },
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+              required: true %>
           <p class="mt-1 text-xs text-gray-500">Choose the approval workflow for this invoice</p>
         </div>
         
@@ -250,8 +260,10 @@
                lines = lines.values if lines.respond_to?(:values) # Handle ActionController::Parameters
                lines.each_with_index do |line, index| %>
               <tr class="line-item">
+                <%= hidden_field_tag "invoice[invoice_lines][#{index}][id]", line[:id] %>
+                <%= hidden_field_tag "invoice[invoice_lines][#{index}][line_number]", line[:line_number] %>
                 <td class="px-3 py-2">
-                  <%= text_field_tag "invoice[invoice_lines][#{index}][description]", 
+                  <%= text_field_tag "invoice[invoice_lines][#{index}][description]",
                       line[:description],
                       class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
                       placeholder: "Item description" %>
@@ -358,7 +370,91 @@
           </td>
         </tr>
       </template>
-      
+
+      <!-- Global Financial Adjustments -->
+      <div class="mt-6 border-t pt-4">
+        <h4 class="text-md font-medium text-gray-900 mb-4">Global Financial Adjustments</h4>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <!-- General Discounts -->
+          <div>
+            <%= form.label :total_general_discounts, "General Discounts", class: "block text-sm font-medium text-gray-700" %>
+            <%= form.number_field :total_general_discounts,
+                value: invoice[:total_general_discounts] || 0,
+                class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                step: 0.01,
+                min: 0,
+                placeholder: "0.00",
+                data: { action: "input->invoice-form#calculateTotals" } %>
+            <p class="mt-1 text-xs text-gray-500">Invoice-wide discount amount</p>
+          </div>
+
+          <!-- General Surcharges -->
+          <div>
+            <%= form.label :total_general_surcharges, "General Surcharges", class: "block text-sm font-medium text-gray-700" %>
+            <%= form.number_field :total_general_surcharges,
+                value: invoice[:total_general_surcharges] || 0,
+                class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                step: 0.01,
+                min: 0,
+                placeholder: "0.00",
+                data: { action: "input->invoice-form#calculateTotals" } %>
+            <p class="mt-1 text-xs text-gray-500">Invoice-wide surcharge amount</p>
+          </div>
+
+          <!-- Financial Expenses -->
+          <div>
+            <%= form.label :total_financial_expenses, "Financial Expenses", class: "block text-sm font-medium text-gray-700" %>
+            <%= form.number_field :total_financial_expenses,
+                value: invoice[:total_financial_expenses] || 0,
+                class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                step: 0.01,
+                min: 0,
+                placeholder: "0.00",
+                data: { action: "input->invoice-form#calculateTotals" } %>
+            <p class="mt-1 text-xs text-gray-500">Interest, bank charges, etc.</p>
+          </div>
+
+          <!-- Reimbursable Expenses -->
+          <div>
+            <%= form.label :total_reimbursable_expenses, "Reimbursable Expenses", class: "block text-sm font-medium text-gray-700" %>
+            <%= form.number_field :total_reimbursable_expenses,
+                value: invoice[:total_reimbursable_expenses] || 0,
+                class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                step: 0.01,
+                min: 0,
+                placeholder: "0.00",
+                data: { action: "input->invoice-form#calculateTotals" } %>
+            <p class="mt-1 text-xs text-gray-500">Travel, materials, etc.</p>
+          </div>
+
+          <!-- Withholding Amount -->
+          <div>
+            <%= form.label :withholding_amount, "Withholding Amount", class: "block text-sm font-medium text-gray-700" %>
+            <%= form.number_field :withholding_amount,
+                value: invoice[:withholding_amount] || 0,
+                class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                step: 0.01,
+                min: 0,
+                placeholder: "0.00",
+                data: { action: "input->invoice-form#calculateTotals" } %>
+            <p class="mt-1 text-xs text-gray-500">Tax withholding amount</p>
+          </div>
+
+          <!-- Payment in Kind Amount -->
+          <div>
+            <%= form.label :payment_in_kind_amount, "Payment in Kind", class: "block text-sm font-medium text-gray-700" %>
+            <%= form.number_field :payment_in_kind_amount,
+                value: invoice[:payment_in_kind_amount] || 0,
+                class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                step: 0.01,
+                min: 0,
+                placeholder: "0.00",
+                data: { action: "input->invoice-form#calculateTotals" } %>
+            <p class="mt-1 text-xs text-gray-500">Non-monetary payment amount</p>
+          </div>
+        </div>
+      </div>
+
       <!-- Totals -->
       <div class="mt-6 border-t pt-4">
         <div class="flex justify-end">
@@ -368,8 +464,32 @@
               <dd class="font-medium text-gray-900" data-invoice-form-target="subtotal">€0.00</dd>
             </div>
             <div class="flex justify-between">
+              <dt class="font-medium text-gray-500">General Discounts:</dt>
+              <dd class="font-medium text-red-600" data-invoice-form-target="generalDiscounts">-€0.00</dd>
+            </div>
+            <div class="flex justify-between">
+              <dt class="font-medium text-gray-500">General Surcharges:</dt>
+              <dd class="font-medium text-green-600" data-invoice-form-target="generalSurcharges">+€0.00</dd>
+            </div>
+            <div class="flex justify-between">
+              <dt class="font-medium text-gray-500">Financial Expenses:</dt>
+              <dd class="font-medium text-gray-900" data-invoice-form-target="financialExpenses">€0.00</dd>
+            </div>
+            <div class="flex justify-between">
+              <dt class="font-medium text-gray-500">Reimbursable Expenses:</dt>
+              <dd class="font-medium text-gray-900" data-invoice-form-target="reimbursableExpenses">€0.00</dd>
+            </div>
+            <div class="flex justify-between">
+              <dt class="font-medium text-gray-500">Gross Before Taxes:</dt>
+              <dd class="font-medium text-gray-900" data-invoice-form-target="grossBeforeTaxes">€0.00</dd>
+            </div>
+            <div class="flex justify-between">
               <dt class="font-medium text-gray-500">Tax:</dt>
               <dd class="font-medium text-gray-900" data-invoice-form-target="tax">€0.00</dd>
+            </div>
+            <div class="flex justify-between">
+              <dt class="font-medium text-gray-500">Withholding:</dt>
+              <dd class="font-medium text-red-600" data-invoice-form-target="withholding">-€0.00</dd>
             </div>
             <div class="flex justify-between border-t pt-2">
               <dt class="text-base font-medium text-gray-900">Total:</dt>

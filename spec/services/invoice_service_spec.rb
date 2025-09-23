@@ -490,4 +490,325 @@ RSpec.describe InvoiceService do
       end
     end
   end
+
+  describe 'workflow functionality' do
+    let(:token) { 'test_access_token' }
+
+    describe '.find with workflow_definition_id' do
+      let(:invoice_with_workflow_response) do
+        {
+          data: {
+            id: "123",
+            type: "invoices",
+            attributes: {
+              invoice_number: "FC-2025-0001",
+              invoice_series_id: 72,
+              status: "draft",
+              issue_date: "2025-09-15",
+              workflow_definition_id: 2,
+              total_invoice: "1210.00",
+              currency_code: "EUR",
+              created_at: "2025-09-15T10:00:00.000Z",
+              updated_at: "2025-09-15T10:00:00.000Z"
+            }
+          },
+          included: [
+            {
+              id: "1",
+              type: "invoice_lines",
+              attributes: {
+                line_number: 1,
+                item_description: "Test Service",
+                quantity: 1.0,
+                unit_price_without_tax: 100.0,
+                gross_amount: 100.0,
+                article_code: "SRV001"
+              }
+            }
+          ]
+        }
+      end
+
+      before do
+        stub_request(:get, "http://albaranes-api:3000/api/v1/invoices/123?include=invoice_lines,invoice_taxes")
+          .with(headers: { 'Authorization' => "Bearer #{token}" })
+          .to_return(status: 200, body: invoice_with_workflow_response.to_json)
+      end
+
+      it 'transforms response including workflow_definition_id' do
+        result = described_class.find(123, token: token)
+
+        expect(result[:id]).to eq("123")
+        expect(result[:workflow_definition_id]).to eq(2)
+        expect(result[:invoice_series_id]).to eq(72)
+        expect(result[:status]).to eq("draft")
+        expect(result[:invoice_lines]).to be_an(Array)
+        expect(result[:invoice_lines].first[:product_code]).to eq("SRV001")
+      end
+    end
+
+    describe '.find with workflow fallback' do
+      let(:invoice_without_workflow_response) do
+        {
+          data: {
+            id: "124",
+            type: "invoices",
+            attributes: {
+              invoice_number: "PF-2025-0001",
+              invoice_series_id: nil,
+              status: "draft",
+              issue_date: "2025-09-15",
+              workflow_definition_id: nil,
+              total_invoice: "550.00",
+              currency_code: "EUR"
+            }
+          }
+        }
+      end
+
+      before do
+        stub_request(:get, "http://albaranes-api:3000/api/v1/invoices/124?include=invoice_lines,invoice_taxes")
+          .with(headers: { 'Authorization' => "Bearer #{token}" })
+          .to_return(status: 200, body: invoice_without_workflow_response.to_json)
+      end
+
+      it 'handles nil workflow_definition_id gracefully' do
+        result = described_class.find(124, token: token)
+
+        expect(result[:id]).to eq("124")
+        expect(result[:workflow_definition_id]).to be_nil
+        # Note: invoice_series_id will be inferred from the invoice number
+      end
+
+      it 'infers series from invoice number when invoice_series_id is nil' do
+        result = described_class.find(124, token: token)
+
+        # The service should infer series ID based on invoice number prefix
+        expect(result[:invoice_series_id]).to eq("74") # PF series
+      end
+    end
+
+    describe '.create with workflow_definition_id' do
+      let(:create_params_with_workflow) do
+        {
+          issue_date: '2025-09-15',
+          workflow_definition_id: 2,
+          currency_code: 'EUR',
+          seller_party_id: 1,
+          buyer_party_id: 2,
+          invoice_lines_attributes: [
+            {
+              item_description: 'Test Service',
+              quantity: 1.0,
+              unit_price_without_tax: 100.0
+            }
+          ]
+        }
+      end
+
+      let(:expected_api_params) do
+        {
+          data: {
+            type: 'invoices',
+            attributes: {
+              issue_date: '2025-09-15',
+              workflow_definition_id: 2,
+              currency_code: 'EUR',
+              invoice_lines_attributes: [
+                {
+                  item_description: 'Test Service',
+                  quantity: 1.0,
+                  unit_price_without_tax: 100.0
+                }
+              ]
+            },
+            relationships: {
+              seller_party: {
+                data: { type: 'companies', id: '1' }
+              },
+              buyer_party: {
+                data: { type: 'companies', id: '2' }
+              }
+            }
+          }
+        }
+      end
+
+      before do
+        stub_request(:post, 'http://albaranes-api:3000/api/v1/invoices')
+          .with(
+            headers: { 'Authorization' => "Bearer #{token}" },
+            body: expected_api_params.to_json
+          )
+          .to_return(status: 201, body: { success: true }.to_json)
+      end
+
+      it 'includes workflow_definition_id in API request' do
+        result = described_class.create(create_params_with_workflow, token: token)
+        expect(result[:success]).to eq(true)
+
+        # Verify the request was made with correct parameters
+        expect(WebMock).to have_requested(:post, 'http://albaranes-api:3000/api/v1/invoices')
+          .with(body: expected_api_params.to_json)
+      end
+    end
+
+    describe '.update with workflow_definition_id' do
+      let(:update_params_with_workflow) do
+        {
+          workflow_definition_id: 3,
+          notes: 'Updated with new workflow'
+        }
+      end
+
+      let(:expected_update_params) do
+        {
+          data: {
+            type: 'invoices',
+            attributes: {
+              workflow_definition_id: 3,
+              notes: 'Updated with new workflow'
+            }
+          }
+        }
+      end
+
+      before do
+        stub_request(:put, 'http://albaranes-api:3000/api/v1/invoices/123')
+          .with(
+            headers: { 'Authorization' => "Bearer #{token}" },
+            body: expected_update_params.to_json
+          )
+          .to_return(status: 200, body: { success: true }.to_json)
+      end
+
+      it 'includes workflow_definition_id in update request' do
+        result = described_class.update(123, update_params_with_workflow, token: token)
+        expect(result[:success]).to eq(true)
+
+        # Verify the request was made with correct parameters
+        expect(WebMock).to have_requested(:put, 'http://albaranes-api:3000/api/v1/invoices/123')
+          .with(body: expected_update_params.to_json)
+      end
+    end
+
+    describe 'workflow data transformation' do
+      let(:complex_workflow_response) do
+        {
+          data: [
+            {
+              id: "1",
+              type: "invoices",
+              attributes: {
+                invoice_number: "FC-2025-0001",
+                invoice_series_id: 72,
+                status: "draft",
+                workflow_definition_id: 1,
+                total_invoice: "1210.00"
+              }
+            },
+            {
+              id: "2",
+              type: "invoices",
+              attributes: {
+                invoice_number: "FC-2025-0002",
+                invoice_series_id: 72,
+                status: "approved",
+                workflow_definition_id: 2,
+                total_invoice: "550.00"
+              }
+            }
+          ],
+          meta: {
+            total: 2,
+            page: 1,
+            per_page: 25
+          }
+        }
+      end
+
+      before do
+        stub_request(:get, 'http://albaranes-api:3000/api/v1/invoices')
+          .with(headers: { 'Authorization' => "Bearer #{token}" })
+          .to_return(status: 200, body: complex_workflow_response.to_json)
+      end
+
+      it 'correctly transforms workflow_definition_id for all invoices' do
+        result = described_class.all(token: token)
+
+        expect(result[:invoices]).to be_an(Array)
+        expect(result[:invoices].length).to eq(2)
+
+        first_invoice = result[:invoices].first
+        expect(first_invoice[:workflow_definition_id]).to eq(1)
+        expect(first_invoice[:status]).to eq("draft")
+
+        second_invoice = result[:invoices].second
+        expect(second_invoice[:workflow_definition_id]).to eq(2)
+        expect(second_invoice[:status]).to eq("approved")
+      end
+
+      it 'maintains other transformed fields alongside workflow data' do
+        result = described_class.all(token: token)
+
+        first_invoice = result[:invoices].first
+        expect(first_invoice[:id]).to eq("1")
+        expect(first_invoice[:invoice_series_id]).to eq(72)
+        expect(first_invoice[:total]).to eq(1210.0) # Converted to float
+        expect(first_invoice[:workflow_definition_id]).to eq(1)
+      end
+    end
+
+    describe 'error handling for workflow operations' do
+      context 'when API returns workflow validation error' do
+        before do
+          stub_request(:put, 'http://albaranes-api:3000/api/v1/invoices/123')
+            .with(headers: { 'Authorization' => "Bearer #{token}" })
+            .to_return(
+              status: 422,
+              body: {
+                errors: [
+                  {
+                    status: "422",
+                    title: "Validation Error",
+                    detail: "Workflow definition not found or not accessible"
+                  }
+                ]
+              }.to_json
+            )
+        end
+
+        it 'handles workflow validation errors gracefully' do
+          expect {
+            described_class.update(123, { workflow_definition_id: 999 }, token: token)
+          }.to raise_error(ApiService::ValidationError)
+        end
+      end
+
+      context 'when API returns frozen invoice error for workflow change' do
+        before do
+          stub_request(:put, 'http://albaranes-api:3000/api/v1/invoices/123')
+            .with(headers: { 'Authorization' => "Bearer #{token}" })
+            .to_return(
+              status: 403,
+              body: {
+                errors: [
+                  {
+                    status: "403",
+                    title: "Forbidden",
+                    detail: "Cannot modify workflow of frozen invoice"
+                  }
+                ]
+              }.to_json
+            )
+        end
+
+        it 'handles frozen invoice errors for workflow changes' do
+          expect {
+            described_class.update(123, { workflow_definition_id: 2 }, token: token)
+          }.to raise_error(ApiService::ApiError)
+        end
+      end
+    end
+  end
 end

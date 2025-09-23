@@ -1,11 +1,15 @@
 module RequestHelper
   def self.included(base)
-    base.before(:each) do
+    base.before(:each) do |example|
       host! 'localhost:3002'
-      
+
       # Setup HTTP stubs for all API calls
       setup_http_stubs
-      setup_authentication_mocks
+
+      # Skip authentication mocks for integration tests that want to test auth flows
+      unless example.metadata[:skip_authentication_mocks]
+        setup_authentication_mocks
+      end
     end
   end
   
@@ -50,6 +54,23 @@ module RequestHelper
         body: { companies: [company], total: 1, meta: { page: 1, pages: 1, total: 1 } }.to_json,
         headers: { 'Content-Type' => 'application/json' }
       )
+
+    # Companies with pagination parameter
+    stub_request(:get, "http://albaranes-api:3000/api/v1/companies?per_page=100")
+      .with(
+        headers: {
+          'Accept' => 'application/json',
+          'Accept-Encoding' => 'gzip;q=1.0,deflate;q=0.6,identity;q=0.3',
+          'Authorization' => 'Bearer test_access_token',
+          'Content-Type' => 'application/json',
+          'User-Agent' => 'Ruby'
+        }
+      )
+      .to_return(
+        status: 200,
+        body: { companies: [company], total: 1, meta: { page: 1, pages: 1, total: 1 } }.to_json,
+        headers: { 'Content-Type' => 'application/json' }
+      )
       
     stub_request(:get, %r{http://albaranes-api:3000/api/v1/companies/\d+})
       .to_return(
@@ -78,6 +99,24 @@ module RequestHelper
         body: { message: 'Company deleted successfully' }.to_json,
         headers: { 'Content-Type' => 'application/json' }
       )
+
+    # Company contacts endpoints
+    contact = build(:company_contact_response)
+    stub_request(:get, %r{http://albaranes-api:3000/api/v1/companies/\d+/contacts/\d+})
+      .with(
+        headers: {
+          'Accept' => 'application/json',
+          'Accept-Encoding' => 'gzip;q=1.0,deflate;q=0.6,identity;q=0.3',
+          'Authorization' => 'Bearer test_access_token',
+          'Content-Type' => 'application/json',
+          'User-Agent' => 'Ruby'
+        }
+      )
+      .to_return(
+        status: 200,
+        body: contact.to_json,
+        headers: { 'Content-Type' => 'application/json' }
+      )
     
     # Invoice endpoints
     stub_request(:get, "http://albaranes-api:3000/api/v1/invoices")
@@ -87,12 +126,6 @@ module RequestHelper
         headers: { 'Content-Type' => 'application/json' }
       )
       
-    stub_request(:get, "http://albaranes-api:3000/api/v1/invoices/statistics")
-      .to_return(
-        status: 200,
-        body: { total_count: 1, total_value: 1000.00, status_counts: { draft: 1 } }.to_json,
-        headers: { 'Content-Type' => 'application/json' }
-      )
       
     stub_request(:get, "http://albaranes-api:3000/api/v1/invoices/stats")
       .to_return(
@@ -163,6 +196,23 @@ module RequestHelper
         body: '<?xml version="1.0"?><Facturae></Facturae>',
         headers: { 'Content-Type' => 'application/xml' }
       )
+
+    # Workflow endpoints
+    stub_request(:get, "http://albaranes-api:3000/api/v1/workflow_definitions")
+      .with(
+        headers: {
+          'Accept' => 'application/json',
+          'Accept-Encoding' => 'gzip;q=1.0,deflate;q=0.6,identity;q=0.3',
+          'Authorization' => 'Bearer test_access_token',
+          'Content-Type' => 'application/json',
+          'User-Agent' => 'Ruby'
+        }
+      )
+      .to_return(
+        status: 200,
+        body: { data: [{ id: 1, name: 'Default Workflow' }] }.to_json,
+        headers: { 'Content-Type' => 'application/json' }
+      )
   end
   
   def setup_authentication_mocks
@@ -185,6 +235,12 @@ module RequestHelper
     allow_any_instance_of(ApplicationController).to receive(:session).and_return(session_double)
   end
   
+  def setup_http_stubs_only
+    # Only setup HTTP stubs without authentication mocking
+    setup_http_stubs
+    # Do NOT call setup_authentication_mocks
+  end
+
   def setup_service_mocks
     user = build(:user_response)
     company = build(:company_response) 
@@ -216,9 +272,6 @@ module RequestHelper
     # Mock InvoiceService methods
     allow(InvoiceService).to receive(:all).with(any_args).and_return({ 
       invoices: [invoice], total: 1, meta: { page: 1, pages: 1, total: 1 }
-    })
-    allow(InvoiceService).to receive(:statistics).with(any_args).and_return({
-      total_count: 1, total_value: 1000.00, status_counts: { draft: 1 }
     })
     allow(InvoiceService).to receive(:stats).with(any_args).and_return({
       total_invoices: 45,

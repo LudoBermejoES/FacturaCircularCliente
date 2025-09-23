@@ -48,8 +48,10 @@ class InvoiceService < ApiService
             # Additional fields that might be missing
             payment_terms: attributes[:payment_terms],
             payment_method: attributes[:payment_method],
-            # Company name from API response 
-            company_name: attributes[:buyer_name]
+            # Company name from API response
+            company_name: attributes[:buyer_name],
+            # Workflow functionality
+            workflow_definition_id: attributes[:workflow_definition_id]
           }
         end
         
@@ -124,12 +126,21 @@ class InvoiceService < ApiService
           # Additional fields that might be missing
           payment_terms: attributes[:payment_terms],
           payment_method: attributes[:payment_method],
+          workflow_definition_id: attributes[:workflow_definition_id],
+          # Global financial fields
+          total_general_discounts: attributes[:total_general_discounts],
+          total_general_surcharges: attributes[:total_general_surcharges],
+          total_financial_expenses: attributes[:total_financial_expenses],
+          total_reimbursable_expenses: attributes[:total_reimbursable_expenses],
+          withholding_amount: attributes[:withholding_amount],
+          payment_in_kind_amount: attributes[:payment_in_kind_amount],
           invoice_lines: response[:included]&.select { |item| item[:type] == 'invoice_lines' }&.map do |line|
             line_attrs = line[:attributes] || {}
             quantity = line_attrs[:quantity].to_f
             unit_price = line_attrs[:unit_price_without_tax].to_f
             {
               id: line[:id],
+              line_number: line_attrs[:line_number],
               description: line_attrs[:item_description],
               item_description: line_attrs[:item_description], # For view compatibility
               quantity: quantity,
@@ -139,7 +150,8 @@ class InvoiceService < ApiService
               discount_percentage: line_attrs[:discount_rate] || 0,
               discount_rate: line_attrs[:discount_rate], # For view compatibility
               gross_amount: line_attrs[:gross_amount],
-              total: line_attrs[:gross_amount] || (quantity * unit_price)
+              total: line_attrs[:gross_amount] || (quantity * unit_price),
+              product_code: line_attrs[:article_code] # Map article_code to product_code for client compatibility
             }
           end || []
         }
@@ -163,7 +175,78 @@ class InvoiceService < ApiService
     def update(id, params, token:)
       # Convert to JSON API format
       json_api_params = format_for_api(params)
-      put("/invoices/#{id}", token: token, body: json_api_params)
+      response = put("/invoices/#{id}", token: token, body: json_api_params)
+
+      # Apply same transformation as find method
+      if response[:data]
+        attributes = response[:data][:attributes] || {}
+        invoice_series_id = attributes[:invoice_series_id]
+        if invoice_series_id.nil? && attributes[:invoice_number].present?
+          case attributes[:invoice_number]
+          when /^FC-/
+            invoice_series_id = "72" # FC - Facturas Comerciales 2025
+          when /^PF-/
+            invoice_series_id = "74" # PF - Proforma 2025
+          end
+        end
+
+        transformed = {
+          id: response[:data][:id],
+          invoice_number: attributes[:invoice_number],
+          invoice_series_id: invoice_series_id,
+          proforma_number: attributes[:proforma_number],
+          document_type: attributes[:document_type],
+          invoice_type: attributes[:document_type], # alias for compatibility
+          status: attributes[:status],
+          date: attributes[:issue_date],
+          issue_date: attributes[:issue_date], # alias for compatibility
+          due_date: attributes[:due_date],
+          seller_party_id: attributes[:seller_party_id],
+          buyer_party_id: attributes[:buyer_party_id],
+          buyer_company_contact_id: attributes[:buyer_company_contact_id],
+          total_invoice: attributes[:total_invoice],
+          total: attributes[:total_invoice]&.to_f, # Field used by views for display
+          subtotal: attributes[:total_gross_amount_before_taxes]&.to_f, # Subtotal calculation
+          total_tax: attributes[:total_tax_outputs]&.to_f, # Tax amount
+          currency_code: attributes[:currency_code],
+          language_code: attributes[:language_code],
+          notes: attributes[:notes],
+          internal_notes: attributes[:internal_notes],
+          is_frozen: attributes[:is_frozen],
+          frozen_at: attributes[:frozen_at],
+          display_number: attributes[:display_number],
+          is_proforma: attributes[:is_proforma],
+          created_at: attributes[:created_at],
+          updated_at: attributes[:updated_at],
+          can_be_modified: attributes[:can_be_modified],
+          can_be_converted: attributes[:can_be_converted],
+          # Additional fields from API that might be used by views
+          total_gross_amount: attributes[:total_gross_amount],
+          total_gross_amount_before_taxes: attributes[:total_gross_amount_before_taxes],
+          total_tax_outputs: attributes[:total_tax_outputs],
+          total_tax_withheld: attributes[:total_tax_withheld],
+          total_outstanding_amount: attributes[:total_outstanding_amount],
+          exchange_rate: attributes[:exchange_rate],
+          # Additional fields that might be missing
+          payment_terms: attributes[:payment_terms],
+          payment_method: attributes[:payment_method],
+          workflow_definition_id: attributes[:workflow_definition_id],
+          # Global financial fields
+          total_general_discounts: attributes[:total_general_discounts],
+          total_general_surcharges: attributes[:total_general_surcharges],
+          total_financial_expenses: attributes[:total_financial_expenses],
+          total_reimbursable_expenses: attributes[:total_reimbursable_expenses],
+          withholding_amount: attributes[:withholding_amount],
+          payment_in_kind_amount: attributes[:payment_in_kind_amount]
+        }
+
+        Rails.logger.info "DEBUG: InvoiceService.update - Transformed invoice: #{transformed.inspect}"
+        Rails.logger.info "DEBUG: InvoiceService.update - Transformed invoice[:id]: #{transformed[:id].inspect} (#{transformed[:id].class})"
+
+        return transformed
+      else
+        response
+      end
     end
     
     def delete(id, token:)

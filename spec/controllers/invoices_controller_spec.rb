@@ -39,6 +39,14 @@ RSpec.describe InvoicesController, type: :controller do
     allow(controller).to receive(:current_user).and_return(user)
     allow(controller).to receive(:current_token).and_return(token)
     allow(controller).to receive(:can?).and_return(true)
+
+    # Add workflow definitions stub for all controller tests
+    stub_request(:get, "http://albaranes-api:3000/api/v1/workflow_definitions")
+      .to_return(
+        status: 200,
+        body: { data: [{ id: 1, name: 'Default Workflow' }] }.to_json,
+        headers: { 'Content-Type' => 'application/json' }
+      )
   end
 
   describe 'GET #new' do
@@ -705,10 +713,308 @@ RSpec.describe InvoicesController, type: :controller do
 
       it 'handles partial contact data correctly' do
         get :new
-        
+
         expect(response).to have_http_status(:ok)
         company_contacts = assigns(:company_contacts)
         expect(company_contacts[company_id.to_s]).to eq([partial_contact])
+      end
+    end
+  end
+
+  describe 'workflow functionality' do
+    let(:workflow_definitions) do
+      [
+        { id: 1, name: 'Simple Invoice Workflow', company_id: company_id },
+        { id: 2, name: 'Standard Invoice Workflow', company_id: company_id },
+        { id: 3, name: 'Complex Approval Workflow', company_id: company_id }
+      ]
+    end
+
+    let(:invoice_with_workflow) do
+      build(:invoice_response,
+        id: invoice_id,
+        company_id: company_id,
+        workflow_definition_id: 2,
+        status: 'draft'
+      )
+    end
+
+    describe 'GET #new with workflow support' do
+      before do
+        allow(CompanyService).to receive(:all).and_return({ companies: [company] })
+        allow(InvoiceSeriesService).to receive(:all).and_return({ invoice_series: [] })
+        allow(CompanyContactsService).to receive(:active_contacts).and_return([])
+        allow(WorkflowService).to receive(:definitions).and_return({ data: workflow_definitions })
+      end
+
+      it 'loads available workflow definitions' do
+        get :new
+
+        expect(response).to have_http_status(:ok)
+        expect(assigns(:workflows)).to eq(workflow_definitions)
+        expect(WorkflowService).to have_received(:definitions).with(token: token)
+      end
+
+      it 'includes workflow definitions in the view context' do
+        get :new
+
+        workflows = assigns(:workflows)
+        expect(workflows).to be_an(Array)
+        expect(workflows.length).to eq(3)
+        expect(workflows.first[:name]).to eq('Simple Invoice Workflow')
+      end
+    end
+
+    describe 'GET #edit with workflow' do
+      before do
+        allow(InvoiceService).to receive(:find).and_return(invoice_with_workflow)
+        allow(CompanyService).to receive(:all).and_return({ companies: [company] })
+        allow(InvoiceSeriesService).to receive(:all).and_return({ invoice_series: [] })
+        allow(CompanyContactsService).to receive(:active_contacts).and_return([])
+        allow(WorkflowService).to receive(:definitions).and_return({ data: workflow_definitions })
+      end
+
+      it 'loads invoice with workflow information' do
+        get :edit, params: { id: invoice_id }
+
+        expect(response).to have_http_status(:ok)
+        expect(assigns(:invoice)[:workflow_definition_id]).to eq(2)
+        expect(assigns(:workflows)).to eq(workflow_definitions)
+      end
+
+      it 'preselects the current workflow in the form' do
+        get :edit, params: { id: invoice_id }
+
+        invoice = assigns(:invoice)
+        workflows = assigns(:workflows)
+
+        expect(invoice[:workflow_definition_id]).to eq(2)
+        expect(workflows.find { |w| w[:id] == 2 }[:name]).to eq('Standard Invoice Workflow')
+      end
+    end
+
+    describe 'POST #create with workflow_definition_id' do
+      let(:invoice_params_with_workflow) do
+        invoice_params.merge(
+          workflow_definition_id: '2'
+        )
+      end
+
+      let(:expected_processed_params) do
+        {
+          issue_date: '2024-01-15',
+          due_date: '2024-02-15',
+          seller_party_id: company_id,
+          buyer_party_id: company_id + 1,
+          buyer_company_contact_id: contact_id,
+          notes: 'Test invoice',
+          workflow_definition_id: 2,
+          invoice_lines_attributes: [
+            {
+              item_description: 'Test item',
+              quantity: 2.0,
+              unit_price_without_tax: 100.0,
+              tax_rate: 21.0
+            }
+          ]
+        }
+      end
+
+      before do
+        allow(InvoiceService).to receive(:create).and_return({ success: true, invoice: invoice_with_workflow })
+      end
+
+      it 'includes workflow_definition_id in processed parameters' do
+        # Setup stub to capture parameters
+        captured_params = nil
+        allow(InvoiceService).to receive(:create) do |params, _|
+          captured_params = params
+          { data: { id: 123 } }
+        end
+
+        post :create, params: { invoice: invoice_params_with_workflow }
+
+        expect(captured_params[:workflow_definition_id]).to eq("2")
+        expect(InvoiceService).to have_received(:create).with(any_args)
+      end
+
+      it 'processes workflow_definition_id as string (Rails parameter behavior)' do
+        # Setup stub to capture parameters
+        captured_params = nil
+        allow(InvoiceService).to receive(:create) do |params, _|
+          captured_params = params
+          { data: { id: 123 } }
+        end
+
+        post :create, params: { invoice: invoice_params_with_workflow }
+
+        # Rails controller parameters keep workflow_definition_id as string
+        expect(captured_params[:workflow_definition_id]).to eq("2")
+        expect(captured_params[:workflow_definition_id]).to be_a(String)
+      end
+
+      it 'redirects on successful creation with workflow' do
+        allow(InvoiceService).to receive(:create).and_return({ data: { id: 123 } })
+
+        post :create, params: { invoice: invoice_params_with_workflow }
+
+        expect(response).to redirect_to(invoice_path(123))
+        expect(flash[:notice]).to eq('Invoice created successfully')
+      end
+    end
+
+    describe 'PATCH #update with workflow_definition_id' do
+      let(:update_params_with_workflow) do
+        {
+          workflow_definition_id: '3',
+          notes: 'Updated with new workflow'
+        }
+      end
+
+      before do
+        allow(InvoiceService).to receive(:find).and_return(invoice_with_workflow)
+        allow(InvoiceService).to receive(:update).and_return({ success: true, invoice: invoice_with_workflow })
+      end
+
+      it 'includes workflow_definition_id in update parameters' do
+        # Setup stub to capture parameters
+        captured_params = nil
+        allow(InvoiceService).to receive(:update) do |id, params, _|
+          captured_params = params
+          { success: true }
+        end
+
+        patch :update, params: { id: invoice_id, invoice: update_params_with_workflow }
+
+        expect(captured_params[:workflow_definition_id]).to eq("3")
+        expect(InvoiceService).to have_received(:update).with(invoice_id, any_args)
+      end
+
+      it 'handles workflow change requests' do
+        patch :update, params: { id: invoice_id, invoice: update_params_with_workflow }
+
+        expect(response).to redirect_to(invoice_path(invoice_id))
+        expect(flash[:notice]).to eq('Invoice updated successfully')
+      end
+
+      it 'processes empty workflow_definition_id gracefully' do
+        params_with_empty_workflow = update_params_with_workflow.merge(workflow_definition_id: '')
+
+        # Setup stub to capture parameters
+        captured_params = nil
+        allow(InvoiceService).to receive(:update) do |id, params, _|
+          captured_params = params
+          { success: true }
+        end
+
+        patch :update, params: { id: invoice_id, invoice: params_with_empty_workflow }
+
+        # Empty string still gets passed through in Rails controllers
+        expect(captured_params[:workflow_definition_id]).to eq("")
+      end
+    end
+
+    describe 'workflow error handling' do
+      before do
+        allow(InvoiceService).to receive(:find).and_return(invoice_with_workflow)
+      end
+
+      context 'when workflow validation fails' do
+        before do
+          allow(InvoiceService).to receive(:update)
+            .and_raise(ApiService::ValidationError.new('Validation failed', { workflow_definition_id: ['is invalid'] }))
+          allow(CompanyService).to receive(:all).and_return({ companies: [company] })
+          allow(InvoiceSeriesService).to receive(:all).and_return({ invoice_series: [] })
+          allow(CompanyContactsService).to receive(:active_contacts).and_return([])
+          allow(WorkflowService).to receive(:definitions).and_return({ data: workflow_definitions })
+        end
+
+        it 'handles workflow validation errors gracefully' do
+          patch :update, params: { id: invoice_id, invoice: { workflow_definition_id: '999' } }
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(assigns(:invoice)[:workflow_definition_id]).to eq(2) # Original value preserved
+          expect(assigns(:workflows)).to eq(workflow_definitions) # Workflows reloaded for form
+        end
+
+        it 'displays workflow-specific error messages' do
+          patch :update, params: { id: invoice_id, invoice: { workflow_definition_id: '999' } }
+
+          expect(flash.now[:alert]).to eq('Please fix the errors below.')
+        end
+      end
+
+      context 'when trying to change workflow of frozen invoice' do
+        let(:frozen_invoice) { invoice_with_workflow.merge(is_frozen: true, status: 'sent') }
+
+        before do
+          allow(InvoiceService).to receive(:find).and_return(frozen_invoice)
+          allow(InvoiceService).to receive(:update)
+            .and_raise(ApiService::ApiError.new('Cannot modify frozen invoice'))
+          allow(CompanyService).to receive(:all).and_return({ companies: [company] })
+          allow(InvoiceSeriesService).to receive(:all).and_return({ invoice_series: [] })
+          allow(CompanyContactsService).to receive(:active_contacts).and_return([])
+          allow(WorkflowService).to receive(:definitions).and_return({ data: workflow_definitions })
+        end
+
+        it 'prevents workflow changes on frozen invoices' do
+          patch :update, params: { id: invoice_id, invoice: { workflow_definition_id: '3' } }
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(flash.now[:alert]).to eq('Error updating invoice: Cannot modify frozen invoice')
+        end
+      end
+    end
+
+    describe 'workflow parameter processing' do
+      it 'passes empty workflow_definition_id as empty string' do
+        # Test the actual controller behavior - it passes empty strings through
+        params_with_empty_workflow = invoice_params.merge(workflow_definition_id: '')
+
+        # Setup stub to capture parameters
+        captured_params = nil
+        allow(InvoiceService).to receive(:create) do |params, _|
+          captured_params = params
+          { data: { id: 123 } }
+        end
+
+        post :create, params: { invoice: params_with_empty_workflow }
+
+        # Rails controllers pass empty strings through
+        expect(captured_params[:workflow_definition_id]).to eq("")
+      end
+
+      it 'keeps workflow_definition_id as string (Rails parameter behavior)' do
+        params_with_string_workflow = invoice_params.merge(workflow_definition_id: '2')
+
+        # Setup stub to capture parameters
+        captured_params = nil
+        allow(InvoiceService).to receive(:create) do |params, _|
+          captured_params = params
+          { data: { id: 123 } }
+        end
+
+        post :create, params: { invoice: params_with_string_workflow }
+
+        # Rails controllers keep string parameters as strings
+        expect(captured_params[:workflow_definition_id]).to eq("2")
+        expect(captured_params[:workflow_definition_id]).to be_a(String)
+      end
+
+      it 'handles nil workflow_definition_id' do
+        params_with_nil_workflow = invoice_params.merge(workflow_definition_id: nil)
+
+        # Setup stub to capture parameters
+        captured_params = nil
+        allow(InvoiceService).to receive(:create) do |params, _|
+          captured_params = params
+          { data: { id: 123 } }
+        end
+
+        post :create, params: { invoice: params_with_nil_workflow }
+
+        # Rails converts nil to empty string in form submissions
+        expect(captured_params[:workflow_definition_id]).to eq("")
       end
     end
   end

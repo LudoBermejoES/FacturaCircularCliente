@@ -18,6 +18,13 @@ export default class extends Controller {
     // Store all series options for filtering
     if (this.hasSeriesSelectTarget) {
       this.storeAllSeriesOptions()
+      // Filter series based on current invoice type on page load
+      if (this.hasInvoiceTypeSelectTarget) {
+        const currentInvoiceType = this.invoiceTypeSelectTarget.value
+        if (currentInvoiceType) {
+          this.filterSeriesByType(currentInvoiceType)
+        }
+      }
     }
   }
 
@@ -90,28 +97,40 @@ export default class extends Controller {
   calculateTotals() {
     let subtotal = 0
     let totalTax = 0
-    
+
     const lineItems = this.lineItemsTarget.querySelectorAll('.line-item')
-    
+
     lineItems.forEach(lineItem => {
       const quantity = parseFloat(lineItem.querySelector('input[name*="[quantity]"]')?.value) || 0
       const unitPrice = parseFloat(lineItem.querySelector('input[name*="[unit_price]"]')?.value) || 0
       const discount = parseFloat(lineItem.querySelector('input[name*="[discount_percentage]"]')?.value) || 0
       const taxRate = parseFloat(lineItem.querySelector('input[name*="[tax_rate]"]')?.value) || 0
-      
+
       const lineSubtotal = quantity * unitPrice
       const discountAmount = lineSubtotal * (discount / 100)
       const lineNet = lineSubtotal - discountAmount
       const lineTax = lineNet * (taxRate / 100)
-      
+
       subtotal += lineNet
       totalTax += lineTax
-      
+
       this.updateLineTotal(lineItem)
     })
-    
-    const total = subtotal + totalTax
-    
+
+    // Get global financial amounts
+    const generalDiscounts = parseFloat(document.querySelector('input[name="invoice[total_general_discounts]"]')?.value) || 0
+    const generalSurcharges = parseFloat(document.querySelector('input[name="invoice[total_general_surcharges]"]')?.value) || 0
+    const financialExpenses = parseFloat(document.querySelector('input[name="invoice[total_financial_expenses]"]')?.value) || 0
+    const reimbursableExpenses = parseFloat(document.querySelector('input[name="invoice[total_reimbursable_expenses]"]')?.value) || 0
+    const withholdingAmount = parseFloat(document.querySelector('input[name="invoice[withholding_amount]"]')?.value) || 0
+
+    // Calculate gross amount before taxes (following backend logic)
+    // total_gross_amount_before_taxes = subtotal - general_discounts + general_surcharges + financial_expenses + reimbursable_expenses
+    const grossBeforeTaxes = subtotal - generalDiscounts + generalSurcharges + financialExpenses + reimbursableExpenses
+
+    // Calculate final total (gross before taxes + tax outputs - withholding)
+    const total = grossBeforeTaxes + totalTax - withholdingAmount
+
     // Update display
     if (this.hasSubtotalTarget) {
       this.subtotalTarget.textContent = `€${subtotal.toFixed(2)}`
@@ -121,6 +140,37 @@ export default class extends Controller {
     }
     if (this.hasTotalTarget) {
       this.totalTarget.textContent = `€${total.toFixed(2)}`
+    }
+
+    // Update global amounts display
+    const generalDiscountsTarget = document.querySelector('[data-invoice-form-target="generalDiscounts"]')
+    if (generalDiscountsTarget) {
+      generalDiscountsTarget.textContent = generalDiscounts > 0 ? `-€${generalDiscounts.toFixed(2)}` : '-€0.00'
+    }
+
+    const generalSurchargesTarget = document.querySelector('[data-invoice-form-target="generalSurcharges"]')
+    if (generalSurchargesTarget) {
+      generalSurchargesTarget.textContent = generalSurcharges > 0 ? `+€${generalSurcharges.toFixed(2)}` : '+€0.00'
+    }
+
+    const financialExpensesTarget = document.querySelector('[data-invoice-form-target="financialExpenses"]')
+    if (financialExpensesTarget) {
+      financialExpensesTarget.textContent = `€${financialExpenses.toFixed(2)}`
+    }
+
+    const reimbursableExpensesTarget = document.querySelector('[data-invoice-form-target="reimbursableExpenses"]')
+    if (reimbursableExpensesTarget) {
+      reimbursableExpensesTarget.textContent = `€${reimbursableExpenses.toFixed(2)}`
+    }
+
+    const grossBeforeTaxesTarget = document.querySelector('[data-invoice-form-target="grossBeforeTaxes"]')
+    if (grossBeforeTaxesTarget) {
+      grossBeforeTaxesTarget.textContent = `€${grossBeforeTaxes.toFixed(2)}`
+    }
+
+    const withholdingTarget = document.querySelector('[data-invoice-form-target="withholding"]')
+    if (withholdingTarget) {
+      withholdingTarget.textContent = withholdingAmount > 0 ? `-€${withholdingAmount.toFixed(2)}` : '-€0.00'
     }
   }
 
@@ -383,21 +433,33 @@ export default class extends Controller {
     // Determine which series codes are valid for the selected invoice type
     const validSeriesCodes = this.getValidSeriesCodesForType(invoiceType)
 
-    // Clear current options (except the blank option)
-    while (this.seriesSelectTarget.options.length > 1) {
-      this.seriesSelectTarget.removeChild(this.seriesSelectTarget.lastChild)
-    }
+    // Clear all options
+    this.seriesSelectTarget.innerHTML = ''
 
-    // Add filtered options
-    this.allSeriesValue.forEach(seriesOption => {
-      if (seriesOption.value === '' || validSeriesCodes.includes(seriesOption.seriesCode)) {
-        const option = document.createElement('option')
-        option.value = seriesOption.value
-        option.text = seriesOption.text
-        option.selected = seriesOption.selected
-        this.seriesSelectTarget.appendChild(option)
-      }
+    // Add blank option first
+    const blankOption = document.createElement('option')
+    blankOption.value = ''
+    blankOption.text = 'Select invoice series'
+    this.seriesSelectTarget.appendChild(blankOption)
+
+    // Add filtered valid series options
+    const validOptions = this.allSeriesValue.filter(seriesOption =>
+      seriesOption.value !== '' && validSeriesCodes.includes(seriesOption.seriesCode)
+    )
+
+    validOptions.forEach(seriesOption => {
+      const option = document.createElement('option')
+      option.value = seriesOption.value
+      option.text = seriesOption.text
+      this.seriesSelectTarget.appendChild(option)
     })
+
+    // Auto-select if there's only one valid option
+    if (validOptions.length === 1) {
+      this.seriesSelectTarget.value = validOptions[0].value
+      // Trigger change event to update invoice number
+      this.seriesSelectTarget.dispatchEvent(new Event('change'))
+    }
   }
 
   getValidSeriesCodesForType(invoiceType) {
