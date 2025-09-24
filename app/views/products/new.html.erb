@@ -1,0 +1,11 @@
+<% breadcrumb "Products", products_path %>
+<% breadcrumb "New Product" %>
+
+<div class="space-y-6">
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900">New Product</h1>
+    <p class="mt-1 text-sm text-gray-600">Create a new product for your catalog</p>
+  </div>
+
+  <%= render 'form', product: @product %>
+</div>

@@ -26,18 +26,86 @@ export default class extends Controller {
         }
       }
     }
+
+    // Listen for product line creation events
+    this.element.addEventListener('createProductLine', this.handleCreateProductLine.bind(this))
+  }
+
+  disconnect() {
+    this.element.removeEventListener('createProductLine', this.handleCreateProductLine.bind(this))
+  }
+
+  handleCreateProductLine(event) {
+    console.log('handleCreateProductLine called with:', event.detail)
+    const { product, quantity } = event.detail
+
+    // Create a new line item with product data
+    this.addLineItemWithProduct(product, quantity)
+  }
+
+  addLineItemWithProduct(product, quantity = 1) {
+    console.log('addLineItemWithProduct called with product:', product, 'quantity:', quantity)
+    // Get the template HTML
+    const template = this.lineItemTemplateTarget.innerHTML
+    console.log('Template found:', template.length > 0 ? 'Yes' : 'No')
+    console.log('Template content:', template.substring(0, 100) + '...')
+
+    // Create a temporary table container to manipulate the HTML (needed for <tr> elements)
+    const tempTable = document.createElement('table')
+    const tempTbody = document.createElement('tbody')
+    tempTbody.innerHTML = template.replace(/NEW_RECORD/g, this.lineIndexValue)
+    tempTable.appendChild(tempTbody)
+    console.log('TempTbody innerHTML:', tempTbody.innerHTML.substring(0, 100) + '...')
+
+    // Find the line item row in the template (not the product selector row)
+    let lineItemRow = tempTbody.querySelector('.line-item')
+    console.log('LineItemRow found:', lineItemRow ? 'Yes' : 'No')
+
+    if (lineItemRow) {
+
+
+      // Add just the filled line item (no need for product selector on the new line)
+      const fullLineHTML = `
+        ${lineItemRow.outerHTML}
+      `
+
+      // Add the complete line item
+      console.log('Inserting HTML:', fullLineHTML.substring(0, 200) + '...')
+      this.lineItemsTarget.insertAdjacentHTML('beforeend', fullLineHTML)
+      const lastRow = this.lineItemsTarget.rows[this.lineItemsTarget.rows.length - 1];
+
+            // Fill in the product data
+      const descriptionField = lastRow.querySelector('input[name*="[description]"]')
+      const quantityField = lastRow.querySelector('input[name*="[quantity]"]')
+      const unitPriceField = lastRow.querySelector('input[name*="[unit_price]"]')
+      const taxRateField = lastRow.querySelector('input[name*="[tax_rate]"]')
+      const discountField = lastRow.querySelector('input[name*="[discount_percentage]"]')
+
+      if (descriptionField) descriptionField.value = product.description
+      if (quantityField) quantityField.value = quantity
+      if (unitPriceField) unitPriceField.value = product.base_price
+      if (taxRateField) taxRateField.value = product.tax_rate
+      if (discountField) discountField.value = 0
+      console.log(lastRow)
+      console.log('HTML inserted successfully')
+    } else {
+      console.log('Error: lineItemRow not found in template')
+    }
+
+    this.lineIndexValue++
+    this.calculateTotals()
   }
 
   addLineItem(event) {
     if (event) event.preventDefault()
-    
+
     const template = this.lineItemTemplateTarget.innerHTML
     const newLineItem = template.replace(/NEW_RECORD/g, this.lineIndexValue)
-    
+
     this.lineItemsTarget.insertAdjacentHTML('beforeend', newLineItem)
     this.lineIndexValue++
     this.calculateTotals()
-    
+
     // Focus on the description field of the new line item
     const newItems = this.lineItemsTarget.querySelectorAll('.line-item')
     const lastItem = newItems[newItems.length - 1]

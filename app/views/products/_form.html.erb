@@ -1,0 +1,212 @@
+<%= form_with url: product.is_a?(Hash) && product[:id].present? ? product_path(product[:id]) : products_path,
+              method: product.is_a?(Hash) && product[:id].present? ? :patch : :post,
+              scope: :product,
+              local: true,
+              class: "space-y-6" do |form| %>
+
+  <% if @errors.present? %>
+    <div class="rounded-md bg-red-50 p-4">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+          </svg>
+        </div>
+        <div class="ml-3">
+          <h3 class="text-sm font-medium text-red-800">
+            There were errors with your submission
+          </h3>
+          <div class="mt-2 text-sm text-red-700">
+            <ul class="list-disc pl-5 space-y-1">
+              <% @errors.each do |field, messages| %>
+                <% Array(messages).each do |message| %>
+                  <li><%= field.to_s.humanize %> <%= message %></li>
+                <% end %>
+              <% end %>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <div class="bg-white shadow px-4 py-5 sm:rounded-lg sm:p-6">
+    <div class="md:grid md:grid-cols-3 md:gap-6">
+      <div class="md:col-span-1">
+        <h3 class="text-lg font-medium leading-6 text-gray-900">Product Information</h3>
+        <p class="mt-1 text-sm text-gray-500">
+          Basic product details for invoice line items.
+        </p>
+      </div>
+      <div class="mt-5 md:mt-0 md:col-span-2">
+        <div class="grid grid-cols-6 gap-6">
+          <div class="col-span-6 sm:col-span-3">
+            <%= form.label :sku, class: "block text-sm font-medium text-gray-700" %>
+            <%= form.text_field :sku,
+                                value: product[:sku],
+                                class: "mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md #{'border-red-300' if @errors&.key?('sku')}",
+                                placeholder: "e.g., PRD-001" %>
+            <% if @errors&.key?('sku') %>
+              <p class="mt-2 text-sm text-red-600">
+                <%= Array(@errors['sku']).first %>
+              </p>
+            <% end %>
+          </div>
+
+          <div class="col-span-6 sm:col-span-3">
+            <%= form.label :name, class: "block text-sm font-medium text-gray-700" %>
+            <%= form.text_field :name,
+                                value: product[:name],
+                                class: "mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md #{'border-red-300' if @errors&.key?('name')}",
+                                placeholder: "Product name" %>
+            <% if @errors&.key?('name') %>
+              <p class="mt-2 text-sm text-red-600">
+                <%= Array(@errors['name']).first %>
+              </p>
+            <% end %>
+          </div>
+
+          <div class="col-span-6">
+            <%= form.label :description, class: "block text-sm font-medium text-gray-700" %>
+            <%= form.text_area :description,
+                               value: product[:description],
+                               rows: 3,
+                               class: "mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md #{'border-red-300' if @errors&.key?('description')}",
+                               placeholder: "Product description (optional)" %>
+            <% if @errors&.key?('description') %>
+              <p class="mt-2 text-sm text-red-600">
+                <%= Array(@errors['description']).first %>
+              </p>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white shadow px-4 py-5 sm:rounded-lg sm:p-6">
+    <div class="md:grid md:grid-cols-3 md:gap-6">
+      <div class="md:col-span-1">
+        <h3 class="text-lg font-medium leading-6 text-gray-900">Pricing & Tax</h3>
+        <p class="mt-1 text-sm text-gray-500">
+          Set the product price and tax configuration for Spanish compliance.
+        </p>
+      </div>
+      <div class="mt-5 md:mt-0 md:col-span-2">
+        <div class="grid grid-cols-6 gap-6">
+          <div class="col-span-6 sm:col-span-3">
+            <%= form.label :base_price, "Base Price", class: "block text-sm font-medium text-gray-700" %>
+            <div class="mt-1 relative rounded-md shadow-sm">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <span class="text-gray-500 sm:text-sm">€</span>
+              </div>
+              <%= form.number_field :base_price,
+                                    value: product[:base_price],
+                                    step: 0.01,
+                                    min: 0,
+                                    class: "focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md #{'border-red-300' if @errors&.key?('base_price')}",
+                                    placeholder: "0.00" %>
+              <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                <span class="text-gray-500 sm:text-sm">EUR</span>
+              </div>
+            </div>
+            <% if @errors&.key?('base_price') %>
+              <p class="mt-2 text-sm text-red-600">
+                <%= Array(@errors['base_price']).first %>
+              </p>
+            <% end %>
+          </div>
+
+          <div class="col-span-6 sm:col-span-3">
+            <%= form.label :currency_code, "Currency", class: "block text-sm font-medium text-gray-700" %>
+            <%= form.select :currency_code,
+                            options_for_select([
+                              ['Euro (EUR)', 'EUR'],
+                              ['US Dollar (USD)', 'USD'],
+                              ['British Pound (GBP)', 'GBP']
+                            ], product[:currency_code] || 'EUR'),
+                            {},
+                            { class: "mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md #{'border-red-300' if @errors&.key?('currency_code')}" } %>
+            <% if @errors&.key?('currency_code') %>
+              <p class="mt-2 text-sm text-red-600">
+                <%= Array(@errors['currency_code']).first %>
+              </p>
+            <% end %>
+          </div>
+
+          <div class="col-span-6 sm:col-span-4">
+            <%= form.label :tax_rate, "Spanish Tax Rate (IVA)", class: "block text-sm font-medium text-gray-700" %>
+            <%= form.select :tax_rate,
+                            options_for_select([
+                              ['21% - Standard Rate (General)', 21],
+                              ['10% - Reduced Rate (Books, medicines, etc.)', 10],
+                              ['4% - Super Reduced Rate (Basic necessities)', 4],
+                              ['0% - Tax Exempt (Financial services, etc.)', 0]
+                            ], product[:tax_rate] || 21),
+                            {},
+                            { class: "mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md #{'border-red-300' if @errors&.key?('tax_rate')}" } %>
+            <p class="mt-2 text-sm text-gray-500">
+              Select the appropriate Spanish VAT rate for this product category.
+            </p>
+            <% if @errors&.key?('tax_rate') %>
+              <p class="mt-2 text-sm text-red-600">
+                <%= Array(@errors['tax_rate']).first %>
+              </p>
+            <% end %>
+          </div>
+
+          <% if product[:base_price] && product[:tax_rate] %>
+            <div class="col-span-6">
+              <div class="bg-gray-50 rounded-lg p-4">
+                <h4 class="text-sm font-medium text-gray-900">Price Calculation Preview</h4>
+                <div class="mt-2 text-sm text-gray-600">
+                  <p>Base Price: <%= number_to_currency(product[:base_price], unit: "€", precision: 2) %></p>
+                  <p>Tax (<%= product[:tax_rate] %>%): <%= number_to_currency((product[:base_price] * product[:tax_rate] / 100), unit: "€", precision: 2) %></p>
+                  <p class="font-medium">Total with Tax: <%= number_to_currency((product[:base_price] * (1 + product[:tax_rate] / 100)), unit: "€", precision: 2) %></p>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white shadow px-4 py-5 sm:rounded-lg sm:p-6">
+    <div class="md:grid md:grid-cols-3 md:gap-6">
+      <div class="md:col-span-1">
+        <h3 class="text-lg font-medium leading-6 text-gray-900">Status</h3>
+        <p class="mt-1 text-sm text-gray-500">
+          Control product availability for invoice creation.
+        </p>
+      </div>
+      <div class="mt-5 md:mt-0 md:col-span-2">
+        <div class="space-y-4">
+          <div class="flex items-start">
+            <div class="flex items-center h-5">
+              <%= form.check_box :is_active,
+                                 { checked: product[:is_active] != false, class: "focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded" },
+                                 true, false %>
+            </div>
+            <div class="ml-3 text-sm">
+              <%= form.label :is_active, "Active Product", class: "font-medium text-gray-700" %>
+              <p class="text-gray-500">When active, this product will be available for selection in invoice line items.</p>
+            </div>
+          </div>
+          <% if @errors&.key?('is_active') %>
+            <p class="text-sm text-red-600">
+              <%= Array(@errors['is_active']).first %>
+            </p>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex justify-end space-x-3">
+    <%= link_to "Cancel", product.is_a?(Hash) && product[:id].present? ? product_path(product[:id]) : products_path,
+                class: "bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+    <%= form.submit (product.is_a?(Hash) && product[:id].present?) ? "Update Product" : "Create Product",
+                    class: "ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+  </div>
+<% end %>

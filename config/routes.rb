@@ -81,6 +81,18 @@ Rails.application.routes.draw do
       post :recalculate
     end
   end
+
+  # Products Management
+  resources :products do
+    collection do
+      get :search
+    end
+    member do
+      post :activate
+      post :deactivate
+      post :duplicate
+    end
+  end
   
   # Invoice Numbering API endpoints (for AJAX calls)
   namespace :api do

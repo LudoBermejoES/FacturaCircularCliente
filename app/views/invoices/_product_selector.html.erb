@@ -1,0 +1,80 @@
+<div class="product-selector-container"
+     data-controller="product-selector"
+     data-product-selector-search-url-value="<%= search_products_path %>"
+     data-product-selector-line-index-value="<%= line_index %>">
+
+  <div class="flex items-center space-x-2 mb-2">
+    <div class="flex-1 relative">
+      <!-- Product Search Input -->
+      <div class="relative">
+        <input type="text"
+               data-product-selector-target="search"
+               data-action="input->product-selector#search focus->product-selector#search"
+               class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm pl-10 pr-10"
+               placeholder="Search products (optional)..."
+               autocomplete="off" />
+
+        <!-- Search Icon -->
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0110.607 10.607z" />
+          </svg>
+        </div>
+
+        <!-- Clear Button -->
+        <button type="button"
+                data-action="click->product-selector#clearSelection"
+                class="absolute inset-y-0 right-0 pr-3 flex items-center"
+                title="Clear selection">
+          <svg class="h-4 w-4 text-gray-400 hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Search Results Dropdown -->
+      <div data-product-selector-target="results"
+           class="absolute z-50 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm hidden">
+        <!-- Results will be populated by JavaScript -->
+      </div>
+    </div>
+
+    <!-- Help Text -->
+    <div class="flex-shrink-0">
+      <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+        <svg class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+        </svg>
+        Optional
+      </span>
+    </div>
+  </div>
+
+  <!-- Instructions -->
+  <div class="text-xs text-gray-500 mb-3 p-2 bg-gray-50 rounded-md border">
+    <div class="flex items-start space-x-2">
+      <svg class="h-4 w-4 text-blue-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+      </svg>
+      <div class="space-y-1">
+        <p><strong>Product selection is optional:</strong></p>
+        <ul class="space-y-0.5 text-gray-600">
+          <li>• Search and select a product to auto-fill description, price, and tax rate</li>
+          <li>• Or manually enter line item details without selecting a product</li>
+          <li>• You can modify any field after selecting a product</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .product-selector-container {
+    /* Ensure dropdown appears above other elements */
+  }
+  .product-selector-container [data-product-selector-target="results"] {
+    /* Additional styling for the dropdown */
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+</style>

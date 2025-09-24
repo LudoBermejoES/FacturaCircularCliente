@@ -259,6 +259,69 @@
             <% lines = invoice[:invoice_lines] || []
                lines = lines.values if lines.respond_to?(:values) # Handle ActionController::Parameters
                lines.each_with_index do |line, index| %>
+              <!-- Product Selector Row -->
+              <tr class="bg-blue-50 border-b border-blue-100">
+                <td colspan="7" class="px-3 py-2">
+
+                  <div class="product-selector-row mt-2" id="product-selector-<%= index %>"
+                       data-controller="product-selector"
+                       data-product-selector-search-url-value="<%= search_products_path %>"
+                       data-product-selector-line-index-value="<%= index %>">
+                    <div class="bg-white rounded-lg p-4 border border-blue-200">
+                      <div class="flex items-center space-x-3">
+                        <div class="flex-1 relative">
+                          <input type="text"
+                                 data-product-selector-target="search"
+                                 data-action="input->product-selector#search focus->product-selector#search"
+                                 class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm pl-10"
+                                 placeholder="Search products by name or SKU..."
+                                 autocomplete="off" />
+
+                          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0110.607 10.607z" />
+                            </svg>
+                          </div>
+
+                          <div data-product-selector-target="results"
+                               class="absolute z-50 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm hidden">
+                          </div>
+                        </div>
+
+                        <button type="button"
+                                data-action="click->product-selector#clearSelection"
+                                class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                          Clear
+                        </button>
+                        <button type="button"
+                                data-action="click->product-selector#createLine"
+                                data-product-selector-target="createLineButton"
+                                disabled
+                                class="inline-flex items-center px-3 py-2 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-md text-white bg-green-600 opacity-50 cursor-not-allowed">
+                          <svg class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                          </svg>
+                          Create Line
+                        </button>
+                        <button type="button"
+                                data-action="click->product-modal#open"
+                                class="inline-flex items-center px-3 py-2 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+                          <svg class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          New Product
+                        </button>
+                      </div>
+
+                      <div class="mt-2 text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                        💡 <strong>Tip:</strong> Search and select a product, then click "Create Line" to add it as a new invoice line. You can also enter line details manually below.
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Line Item Data Row -->
               <tr class="line-item">
                 <%= hidden_field_tag "invoice[invoice_lines][#{index}][id]", line[:id] %>
                 <%= hidden_field_tag "invoice[invoice_lines][#{index}][line_number]", line[:line_number] %>
@@ -274,7 +337,9 @@
                       class: "block w-20 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
                       step: 0.01,
                       min: 0,
-                      data: { action: "input->invoice-form#calculateLineTotal" } %>
+                      data: {
+                        action: "input->invoice-form#calculateLineTotal"
+                      } %>
                 </td>
                 <td class="px-3 py-2">
                   <%= number_field_tag "invoice[invoice_lines][#{index}][unit_price]",
@@ -282,7 +347,9 @@
                       class: "block w-24 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
                       step: 0.01,
                       min: 0,
-                      data: { action: "input->invoice-form#calculateLineTotal" } %>
+                      data: {
+                        action: "input->invoice-form#calculateLineTotal"
+                      } %>
                 </td>
                 <td class="px-3 py-2">
                   <%= number_field_tag "invoice[invoice_lines][#{index}][tax_rate]",
@@ -291,7 +358,9 @@
                       step: 0.01,
                       min: 0,
                       max: 100,
-                      data: { action: "input->invoice-form#calculateLineTotal" } %>
+                      data: {
+                        action: "input->invoice-form#calculateLineTotal"
+                      } %>
                 </td>
                 <td class="px-3 py-2">
                   <%= number_field_tag "invoice[invoice_lines][#{index}][discount_percentage]",
@@ -300,7 +369,9 @@
                       step: 0.01,
                       min: 0,
                       max: 100,
-                      data: { action: "input->invoice-form#calculateLineTotal" } %>
+                      data: {
+                        action: "input->invoice-form#calculateLineTotal"
+                      } %>
                 </td>
                 <td class="px-3 py-2">
                   <span class="line-total text-sm font-medium text-gray-900">€0.00</span>
@@ -535,3 +606,7 @@
         class: "px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
   </div>
 <% end %>
+
+<!-- Include Product Creation Modal -->
+<%= render 'shared/product_creation_modal' %>
+

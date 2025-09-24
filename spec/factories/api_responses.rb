@@ -43,8 +43,63 @@ FactoryBot.define do
     unit_price { Faker::Commerce.price(range: 10..1000) }
     tax_rate { [10, 21].sample }
     discount_percentage { [0, 5, 10, 15].sample }
-    
+
     initialize_with { attributes }
+  end
+
+  factory :product_response, class: Hash do
+    id { Faker::Number.number(digits: 3) }
+    sku { "PRD-#{Faker::Number.number(digits: 3)}" }
+    name { Faker::Commerce.product_name }
+    description { Faker::Lorem.sentence }
+    is_active { true }
+    base_price { Faker::Commerce.price(range: 10..1000).to_f }
+    currency_code { 'EUR' }
+    tax_rate { [0, 4, 10, 21].sample.to_f }
+    created_at { 1.week.ago.iso8601 }
+    updated_at { 1.day.ago.iso8601 }
+    price_with_tax { (base_price * (1 + tax_rate / 100.0)).round(2) }
+    display_name { "#{sku} - #{name}" }
+    formatted_price { "#{currency_code} #{base_price}" }
+
+    # Tax helper computed attributes
+    standard_tax { tax_rate == 21 }
+    reduced_tax { tax_rate == 10 }
+    super_reduced_tax { tax_rate == 4 }
+    tax_exempt { tax_rate == 0 }
+
+    # Tax description based on rate
+    tax_description do
+      case tax_rate
+      when 21 then 'Standard (21%)'
+      when 10 then 'Reduced (10%)'
+      when 4 then 'Super Reduced (4%)'
+      when 0 then 'Exempt (0%)'
+      else "Custom (#{tax_rate}%)"
+      end
+    end
+
+    initialize_with { attributes }
+
+    trait :inactive do
+      is_active { false }
+    end
+
+    trait :standard_tax do
+      tax_rate { 21.0 }
+    end
+
+    trait :reduced_tax do
+      tax_rate { 10.0 }
+    end
+
+    trait :super_reduced_tax do
+      tax_rate { 4.0 }
+    end
+
+    trait :tax_exempt do
+      tax_rate { 0.0 }
+    end
   end
   
   factory :workflow_history_response, class: Hash do

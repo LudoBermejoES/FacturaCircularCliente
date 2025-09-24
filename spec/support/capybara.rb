@@ -2,7 +2,7 @@ require 'capybara/rails'
 require 'capybara/rspec'
 require 'selenium-webdriver'
 
-# Configure Selenium Grid driver for remote browser
+# Configure Selenium Grid driver for remote browser with enhanced timeouts
 Capybara.register_driver :selenium_remote do |app|
   options = Selenium::WebDriver::Chrome::Options.new
   options.add_argument('--headless')
@@ -12,21 +12,35 @@ Capybara.register_driver :selenium_remote do |app|
   options.add_argument('--window-size=1920,1080')
   options.add_argument('--disable-extensions')
   options.add_argument('--disable-software-rasterizer')
+  # Add more stability arguments
+  options.add_argument('--disable-blink-features=AutomationControlled')
+  options.add_argument('--disable-features=VizDisplayCompositor')
+  options.add_argument('--disable-translate')
+  options.add_argument('--disable-background-timer-throttling')
+  options.add_argument('--disable-renderer-backgrounding')
+  options.add_argument('--disable-features=TranslateUI')
+  options.add_argument('--disable-ipc-flooding-protection')
+
+  client = Selenium::WebDriver::Remote::Http::Default.new
+  client.open_timeout = 120  # Increase from default 60
+  client.read_timeout = 120  # Increase from default 60
 
   if ENV['HUB_URL'].present?
-    # Use remote Selenium Grid
+    # Use remote Selenium Grid with increased timeouts
     Capybara::Selenium::Driver.new(
       app,
       browser: :remote,
       url: ENV['HUB_URL'],
-      options: options
+      options: options,
+      http_client: client
     )
   else
     # Fallback to local Chrome (for local development)
     Capybara::Selenium::Driver.new(
       app,
       browser: :chrome,
-      options: options
+      options: options,
+      http_client: client
     )
   end
 end
@@ -58,14 +72,16 @@ end
 Capybara.javascript_driver = :selenium_remote
 Capybara.default_driver = :rack_test
 
-# Configure Capybara settings
+# Configure Capybara settings with increased timeouts
 Capybara.configure do |config|
-  config.default_max_wait_time = 10
+  config.default_max_wait_time = 15  # Increased from 10
   config.server = :puma, {
     Silent: true,
     Threads: "1:1",
     workers: 0,  # Disable clustering for faster boot
-    preload_app: false  # Disable app preloading to prevent initialization blocks
+    preload_app: false,  # Disable app preloading to prevent initialization blocks
+    queue_requests: false,
+    Verbose: false
   }
 
   # Allow external connections in Docker
@@ -81,8 +97,15 @@ Capybara.configure do |config|
   end
 end
 
-# Increase server boot timeout for Docker environment (3 minutes)
-ENV['CAPYBARA_SERVER_TIMEOUT'] = '180'
+# Increase server boot timeout for Docker environment (5 minutes)
+# Note: server_boot_timeout is not available in all Capybara versions
+# Use environment variable instead
+ENV['CAPYBARA_SERVER_TIMEOUT'] = '300'
+
+# Set Capybara server timeout if method is available
+if Capybara.respond_to?(:server_boot_timeout=)
+  Capybara.server_boot_timeout = 300
+end
 
 RSpec.configure do |config|
   # Configure feature tests to use Rack::Test by default to avoid server boot timeout

@@ -1,0 +1,30 @@
+# Use the official Playwright image with all browsers pre-installed
+FROM mcr.microsoft.com/playwright:v1.40.0-focal
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY e2e/package*.json ./
+
+# Install dependencies
+RUN npm install --production=false
+
+# Copy TypeScript config
+COPY e2e/tsconfig.json ./
+
+# Copy test files and configurations
+COPY e2e/ .
+
+# Install Playwright browsers (they're already in the image, but this ensures they're up to date)
+RUN npx playwright install --with-deps
+
+# Create directories for test results
+RUN mkdir -p /app/playwright-report /app/test-results
+
+# Set environment variables
+ENV CI=true
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+# Default command runs all tests
+CMD ["npx", "playwright", "test"]

@@ -48,6 +48,27 @@ services:
     networks:
       - factura-shared
 
+  playwright:
+    container_name: factura-circular-playwright
+    build:
+      context: .
+      dockerfile: Dockerfile.playwright
+    volumes:
+      - ./e2e:/app
+      - ./playwright-report:/app/playwright-report
+      - ./test-results:/app/test-results
+    environment:
+      - BASE_URL=http://web:3000
+      - API_URL=http://albaranes-api:3000/api/v1
+      - CI=${CI:-false}
+      - HEADED=${HEADED:-false}
+      - DEBUG=${DEBUG:-false}
+    networks:
+      - factura-shared
+    depends_on:
+      - web
+    command: npx playwright test
+
 volumes:
   bundle_cache:
   node_modules:

@@ -101,9 +101,11 @@ RSpec.feature 'Invoice Form Interactions', type: :feature do
     select 'Test Company (Company)', from: 'buyer_selection'
     fill_in 'Invoice Date', with: Date.current.strftime('%Y-%m-%d')
     
-    # The form should have at least one default line item row to fill in
-    # Fill in the default line item (JavaScript-free approach)
-    within(first('tbody tr')) do
+    # The form should have at least two rows (header + form inputs)
+    expect(page).to have_css('tbody tr', minimum: 2, wait: 2)
+
+    # Fill in the default line item (use the second row which has the actual form inputs)
+    within(page.all('tbody tr')[1]) do
       find('input[placeholder="Item description"]').set('Web Development Services')
       find('input[name*="[quantity]"]').set('10')
       find('input[name*="[unit_price]"]').set('150.00')
@@ -133,11 +135,11 @@ RSpec.feature 'Invoice Form Interactions', type: :feature do
     expect(page).to have_content('Tax:')
     expect(page).to have_content('Total:')
     
-    # Form should have at least one default line item row
-    expect(page).to have_css('tbody tr', minimum: 1)
-    
-    # Should be able to fill in basic line item data
-    within(first('tbody tr')) do
+    # Form should have at least two line item rows (header + actual form inputs)
+    expect(page).to have_css('tbody tr', minimum: 2)
+
+    # Should be able to fill in basic line item data (use second row with actual inputs)
+    within(page.all('tbody tr')[1]) do
       find('input[placeholder="Item description"]').set('Design Services')
       find('input[name*="[quantity]"]').set('5')
       find('input[name*="[unit_price]"]').set('100.00')
@@ -181,8 +183,8 @@ RSpec.feature 'Invoice Form Interactions', type: :feature do
     select 'Test Company', from: 'invoice_seller_party_id'
     select 'Test Company (Company)', from: 'buyer_selection'
     
-    # Fill line item including discount and tax fields
-    within(first('tbody tr')) do
+    # Fill line item including discount and tax fields (use second row with actual inputs)
+    within(page.all('tbody tr')[1]) do
       find('input[placeholder="Item description"]').set('Service')
       find('input[name*="[quantity]"]').set('1')
       find('input[name*="[unit_price]"]').set('1000.00')
@@ -191,7 +193,7 @@ RSpec.feature 'Invoice Form Interactions', type: :feature do
     end
     
     # Verify fields were filled (without expecting JavaScript calculations)
-    within(first('tbody tr')) do
+    within(page.all('tbody tr')[1]) do
       expect(find('input[name*="[discount_percentage]"]').value).to eq('10')
       expect(find('input[name*="[tax_rate]"]').value).to eq('21')
     end
@@ -211,8 +213,8 @@ RSpec.feature 'Invoice Form Interactions', type: :feature do
     select 'Test Company', from: 'invoice_seller_party_id'
     select 'Test Company (Company)', from: 'buyer_selection' 
     
-    # Fill one line item with minimal data
-    within(first('tbody tr')) do
+    # Fill one line item with minimal data (use second row with actual inputs)
+    within(page.all('tbody tr')[1]) do
       find('input[placeholder="Item description"]').set('Basic Service')
       find('input[name*="[quantity]"]').set('1')
       find('input[name*="[unit_price]"]').set('100.00')
@@ -314,15 +316,15 @@ RSpec.feature 'Invoice Form Interactions', type: :feature do
     select 'Test Company', from: 'invoice_seller_party_id'
     select 'Test Company (Company)', from: 'buyer_selection'
     
-    # Fill line item with negative price
-    within(first('tbody tr')) do
+    # Fill line item with negative price (use second row with actual inputs)
+    within(page.all('tbody tr')[1]) do
       find('input[placeholder="Item description"]').set('Refund Service')
       find('input[name*="[quantity]"]').set('1')
       find('input[name*="[unit_price]"]').set('-100.00')
     end
     
     # Verify the form accepts negative values in the field
-    within(first('tbody tr')) do
+    within(page.all('tbody tr')[1]) do
       expect(find('input[name*="[unit_price]"]').value).to eq('-100.00')
     end
     
