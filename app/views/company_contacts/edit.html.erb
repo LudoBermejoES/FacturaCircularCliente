@@ -105,87 +105,64 @@
           </div>
         </div>
 
-        <!-- Address Information -->
+        <!-- Address Management -->
         <div class="border-t border-gray-200 pt-6">
-          <h4 class="text-lg font-medium text-gray-900 mb-4">Address Information</h4>
-          
-          <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <!-- Address Type -->
-            <div>
-              <%= form.label "addresses[0][address_type]", "Address Type", class: "block text-sm font-medium text-gray-700" %>
-              <%= form.select "addresses[0][address_type]", 
-                  options_for_select([
-                    ["Billing", "billing"],
-                    ["Shipping", "shipping"],
-                    ["Headquarters", "headquarters"],
-                    ["Branch", "branch"]
-                  ], @contact[:addresses].present? ? @contact[:addresses].first&.dig(:address_type) : "billing"),
-                  {},
-                  class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
-            </div>
-
-            <!-- Default Address -->
-            <div class="flex items-center pt-6">
-              <%= check_box_tag "addresses[0][is_default]", "true", 
-                  @contact[:addresses].present? ? (@contact[:addresses].first&.dig(:is_default) || false) : true,
-                  class: "h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" %>
-              <%= form.label "addresses[0][is_default]", "Default Address", class: "ml-2 block text-sm text-gray-900" %>
-            </div>
-
-            <!-- Street Address -->
-            <div class="sm:col-span-2">
-              <%= form.label "addresses[0][street_address]", "Street Address", class: "block text-sm font-medium text-gray-700" %>
-              <%= form.text_area "addresses[0][street_address]", 
-                  value: @contact[:addresses].present? ? @contact[:addresses].first&.dig(:street_address) : '',
-                  rows: 3,
-                  class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
-                  placeholder: "Enter street address" %>
-            </div>
-
-            <!-- City -->
-            <div>
-              <%= form.label "addresses[0][city]", "City", class: "block text-sm font-medium text-gray-700" %>
-              <%= form.text_field "addresses[0][city]", 
-                  value: @contact[:addresses].present? ? @contact[:addresses].first&.dig(:city) : '',
-                  class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
-                  placeholder: "Enter city" %>
-            </div>
-
-            <!-- Postal Code -->
-            <div>
-              <%= form.label "addresses[0][postal_code]", "Postal Code", class: "block text-sm font-medium text-gray-700" %>
-              <%= form.text_field "addresses[0][postal_code]", 
-                  value: @contact[:addresses].present? ? @contact[:addresses].first&.dig(:postal_code) : '',
-                  class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
-                  placeholder: "Enter postal code" %>
-            </div>
-
-            <!-- State/Province -->
-            <div>
-              <%= form.label "addresses[0][state_province]", "State/Province", class: "block text-sm font-medium text-gray-700" %>
-              <%= form.text_field "addresses[0][state_province]", 
-                  value: @contact[:addresses].present? ? @contact[:addresses].first&.dig(:state_province) : '',
-                  class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
-                  placeholder: "Enter state or province" %>
-            </div>
-
-            <!-- Country -->
-            <div>
-              <%= form.label "addresses[0][country_code]", "Country", class: "block text-sm font-medium text-gray-700" %>
-              <%= form.select "addresses[0][country_code]", 
-                  options_for_select([
-                    ["Spain", "ESP"],
-                    ["France", "FRA"],
-                    ["Germany", "DEU"],
-                    ["Italy", "ITA"],
-                    ["Portugal", "PRT"],
-                    ["United Kingdom", "GBR"],
-                    ["United States", "USA"]
-                  ], @contact[:addresses].present? ? @contact[:addresses].first&.dig(:country_code) : "ESP"),
-                  {},
-                  class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
-            </div>
+          <div class="flex justify-between items-center mb-4">
+            <h4 class="text-lg font-medium text-gray-900">Addresses</h4>
+            <%= link_to "Manage Addresses",
+                company_company_contact_addresses_path(@company[:id], @contact[:id]),
+                class: "inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
           </div>
+
+          <!-- Address Summary -->
+          <% if @contact[:addresses] && @contact[:addresses].any? %>
+            <div class="bg-gray-50 rounded-lg p-4">
+              <% default_address = @contact[:addresses].find { |a| a[:is_default] } || @contact[:addresses].first %>
+              <div class="flex items-start">
+                <div class="flex-shrink-0">
+                  <svg class="h-5 w-5 text-gray-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                  </svg>
+                </div>
+                <div class="ml-3 flex-1">
+                  <p class="text-sm font-medium text-gray-900">
+                    Default Address:
+                    <% if default_address[:is_default] %>
+                      <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">
+                        Default
+                      </span>
+                    <% end %>
+                  </p>
+                  <address class="mt-1 text-sm text-gray-600 not-italic">
+                    <%= default_address[:full_address_with_country] || [
+                      default_address[:street_address],
+                      default_address[:city],
+                      default_address[:postal_code],
+                      default_address[:country_code]
+                    ].compact.join(', ') %>
+                  </address>
+                  <p class="mt-2 text-sm text-gray-500">
+                    <%= pluralize(@contact[:addresses].size, 'address') %> total
+                    <%= link_to "View all →", company_company_contact_addresses_path(@company[:id], @contact[:id]), class: "ml-2 font-medium text-indigo-600 hover:text-indigo-500" %>
+                  </p>
+                </div>
+              </div>
+            </div>
+          <% else %>
+            <div class="bg-gray-50 rounded-lg p-4">
+              <div class="text-center">
+                <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                </svg>
+                <p class="mt-2 text-sm text-gray-500">No addresses configured for this contact.</p>
+                <%= link_to "Add First Address",
+                    new_company_company_contact_address_path(@company[:id], @contact[:id]),
+                    class: "mt-2 inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+              </div>
+            </div>
+          <% end %>
         </div>
 
         <!-- Status Information -->

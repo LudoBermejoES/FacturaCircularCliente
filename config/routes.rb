@@ -31,6 +31,13 @@ Rails.application.routes.draw do
         post :activate
         post :deactivate
       end
+
+      # Address management for contacts
+      resources :addresses, controller: 'company_contact_addresses' do
+        member do
+          post :set_default
+        end
+      end
     end
     
     # User management within companies

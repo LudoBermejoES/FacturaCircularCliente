@@ -175,7 +175,59 @@ FactoryBot.define do
         }
       ]
     end
-    
+
     initialize_with { attributes }
+  end
+
+  factory :address_response, class: Hash do
+    id { Faker::Number.number(digits: 3) }
+    street_address { "#{Faker::Address.street_name} #{Faker::Address.building_number}" }
+    city { Faker::Address.city }
+    state_province { Faker::Address.state }
+    postal_code { Faker::Address.zip_code }
+    country_code { ['ESP', 'FRA', 'DEU', 'ITA'].sample }
+    country_name do
+      case country_code
+      when 'ESP' then 'Spain'
+      when 'FRA' then 'France'
+      when 'DEU' then 'Germany'
+      when 'ITA' then 'Italy'
+      else 'Unknown'
+      end
+    end
+    address_type { ['billing', 'shipping'].sample }
+    is_default { [true, false].sample }
+    display_type { address_type.capitalize }
+    full_address { "#{street_address}, #{postal_code} #{city}, #{state_province}, #{country_name}" }
+    full_address_with_country { full_address }
+    created_at { 1.week.ago.iso8601 }
+    updated_at { 1.day.ago.iso8601 }
+
+    initialize_with { attributes }
+
+    trait :billing do
+      address_type { 'billing' }
+      display_type { 'Billing' }
+    end
+
+    trait :shipping do
+      address_type { 'shipping' }
+      display_type { 'Shipping' }
+    end
+
+    trait :default do
+      is_default { true }
+    end
+
+    trait :non_default do
+      is_default { false }
+    end
+
+    trait :spanish do
+      country_code { 'ESP' }
+      country_name { 'Spain' }
+      state_province { ['Madrid', 'Barcelona', 'Valencia', 'Sevilla'].sample }
+      postal_code { "#{Faker::Number.number(digits: 2)}#{Faker::Number.number(digits: 3)}" }
+    end
   end
 end

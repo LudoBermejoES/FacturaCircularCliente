@@ -1,0 +1,29 @@
+<% breadcrumb ["Companies", companies_path],
+              [@company[:name], company_path(@company[:id])],
+              ["Contacts", company_company_contacts_path(@company[:id])],
+              [@contact[:name], edit_company_company_contact_path(@company[:id], @contact[:id])],
+              ["Addresses", company_company_contact_addresses_path(@company[:id], @contact[:id])],
+              "New Address" %>
+
+<div class="space-y-6">
+  <!-- Header -->
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900">Add New Address</h1>
+    <p class="mt-1 text-sm text-gray-600">
+      Add a new address for <%= @contact[:name] %>
+    </p>
+  </div>
+
+  <!-- Form -->
+  <div class="bg-white shadow rounded-lg">
+    <div class="px-4 py-5 sm:px-6">
+      <h3 class="text-lg font-medium text-gray-900">Address Information</h3>
+      <p class="mt-1 text-sm text-gray-500">
+        Provide the address details below. All required fields are marked with an asterisk (*).
+      </p>
+    </div>
+    <div class="border-t border-gray-200 px-4 py-5 sm:px-6">
+      <%= render 'form' %>
+    </div>
+  </div>
+</div>
