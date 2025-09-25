@@ -7,7 +7,9 @@ export default class extends Controller {
     "establishmentSelect", "taxJurisdiction", "buyerLocationToggle", "buyerLocationFields",
     "taxContextStatus", "taxContextIndicator", "taxContextDetails", "transactionType", "crossBorder",
     "euTransaction", "reverseCharge", "autoTaxCalculate", "calculateTaxButton", "refreshTaxButton",
-    "taxContextEstablishmentId", "taxContextCrossBorder", "taxContextEuTransaction", "taxContextReverseCharge"
+    "taxContextEstablishmentId", "taxContextCrossBorder", "taxContextEuTransaction", "taxContextReverseCharge",
+    "lineItemTaxToggle", "taxColumnHeader", "taxColumnCell", "taxRateInput", "taxGroupSelect",
+    "taxGroupsSection", "taxGroupsContainer", "selectedTaxGroupsInputs"
   ]
   static values = {
     lineIndex: Number,
@@ -23,6 +25,10 @@ export default class extends Controller {
   debounceTimers = new Map()
   requestCache = new Map()
   lastTaxCalculationSignature = null
+
+  // Tax rates management
+  taxRatesByJurisdiction = new Map()
+  taxGroupsByJurisdiction = new Map()
 
   connect() {
     this.lineIndexValue = this.lineItemsTarget.querySelectorAll('.line-item').length
@@ -41,6 +47,11 @@ export default class extends Controller {
           this.filterSeriesByType(currentInvoiceType)
         }
       }
+    }
+
+    // Auto-populate tax jurisdiction if default establishment is pre-selected
+    if (this.hasEstablishmentSelectTarget && this.establishmentSelectTarget.value) {
+      this.updateTaxJurisdictionDisplay(this.establishmentSelectTarget.value)
     }
 
     // Listen for product line creation events
@@ -162,44 +173,376 @@ export default class extends Controller {
     const quantity = parseFloat(lineItem.querySelector('input[name*="[quantity]"]')?.value) || 0
     const unitPrice = parseFloat(lineItem.querySelector('input[name*="[unit_price]"]')?.value) || 0
     const discount = parseFloat(lineItem.querySelector('input[name*="[discount_percentage]"]')?.value) || 0
-    const taxRate = parseFloat(lineItem.querySelector('input[name*="[tax_rate]"]')?.value) || 0
-    
+
     const subtotal = quantity * unitPrice
     const discountAmount = subtotal * (discount / 100)
     const lineNet = subtotal - discountAmount
-    const lineTax = lineNet * (taxRate / 100)
-    const lineTotal = lineNet + lineTax
-    
+
+    const useLineItemTaxes = this.hasLineItemTaxToggleTarget && this.lineItemTaxToggleTarget.checked
+    let lineTotal = lineNet
+
+    if (useLineItemTaxes) {
+      const taxRate = parseFloat(lineItem.querySelector('input[name*="[tax_rate]"]')?.value) || 0
+      const lineTax = lineNet * (taxRate / 100)
+      lineTotal = lineNet + lineTax
+    }
+    // For global tax calculation, line totals don't include tax (tax is calculated globally)
+
     const totalElement = lineItem.querySelector('.line-total')
     if (totalElement) {
       totalElement.textContent = `€${lineTotal.toFixed(2)}`
     }
-    
+
     return lineTotal
+  }
+
+  getGlobalTaxRate() {
+    // Get the default tax rate from the selected establishment's tax jurisdiction
+    const establishmentId = this.hasEstablishmentSelectTarget ? this.establishmentSelectTarget.value : null
+    let defaultTaxRate = 21 // Default fallback
+
+    if (establishmentId) {
+      const establishment = this.getEstablishmentById(establishmentId)
+      if (establishment && establishment.tax_jurisdiction && establishment.tax_jurisdiction.default_vat_rate) {
+        defaultTaxRate = establishment.tax_jurisdiction.default_vat_rate
+      }
+    }
+
+    return defaultTaxRate
+  }
+
+  // Tax Rates Management Methods
+
+  async loadTaxRatesForJurisdiction(jurisdictionId) {
+    if (this.taxRatesByJurisdiction.has(jurisdictionId)) {
+      return this.taxRatesByJurisdiction.get(jurisdictionId)
+    }
+
+    try {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+      const response = await fetch(`/api/v1/tax_jurisdictions/${jurisdictionId}/tax_rates`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+          'Accept': 'application/json'
+        },
+        credentials: 'same-origin'
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      const taxRates = data.data || []
+
+      // Group tax rates by group_code (IVA, IRPF, RE, etc.)
+      const groupedRates = this.groupTaxRatesByCode(taxRates)
+
+      this.taxRatesByJurisdiction.set(jurisdictionId, taxRates)
+      this.taxGroupsByJurisdiction.set(jurisdictionId, groupedRates)
+
+      return taxRates
+    } catch (error) {
+      console.error('Error loading tax rates:', error)
+      return []
+    }
+  }
+
+  groupTaxRatesByCode(taxRates) {
+    const grouped = {}
+
+    taxRates.forEach(rate => {
+      // Handle both JSON API format (with attributes) and direct format
+      const attributes = rate.attributes || rate
+      const groupCode = attributes.group_code || attributes.type
+
+      if (!grouped[groupCode]) {
+        grouped[groupCode] = {
+          name: groupCode,
+          display_name: this.getTaxGroupDisplayName(groupCode),
+          rates: []
+        }
+      }
+
+      grouped[groupCode].rates.push({
+        id: rate.id,
+        name: attributes.name,
+        code: attributes.code,
+        rate: attributes.rate,
+        category: attributes.category,
+        rate_type: attributes.rate_type,
+        display_name: `${attributes.name} (${attributes.rate}%)`,
+        value: attributes.rate
+      })
+    })
+
+    return grouped
+  }
+
+  getTaxGroupDisplayName(groupCode) {
+    const displayNames = {
+      'IVA': 'IVA (Spanish VAT)',
+      'IRPF': 'IRPF (Income Tax Withholding)',
+      'RE': 'Recargo de Equivalencia',
+      'IGIC': 'IGIC (Canary Islands)',
+      'IPSI': 'IPSI (Ceuta & Melilla)',
+      'VAT': 'VAT',
+      'VAT_PL': 'VAT (Poland)',
+      'ISR': 'ISR (Mexico)'
+    }
+    return displayNames[groupCode] || groupCode
+  }
+
+  getTaxGroupsForJurisdiction(jurisdictionId) {
+    return this.taxGroupsByJurisdiction.get(jurisdictionId) || {}
+  }
+
+  getSelectedTaxGroups() {
+    if (!this.hasSelectedTaxGroupsInputsTarget) return []
+
+    const selectedGroups = []
+    const hiddenInputs = this.selectedTaxGroupsInputsTarget.querySelectorAll('[data-tax-group]')
+
+    hiddenInputs.forEach(input => {
+      if (input.value === 'true') {
+        const groupCode = input.getAttribute('data-tax-group')
+        const rateInput = this.selectedTaxGroupsInputsTarget.querySelector(`[data-tax-group-rate="${groupCode}"]`)
+        const rate = rateInput ? parseFloat(rateInput.value) : 0
+        const name = this.getTaxGroupDisplayName(groupCode)
+
+        selectedGroups.push({
+          groupCode: groupCode,
+          rate: rate,
+          name: name
+        })
+      }
+    })
+
+    return selectedGroups
+  }
+
+  updateTaxGroupSelectors(jurisdictionId) {
+    const taxGroups = this.getTaxGroupsForJurisdiction(jurisdictionId)
+
+    // Show the tax groups section and populate it
+    if (this.hasTaxGroupsSectionTarget) {
+      this.taxGroupsSectionTarget.style.display = 'block'
+      this.populateTaxGroupsInContext(taxGroups)
+    }
+
+    // Update tax group selectors in all line items (if any still exist)
+    this.taxGroupSelectTargets.forEach(select => {
+      this.populateTaxGroupSelect(select, taxGroups)
+    })
+  }
+
+  populateTaxGroupSelect(selectElement, taxGroups) {
+    // Clear existing options
+    selectElement.innerHTML = ''
+
+    // Add default option
+    const defaultOption = document.createElement('option')
+    defaultOption.value = ''
+    defaultOption.textContent = 'Select tax type'
+    selectElement.appendChild(defaultOption)
+
+    // Add tax groups
+    Object.keys(taxGroups).forEach(groupCode => {
+      const group = taxGroups[groupCode]
+
+      // Create optgroup for this tax type
+      const optgroup = document.createElement('optgroup')
+      optgroup.label = group.display_name
+
+      // Add rates within this group
+      group.rates.forEach(rate => {
+        const option = document.createElement('option')
+        option.value = `${groupCode}:${rate.rate}`
+        option.textContent = rate.display_name
+        option.setAttribute('data-rate', rate.rate)
+        option.setAttribute('data-group', groupCode)
+        option.setAttribute('data-rate-id', rate.id)
+        optgroup.appendChild(option)
+      })
+
+      selectElement.appendChild(optgroup)
+    })
+  }
+
+  populateTaxGroupsInContext(taxGroups) {
+    if (!this.hasTaxGroupsContainerTarget) return
+
+    // Clear existing tax groups
+    this.taxGroupsContainerTarget.innerHTML = ''
+
+    // Get the container for hidden inputs
+    const hiddenInputsContainer = this.selectedTaxGroupsInputsTarget
+
+    // Clear existing hidden inputs
+    hiddenInputsContainer.innerHTML = ''
+
+    // Create checkboxes for each tax group
+    Object.keys(taxGroups).forEach(groupCode => {
+      const group = taxGroups[groupCode]
+      if (!group.rates || group.rates.length === 0) return
+
+      // Get the first rate as default (or you could show all rates)
+      const defaultRate = group.rates[0]
+
+      // Create the checkbox container
+      const checkboxContainer = document.createElement('div')
+      checkboxContainer.className = 'flex items-start space-x-3 p-3 border rounded-lg hover:bg-gray-50'
+
+      // Create checkbox
+      const checkbox = document.createElement('input')
+      checkbox.type = 'checkbox'
+      checkbox.id = `tax_group_${groupCode}`
+      checkbox.value = groupCode
+      checkbox.className = 'h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded mt-1'
+      checkbox.setAttribute('data-action', 'change->invoice-form#onTaxGroupChange')
+      checkbox.setAttribute('data-group-code', groupCode)
+
+      // Preselect VAT by default
+      const isVAT = groupCode === 'VAT'
+      checkbox.checked = isVAT
+
+      // Create label and description
+      const labelContainer = document.createElement('div')
+      labelContainer.className = 'flex-1 min-w-0'
+
+      const label = document.createElement('label')
+      label.htmlFor = `tax_group_${groupCode}`
+      label.className = 'block text-sm font-medium text-gray-900 cursor-pointer'
+      label.textContent = group.display_name
+
+      labelContainer.appendChild(label)
+
+      // Always add a rate selector for this group
+      const rateSelect = document.createElement('select')
+      rateSelect.className = 'mt-2 block w-full text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500'
+      rateSelect.setAttribute('data-action', 'change->invoice-form#onTaxRateChange')
+      rateSelect.setAttribute('data-group-code', groupCode)
+      rateSelect.style.display = isVAT ? 'block' : 'none' // Show VAT dropdown by default, hide others
+
+      group.rates.forEach(rate => {
+        const option = document.createElement('option')
+        option.value = rate.rate
+        option.textContent = `${rate.rate}% - ${rate.name}`
+        option.setAttribute('data-rate-id', rate.id)
+        rateSelect.appendChild(option)
+      })
+
+      labelContainer.appendChild(rateSelect)
+
+      checkboxContainer.appendChild(checkbox)
+      checkboxContainer.appendChild(labelContainer)
+
+      this.taxGroupsContainerTarget.appendChild(checkboxContainer)
+
+      // Create corresponding hidden input for form submission
+      const hiddenInput = document.createElement('input')
+      hiddenInput.type = 'hidden'
+      hiddenInput.name = `invoice[selected_tax_groups][${groupCode}][enabled]`
+      hiddenInput.value = isVAT ? 'true' : 'false'
+      hiddenInput.setAttribute('data-tax-group', groupCode)
+      hiddenInputsContainer.appendChild(hiddenInput)
+
+      const hiddenRateInput = document.createElement('input')
+      hiddenRateInput.type = 'hidden'
+      hiddenRateInput.name = `invoice[selected_tax_groups][${groupCode}][rate]`
+      hiddenRateInput.value = defaultRate.rate
+      hiddenRateInput.setAttribute('data-tax-group-rate', groupCode)
+      hiddenInputsContainer.appendChild(hiddenRateInput)
+    })
   }
 
   calculateTotals() {
     let subtotal = 0
-    let totalTax = 0
+    let taxBreakdown = {} // Store tax breakdown by group
 
     const lineItems = this.lineItemsTarget.querySelectorAll('.line-item')
+    const useLineItemTaxes = this.hasLineItemTaxToggleTarget && this.lineItemTaxToggleTarget.checked
 
     lineItems.forEach(lineItem => {
       const quantity = parseFloat(lineItem.querySelector('input[name*="[quantity]"]')?.value) || 0
       const unitPrice = parseFloat(lineItem.querySelector('input[name*="[unit_price]"]')?.value) || 0
       const discount = parseFloat(lineItem.querySelector('input[name*="[discount_percentage]"]')?.value) || 0
-      const taxRate = parseFloat(lineItem.querySelector('input[name*="[tax_rate]"]')?.value) || 0
 
       const lineSubtotal = quantity * unitPrice
       const discountAmount = lineSubtotal * (discount / 100)
       const lineNet = lineSubtotal - discountAmount
-      const lineTax = lineNet * (taxRate / 100)
 
       subtotal += lineNet
-      totalTax += lineTax
+
+      if (useLineItemTaxes) {
+        // Get tax rate directly from line item tax rate input
+        const taxRateInput = lineItem.querySelector('[data-invoice-form-target="taxRateInput"]')
+
+        if (taxRateInput && taxRateInput.value) {
+          const taxRate = parseFloat(taxRateInput.value) || 0
+          if (taxRate > 0) {
+            const lineTax = lineNet * (taxRate / 100)
+
+            // Use a generic tax group name for line-item taxes
+            const groupKey = `LineItem_${taxRate}`
+            if (!taxBreakdown[groupKey]) {
+              taxBreakdown[groupKey] = {
+                name: `Tax ${taxRate}%`,
+                total: 0,
+                rate: taxRate
+              }
+            }
+            taxBreakdown[groupKey].total += lineTax
+          }
+        }
+      }
 
       this.updateLineTotal(lineItem)
     })
+
+    let totalTax = 0
+
+    if (!useLineItemTaxes) {
+      // Calculate global tax using selected Tax Context groups
+      const generalDiscounts = parseFloat(document.querySelector('input[name="invoice[total_general_discounts]"]')?.value) || 0
+      const generalSurcharges = parseFloat(document.querySelector('input[name="invoice[total_general_surcharges]"]')?.value) || 0
+      const financialExpenses = parseFloat(document.querySelector('input[name="invoice[total_financial_expenses]"]')?.value) || 0
+      const reimbursableExpenses = parseFloat(document.querySelector('input[name="invoice[total_reimbursable_expenses]"]')?.value) || 0
+
+      const taxableBase = subtotal - generalDiscounts + generalSurcharges + financialExpenses + reimbursableExpenses
+
+      // Get selected tax groups from Tax Context
+      const selectedTaxGroups = this.getSelectedTaxGroups()
+
+      // Apply each selected tax group to the taxable base
+      selectedTaxGroups.forEach(({ groupCode, rate, name }) => {
+        const groupTax = taxableBase * (rate / 100)
+        totalTax += groupTax
+
+        taxBreakdown[groupCode] = {
+          name: name,
+          total: groupTax,
+          rate: rate
+        }
+      })
+
+      // If no tax groups selected, fallback to default behavior
+      if (selectedTaxGroups.length === 0) {
+        const globalTaxRate = this.getGlobalTaxRate()
+        totalTax = taxableBase * (globalTaxRate / 100)
+
+        taxBreakdown['Global'] = {
+          name: 'Default Tax',
+          total: totalTax,
+          rate: globalTaxRate
+        }
+      }
+    } else {
+      // Sum all tax amounts for line-item mode
+      totalTax = Object.values(taxBreakdown).reduce((sum, tax) => sum + tax.total, 0)
+    }
 
     // Get global financial amounts
     const generalDiscounts = parseFloat(document.querySelector('input[name="invoice[total_general_discounts]"]')?.value) || 0
@@ -222,6 +565,9 @@ export default class extends Controller {
     if (this.hasTaxTarget) {
       this.taxTarget.textContent = `€${totalTax.toFixed(2)}`
     }
+
+    // Update tax breakdown display
+    this.updateTaxBreakdownDisplay(taxBreakdown)
     if (this.hasTotalTarget) {
       this.totalTarget.textContent = `€${total.toFixed(2)}`
     }
@@ -255,6 +601,43 @@ export default class extends Controller {
     const withholdingTarget = document.querySelector('[data-invoice-form-target="withholding"]')
     if (withholdingTarget) {
       withholdingTarget.textContent = withholdingAmount > 0 ? `-€${withholdingAmount.toFixed(2)}` : '-€0.00'
+    }
+  }
+
+  updateTaxBreakdownDisplay(taxBreakdown) {
+    // Find or create tax breakdown display area
+    const taxTarget = this.hasTaxTarget ? this.taxTarget : null
+    if (!taxTarget) return
+
+    const taxContainer = taxTarget.closest('.flex')
+    if (!taxContainer) return
+
+    // Remove existing tax breakdown if it exists
+    const existingBreakdown = taxContainer.querySelector('.tax-breakdown')
+    if (existingBreakdown) {
+      existingBreakdown.remove()
+    }
+
+    // If we have multiple tax types, show breakdown
+    const taxTypes = Object.keys(taxBreakdown)
+    if (taxTypes.length > 1 || (taxTypes.length === 1 && taxTypes[0] !== 'Global')) {
+      const breakdownContainer = document.createElement('div')
+      breakdownContainer.className = 'tax-breakdown ml-4 text-xs text-gray-500'
+
+      taxTypes.forEach(groupCode => {
+        const tax = taxBreakdown[groupCode]
+        if (tax.total > 0) {
+          const breakdownItem = document.createElement('div')
+          breakdownItem.className = 'flex justify-between'
+          breakdownItem.innerHTML = `
+            <span>${tax.name} (${tax.rate}%):</span>
+            <span>€${tax.total.toFixed(2)}</span>
+          `
+          breakdownContainer.appendChild(breakdownItem)
+        }
+      })
+
+      taxContainer.appendChild(breakdownContainer)
     }
   }
 
@@ -558,9 +941,102 @@ export default class extends Controller {
     return typeToSeriesMapping[invoiceType] || ['FC'] // Default to FC if type is unknown
   }
 
+  // Line Item Tax Toggle Methods
+
+  toggleLineItemTaxes(event) {
+    const useLineItemTaxes = event.target.checked
+
+    // Show/hide tax columns in both desktop and mobile views
+    this.taxColumnHeaderTargets.forEach(header => {
+      header.style.display = useLineItemTaxes ? '' : 'none'
+    })
+
+    this.taxColumnCellTargets.forEach(cell => {
+      cell.style.display = useLineItemTaxes ? '' : 'none'
+    })
+
+    if (useLineItemTaxes) {
+      // When switching to line-item taxes, set default tax rates
+      this.setDefaultTaxRatesFromJurisdiction()
+    } else {
+      // When switching to global taxes, reset line item tax rates to 0
+      this.taxRateInputTargets.forEach(input => {
+        input.value = '0'
+      })
+    }
+
+    // Recalculate totals
+    this.calculateTotals()
+  }
+
+  setDefaultTaxRatesFromJurisdiction() {
+    // Get the default tax rate from the selected establishment's tax jurisdiction
+    const establishmentId = this.hasEstablishmentSelectTarget ? this.establishmentSelectTarget.value : null
+    let defaultTaxRate = 21 // Default fallback
+
+    if (establishmentId) {
+      const establishment = this.getEstablishmentById(establishmentId)
+      if (establishment && establishment.tax_jurisdiction && establishment.tax_jurisdiction.default_vat_rate) {
+        defaultTaxRate = establishment.tax_jurisdiction.default_vat_rate
+      }
+    }
+
+    // Set all tax rate inputs to the default tax rate
+    this.taxRateInputTargets.forEach(input => {
+      // Only update if it's currently 0 or empty (don't override product-specific rates)
+      if (!input.value || parseFloat(input.value) === 0) {
+        input.value = defaultTaxRate.toString()
+      }
+    })
+  }
+
+  onTaxGroupChange(event) {
+    const checkbox = event.target
+    const groupCode = checkbox.getAttribute('data-group-code')
+    const isChecked = checkbox.checked
+
+    // Update the hidden input for form submission
+    const hiddenInput = this.selectedTaxGroupsInputsTarget.querySelector(`[data-tax-group="${groupCode}"]`)
+    if (hiddenInput) {
+      hiddenInput.value = isChecked ? 'true' : 'false'
+    }
+
+    // Show/hide rate selector if there are multiple rates
+    const checkboxContainer = checkbox.closest('.flex')
+    const rateSelector = checkboxContainer ? checkboxContainer.querySelector('select') : null
+    if (rateSelector) {
+      rateSelector.style.display = isChecked ? 'block' : 'none'
+    }
+
+    // Recalculate totals
+    this.calculateTotals()
+  }
+
+  onTaxRateChange(event) {
+    const selectElement = event.target
+    const groupCode = selectElement.getAttribute('data-group-code')
+    const selectedRate = selectElement.value
+
+    // Update the hidden rate input
+    const hiddenRateInput = this.selectedTaxGroupsInputsTarget.querySelector(`[data-tax-group-rate="${groupCode}"]`)
+    if (hiddenRateInput) {
+      hiddenRateInput.value = selectedRate
+    }
+
+    // Update the description text
+    const selectedOption = selectElement.options[selectElement.selectedIndex]
+    const description = selectElement.parentElement.querySelector('p')
+    if (description && selectedOption) {
+      description.textContent = selectedOption.textContent
+    }
+
+    // Recalculate totals
+    this.calculateTotals()
+  }
+
   // Tax Context Methods
 
-  onEstablishmentChange(event) {
+  async onEstablishmentChange(event) {
     const establishmentId = event.target.value
 
     if (!establishmentId) {
@@ -570,25 +1046,32 @@ export default class extends Controller {
 
     this.updateTaxJurisdictionDisplay(establishmentId)
 
+    // Load tax rates for the jurisdiction
+    const establishment = this.getEstablishmentById(establishmentId)
+    if (establishment && establishment.tax_jurisdiction && establishment.tax_jurisdiction.id) {
+      await this.loadTaxRatesForJurisdiction(establishment.tax_jurisdiction.id)
+      this.updateTaxGroupSelectors(establishment.tax_jurisdiction.id)
+    }
+
     if (this.hasAutoTaxCalculateTarget && this.autoTaxCalculateTarget.checked) {
       this.calculateTaxContext()
     }
   }
 
-  updateTaxJurisdictionDisplay(establishmentId) {
+  async updateTaxJurisdictionDisplay(establishmentId) {
     // Find the establishment data from company establishments
     const establishment = this.getEstablishmentById(establishmentId)
 
     if (establishment && establishment.tax_jurisdiction) {
       const jurisdiction = establishment.tax_jurisdiction
-      const jurisdictionText = `${jurisdiction.country_name} (${jurisdiction.code})`
+      const jurisdictionText = `${jurisdiction.name} (${jurisdiction.country_code})`
 
       if (this.hasTaxJurisdictionTarget) {
         this.taxJurisdictionTarget.innerHTML = `
           <div class="flex items-center">
             <div class="flex-1">
               <div class="font-medium text-gray-900">${jurisdictionText}</div>
-              <div class="text-xs text-gray-500">${jurisdiction.regime_type || 'Standard'} Tax Regime</div>
+              <div class="text-xs text-gray-500">${jurisdiction.default_tax_regime || 'Standard'} Tax Regime</div>
             </div>
             <div class="ml-2">
               ${jurisdiction.is_eu ?
@@ -598,6 +1081,12 @@ export default class extends Controller {
             </div>
           </div>
         `
+      }
+
+      // Load tax rates and groups for the jurisdiction
+      if (jurisdiction.id) {
+        await this.loadTaxRatesForJurisdiction(jurisdiction.id)
+        this.updateTaxGroupSelectors(jurisdiction.id)
       }
     } else {
       this.clearTaxJurisdiction()

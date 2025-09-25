@@ -120,6 +120,8 @@ Rails.application.routes.draw do
       post 'establishments/:establishment_id/tax_context', to: 'company_establishments#resolve_tax_context'
       post 'tax/resolve_context', to: 'tax#resolve_context'
       get 'company_establishments', to: 'company_establishments#index'
+      # Tax jurisdiction tax rates endpoint
+      get 'tax_jurisdictions/:id/tax_rates', to: 'tax_jurisdictions#tax_rates'
     end
   end
   

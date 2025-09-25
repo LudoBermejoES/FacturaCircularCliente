@@ -6,8 +6,8 @@ class CompanyEstablishmentService < ApiService
   # Get all establishments for current company
   def self.all(token:)
     response = get(BASE_ENDPOINT, token: token)
-    establishments = response[:data] || []
-    establishments.map { |establishment| transform_api_response(establishment) }
+    establishments = response[:establishments] || []
+    establishments.map { |establishment| transform_api_response_index(establishment) }
   end
 
   # Get specific establishment
@@ -79,7 +79,7 @@ class CompanyEstablishmentService < ApiService
     }
   end
 
-  # Transform API response to client format
+  # Transform API response to client format (for individual items - JSON API format)
   def self.transform_api_response(api_response)
     return {} unless api_response
 
@@ -107,6 +107,31 @@ class CompanyEstablishmentService < ApiService
     }
   end
 
+  # Transform API response for index (flattened format)
+  def self.transform_api_response_index(api_response)
+    return {} unless api_response
+
+    {
+      id: api_response[:id]&.to_i,
+      name: api_response[:name],
+      address_line_1: api_response[:address_line_1],
+      address_line_2: api_response[:address_line_2],
+      city: api_response[:city],
+      state_province: api_response[:state_province],
+      postal_code: api_response[:postal_code],
+      currency_code: api_response[:currency_code],
+      is_default: api_response[:is_default],
+      tax_jurisdiction_id: api_response.dig(:tax_jurisdiction, :id)&.to_i,
+      tax_jurisdiction: api_response[:tax_jurisdiction],
+      created_at: api_response[:created_at],
+      updated_at: api_response[:updated_at],
+      # Derived properties
+      full_address: build_full_address(api_response),
+      display_name: build_display_name(api_response),
+      default_indicator: api_response[:is_default] ? ' (Default)' : ''
+    }
+  end
+
   # Build full address for display
   def self.build_full_address(attributes)
     parts = []
@@ -129,6 +154,6 @@ class CompanyEstablishmentService < ApiService
     "#{name}#{default_text}"
   end
 
-  private_class_method :format_for_api, :transform_api_response, :build_full_address,
-                       :build_display_name
+  private_class_method :format_for_api, :transform_api_response, :transform_api_response_index,
+                       :build_full_address, :build_display_name
 end
