@@ -1,12 +1,28 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["lineItems", "lineItemTemplate", "subtotal", "tax", "total", "addButton", "seriesSelect", "invoiceNumber", "contactField", "contactSelect", "invoiceTypeSelect", "buyerSelect", "buyerPartyId", "buyerContactId"]
+  static targets = [
+    "lineItems", "lineItemTemplate", "subtotal", "tax", "total", "addButton", "seriesSelect", "invoiceNumber",
+    "contactField", "contactSelect", "invoiceTypeSelect", "buyerSelect", "buyerPartyId", "buyerContactId",
+    "establishmentSelect", "taxJurisdiction", "buyerLocationToggle", "buyerLocationFields",
+    "taxContextStatus", "taxContextIndicator", "taxContextDetails", "transactionType", "crossBorder",
+    "euTransaction", "reverseCharge", "autoTaxCalculate", "calculateTaxButton", "refreshTaxButton",
+    "taxContextEstablishmentId", "taxContextCrossBorder", "taxContextEuTransaction", "taxContextReverseCharge"
+  ]
   static values = {
     lineIndex: Number,
     taxRate: { type: Number, default: 21 },
-    allSeries: Array
+    allSeries: Array,
+    taxContextData: Object,
+    companyEstablishments: Array
   }
+
+  // Performance optimization properties
+  taxContextCache = new Map()
+  establishmentCache = new Map()
+  debounceTimers = new Map()
+  requestCache = new Map()
+  lastTaxCalculationSignature = null
 
   connect() {
     this.lineIndexValue = this.lineItemsTarget.querySelectorAll('.line-item').length
@@ -540,5 +556,638 @@ export default class extends Controller {
     }
 
     return typeToSeriesMapping[invoiceType] || ['FC'] // Default to FC if type is unknown
+  }
+
+  // Tax Context Methods
+
+  onEstablishmentChange(event) {
+    const establishmentId = event.target.value
+
+    if (!establishmentId) {
+      this.clearTaxJurisdiction()
+      return
+    }
+
+    this.updateTaxJurisdictionDisplay(establishmentId)
+
+    if (this.hasAutoTaxCalculateTarget && this.autoTaxCalculateTarget.checked) {
+      this.calculateTaxContext()
+    }
+  }
+
+  updateTaxJurisdictionDisplay(establishmentId) {
+    // Find the establishment data from company establishments
+    const establishment = this.getEstablishmentById(establishmentId)
+
+    if (establishment && establishment.tax_jurisdiction) {
+      const jurisdiction = establishment.tax_jurisdiction
+      const jurisdictionText = `${jurisdiction.country_name} (${jurisdiction.code})`
+
+      if (this.hasTaxJurisdictionTarget) {
+        this.taxJurisdictionTarget.innerHTML = `
+          <div class="flex items-center">
+            <div class="flex-1">
+              <div class="font-medium text-gray-900">${jurisdictionText}</div>
+              <div class="text-xs text-gray-500">${jurisdiction.regime_type || 'Standard'} Tax Regime</div>
+            </div>
+            <div class="ml-2">
+              ${jurisdiction.is_eu ?
+                '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">EU</span>' :
+                '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Non-EU</span>'
+              }
+            </div>
+          </div>
+        `
+      }
+    } else {
+      this.clearTaxJurisdiction()
+    }
+  }
+
+  clearTaxJurisdiction() {
+    if (this.hasTaxJurisdictionTarget) {
+      this.taxJurisdictionTarget.innerHTML = `
+        <div class="text-sm text-gray-500">Select an establishment to see tax jurisdiction</div>
+      `
+    }
+  }
+
+  getEstablishmentById(establishmentId) {
+    // This would typically come from a data attribute or API call
+    // For now, we'll make an API call to get establishment details
+    const establishments = this.companyEstablishmentsValue || []
+    return establishments.find(est => est.id.toString() === establishmentId.toString())
+  }
+
+  toggleBuyerLocation(event) {
+    event.preventDefault()
+
+    if (this.hasBuyerLocationFieldsTarget) {
+      const isHidden = this.buyerLocationFieldsTarget.classList.contains('hidden')
+
+      if (isHidden) {
+        this.buyerLocationFieldsTarget.classList.remove('hidden')
+        this.buyerLocationToggleTarget.innerHTML = `
+          <svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          Cancel
+        `
+      } else {
+        this.buyerLocationFieldsTarget.classList.add('hidden')
+        this.buyerLocationToggleTarget.innerHTML = `
+          <svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          Override
+        `
+        // Clear override fields
+        const countrySelect = document.querySelector('select[name="invoice[buyer_country_override]"]')
+        const cityInput = document.querySelector('input[name="invoice[buyer_city_override]"]')
+        if (countrySelect) countrySelect.value = ''
+        if (cityInput) cityInput.value = ''
+      }
+    }
+  }
+
+  onBuyerLocationChange() {
+    if (this.hasAutoTaxCalculateTarget && this.autoTaxCalculateTarget.checked) {
+      this.calculateTaxContext()
+    }
+  }
+
+  async calculateTaxContext(event) {
+    if (event) event.preventDefault()
+
+    try {
+      // Clear previous errors
+      this.clearValidationErrors()
+
+      // Validate tax context fields before making API call
+      const validationErrors = this.validateTaxContextFields()
+      if (validationErrors.length > 0) {
+        this.displayValidationErrors(validationErrors)
+        return
+      }
+
+      this.showTaxCalculationLoading()
+
+      const taxContextData = await this.resolveTaxContext()
+
+      if (taxContextData && taxContextData.tax_context) {
+        this.updateTaxContextDisplay(taxContextData.tax_context)
+        this.storeTaxContextData(taxContextData.tax_context)
+        this.showTaxCalculationSuccess()
+
+        // Log tax context resolution for debugging
+        console.log('Tax context resolved successfully:', {
+          establishment: taxContextData.establishment?.name,
+          cross_border: taxContextData.tax_context.cross_border,
+          eu_transaction: taxContextData.tax_context.eu_transaction,
+          reverse_charge: taxContextData.tax_context.reverse_charge
+        })
+      } else {
+        this.showTaxCalculationError('Unable to resolve tax context - invalid response format')
+      }
+
+    } catch (error) {
+      console.error('Tax context calculation error:', error)
+
+      // Display user-friendly error messages
+      const errorMessage = error.message || 'Error calculating tax context'
+      this.showTaxCalculationError(errorMessage)
+
+      // Log detailed error for debugging
+      console.error('Detailed error:', {
+        message: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      })
+    }
+  }
+
+  async resolveTaxContext() {
+    const establishmentId = this.hasEstablishmentSelectTarget ? this.establishmentSelectTarget.value : null
+
+    // Validate establishment is selected
+    if (!establishmentId) {
+      throw new Error('Please select a company establishment for tax calculation')
+    }
+
+    const buyerCountry = document.querySelector('select[name="invoice[buyer_country_override]"]')?.value
+    const buyerCity = document.querySelector('input[name="invoice[buyer_city_override]"]')?.value
+
+    // Prepare buyer location data
+    let buyerLocation = null
+    if (buyerCountry || buyerCity) {
+      // Validate country code format
+      if (buyerCountry && buyerCountry.length !== 3) {
+        throw new Error('Invalid country code format. Expected 3-letter code (e.g., ESP, FRA)')
+      }
+
+      buyerLocation = {
+        country: buyerCountry,
+        city: buyerCity
+      }
+    }
+
+    // Get product types from line items with validation
+    const productTypes = this.extractProductTypesFromLines()
+
+    const requestData = {
+      establishment_id: establishmentId,
+      buyer_location: buyerLocation,
+      product_types: productTypes
+    }
+
+    // Get CSRF token for Rails
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+
+    if (!csrfToken) {
+      throw new Error('CSRF token not found. Please refresh the page and try again.')
+    }
+
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
+
+      const response = await fetch('/api/v1/tax/resolve_context', {
+        method: 'POST',
+        headers: {
+          'X-CSRF-Token': csrfToken,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(requestData),
+        signal: controller.signal
+      })
+
+      clearTimeout(timeoutId)
+
+      if (!response.ok) {
+        let errorMessage = `Tax calculation failed (${response.status})`
+
+        try {
+          const errorData = await response.json()
+          if (errorData.errors && errorData.errors.length > 0) {
+            errorMessage = errorData.errors[0].detail || errorData.errors[0].title || errorMessage
+          } else if (errorData.error) {
+            errorMessage = errorData.error
+          }
+        } catch (parseError) {
+          // Use default error message if JSON parsing fails
+        }
+
+        throw new Error(errorMessage)
+      }
+
+      const data = await response.json()
+
+      // Validate response structure
+      if (!data || !data.data || !data.data.attributes) {
+        throw new Error('Invalid response format from tax service')
+      }
+
+      return data.data.attributes
+
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        throw new Error('Tax calculation request timed out. Please check your connection and try again.')
+      }
+      throw error
+    }
+  }
+
+  extractProductTypesFromLines() {
+    const productTypes = new Set(['goods']) // Default
+
+    // Extract product types from line items
+    const lineItems = document.querySelectorAll('[data-line-index]')
+
+    lineItems.forEach(lineItem => {
+      const description = lineItem.querySelector('[name*="[description]"]')?.value || ''
+      const productCode = lineItem.querySelector('[name*="[product_code]"]')?.value || ''
+
+      // Simple classification based on keywords
+      const combinedText = `${description} ${productCode}`.toLowerCase()
+
+      if (combinedText.includes('service') || combinedText.includes('consulting') ||
+          combinedText.includes('support') || combinedText.includes('maintenance')) {
+        productTypes.add('services')
+      }
+
+      if (combinedText.includes('digital') || combinedText.includes('software') ||
+          combinedText.includes('license') || combinedText.includes('subscription')) {
+        productTypes.add('digital_services')
+      }
+
+      if (combinedText.includes('training') || combinedText.includes('education') ||
+          combinedText.includes('course')) {
+        productTypes.add('education')
+      }
+    })
+
+    return Array.from(productTypes)
+  }
+
+  // Tax-specific validation methods
+  validateTaxContextFields() {
+    const errors = []
+
+    // Validate establishment selection for tax calculations
+    if (this.hasAutoTaxCalculateTarget && this.autoTaxCalculateTarget.checked) {
+      const establishmentId = this.hasEstablishmentSelectTarget ? this.establishmentSelectTarget.value : null
+
+      if (!establishmentId) {
+        errors.push({
+          field: 'establishment_id',
+          message: 'Company establishment is required for automatic tax calculations',
+          element: this.establishmentSelectTarget
+        })
+      }
+    }
+
+    // Validate buyer location override fields
+    const buyerCountry = document.querySelector('select[name="invoice[buyer_country_override]"]')?.value
+    const buyerCity = document.querySelector('input[name="invoice[buyer_city_override]"]')?.value
+
+    if (buyerCountry || buyerCity) {
+      if (buyerCountry && buyerCountry.length !== 3) {
+        errors.push({
+          field: 'buyer_country_override',
+          message: 'Invalid country code. Use 3-letter format (ESP, FRA, DEU)',
+          element: document.querySelector('select[name="invoice[buyer_country_override]"]')
+        })
+      }
+
+      if (buyerCity && buyerCity.trim().length === 0) {
+        errors.push({
+          field: 'buyer_city_override',
+          message: 'City cannot be empty when country is specified',
+          element: document.querySelector('input[name="invoice[buyer_city_override]"]')
+        })
+      }
+    }
+
+    // Validate line items for tax calculation
+    const lineItems = document.querySelectorAll('[data-line-index]')
+    let hasValidLines = false
+
+    lineItems.forEach((lineItem, index) => {
+      const description = lineItem.querySelector('[name*="[description]"]')?.value?.trim()
+      const quantity = parseFloat(lineItem.querySelector('[name*="[quantity]"]')?.value || 0)
+      const unitPrice = parseFloat(lineItem.querySelector('[name*="[unit_price]"]')?.value || 0)
+      const taxRate = parseFloat(lineItem.querySelector('[name*="[tax_rate]"]')?.value || 0)
+
+      if (description && quantity > 0 && unitPrice > 0) {
+        hasValidLines = true
+
+        // Validate tax rate range
+        if (taxRate < 0 || taxRate > 100) {
+          errors.push({
+            field: `invoice_lines[${index}][tax_rate]`,
+            message: `Tax rate must be between 0% and 100% (Line ${index + 1})`,
+            element: lineItem.querySelector('[name*="[tax_rate]"]')
+          })
+        }
+
+        // Validate discount percentage
+        const discountPercentage = parseFloat(lineItem.querySelector('[name*="[discount_percentage]"]')?.value || 0)
+        if (discountPercentage < 0 || discountPercentage > 100) {
+          errors.push({
+            field: `invoice_lines[${index}][discount_percentage]`,
+            message: `Discount must be between 0% and 100% (Line ${index + 1})`,
+            element: lineItem.querySelector('[name*="[discount_percentage]"]')
+          })
+        }
+      }
+    })
+
+    if (!hasValidLines && this.hasAutoTaxCalculateTarget && this.autoTaxCalculateTarget.checked) {
+      errors.push({
+        field: 'invoice_lines',
+        message: 'At least one valid line item is required for tax calculations',
+        element: document.querySelector('[data-invoice-form-target="lineItems"]')
+      })
+    }
+
+    return errors
+  }
+
+  displayValidationErrors(errors) {
+    // Clear previous error displays
+    this.clearValidationErrors()
+
+    if (errors.length === 0) return
+
+    // Display errors near their fields
+    errors.forEach(error => {
+      if (error.element) {
+        this.addFieldError(error.element, error.message)
+      }
+    })
+
+    // Show summary error message
+    const errorMessages = errors.map(e => e.message).join(', ')
+    this.showTaxCalculationError(`Validation failed: ${errorMessages}`)
+  }
+
+  addFieldError(element, message) {
+    // Remove existing error for this field
+    const existingError = element.parentNode.querySelector('.tax-field-error')
+    if (existingError) {
+      existingError.remove()
+    }
+
+    // Add error styling to field
+    element.classList.add('border-red-500', 'focus:border-red-500', 'focus:ring-red-500')
+
+    // Add error message
+    const errorDiv = document.createElement('div')
+    errorDiv.className = 'tax-field-error mt-1 text-sm text-red-600'
+    errorDiv.textContent = message
+    element.parentNode.appendChild(errorDiv)
+  }
+
+  clearValidationErrors() {
+    // Remove error styling from all tax-related fields
+    const errorFields = document.querySelectorAll('.border-red-500')
+    errorFields.forEach(field => {
+      field.classList.remove('border-red-500', 'focus:border-red-500', 'focus:ring-red-500')
+    })
+
+    // Remove all error messages
+    const errorMessages = document.querySelectorAll('.tax-field-error')
+    errorMessages.forEach(error => error.remove())
+  }
+
+  // Performance optimization methods
+
+  // Debounced tax context calculation
+  onEstablishmentChangeDebounced(event) {
+    const establishmentId = event.target.value
+
+    // Clear existing timer
+    if (this.debounceTimers.has('establishment')) {
+      clearTimeout(this.debounceTimers.get('establishment'))
+    }
+
+    // Set new debounced timer
+    const timerId = setTimeout(() => {
+      this.onEstablishmentChange(event)
+      this.debounceTimers.delete('establishment')
+    }, 300) // 300ms debounce
+
+    this.debounceTimers.set('establishment', timerId)
+  }
+
+  // Cached establishment loading
+  async loadEstablishmentWithCache(establishmentId) {
+    if (this.establishmentCache.has(establishmentId)) {
+      return this.establishmentCache.get(establishmentId)
+    }
+
+    try {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+
+      const response = await fetch(`/api/v1/company_establishments?establishment_id=${establishmentId}`, {
+        headers: {
+          'X-CSRF-Token': csrfToken,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        const establishment = data.establishments?.find(est => est.id.toString() === establishmentId.toString())
+
+        if (establishment) {
+          // Cache for 5 minutes
+          this.establishmentCache.set(establishmentId, establishment)
+          setTimeout(() => this.establishmentCache.delete(establishmentId), 5 * 60 * 1000)
+          return establishment
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load establishment from API:', error)
+    }
+
+    return null
+  }
+
+  // Create signature for tax calculation request to avoid duplicate calls
+  createTaxCalculationSignature() {
+    const establishmentId = this.hasEstablishmentSelectTarget ? this.establishmentSelectTarget.value : null
+    const buyerCountry = document.querySelector('select[name="invoice[buyer_country_override]"]')?.value || ''
+    const buyerCity = document.querySelector('input[name="invoice[buyer_city_override]"]')?.value || ''
+    const productTypes = this.extractProductTypesFromLines()
+
+    return JSON.stringify({
+      establishmentId,
+      buyerCountry,
+      buyerCity,
+      productTypes: productTypes.sort()
+    })
+  }
+
+  // Cache cleanup on disconnect
+  disconnect() {
+    // Clear all caches
+    this.taxContextCache.clear()
+    this.establishmentCache.clear()
+    this.requestCache.clear()
+
+    // Clear timers
+    this.debounceTimers.forEach(timerId => clearTimeout(timerId))
+    this.debounceTimers.clear()
+  }
+
+  updateTaxContextDisplay(taxContextData) {
+    // Update tax context details
+    if (this.hasTransactionTypeTarget) {
+      const transactionType = taxContextData.cross_border ?
+        (taxContextData.eu_transaction ? 'Intra-EU' : 'International') : 'Domestic'
+      this.transactionTypeTarget.textContent = transactionType
+    }
+
+    if (this.hasCrossBorderTarget) {
+      this.crossBorderTarget.textContent = taxContextData.cross_border ? 'Yes' : 'No'
+    }
+
+    if (this.hasEuTransactionTarget) {
+      this.euTransactionTarget.textContent = taxContextData.eu_transaction ? 'Yes' : 'No'
+    }
+
+    if (this.hasReverseChargeTarget) {
+      this.reverseChargeTarget.textContent = taxContextData.reverse_charge ? 'Required' : 'Not required'
+    }
+
+    // Show tax context details
+    if (this.hasTaxContextDetailsTarget) {
+      this.taxContextDetailsTarget.classList.remove('hidden')
+    }
+  }
+
+  storeTaxContextData(taxContextData) {
+    // Store tax context data in hidden fields
+    if (this.hasTaxContextEstablishmentIdTarget) {
+      this.taxContextEstablishmentIdTarget.value = taxContextData.establishment?.id || ''
+    }
+
+    if (this.hasTaxContextCrossBorderTarget) {
+      this.taxContextCrossBorderTarget.value = taxContextData.cross_border || false
+    }
+
+    if (this.hasTaxContextEuTransactionTarget) {
+      this.taxContextEuTransactionTarget.value = taxContextData.eu_transaction || false
+    }
+
+    if (this.hasTaxContextReverseChargeTarget) {
+      this.taxContextReverseChargeTarget.value = taxContextData.reverse_charge || false
+    }
+
+    // Store full tax context data
+    this.taxContextDataValue = taxContextData
+  }
+
+  showTaxCalculationLoading() {
+    if (this.hasTaxContextStatusTarget) {
+      this.taxContextStatusTarget.textContent = 'Calculating tax context...'
+    }
+
+    if (this.hasTaxContextIndicatorTarget) {
+      this.taxContextIndicatorTarget.innerHTML = `
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+          <svg class="animate-spin -ml-1 mr-1.5 h-3 w-3 text-yellow-800" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Calculating
+        </span>
+      `
+    }
+
+    if (this.hasCalculateTaxButtonTarget) {
+      this.calculateTaxButtonTarget.disabled = true
+    }
+  }
+
+  showTaxCalculationSuccess() {
+    if (this.hasTaxContextStatusTarget) {
+      this.taxContextStatusTarget.textContent = 'Tax context calculated successfully'
+    }
+
+    if (this.hasTaxContextIndicatorTarget) {
+      this.taxContextIndicatorTarget.innerHTML = `
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+          <svg class="-ml-1 mr-1.5 h-3 w-3 text-green-800" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+          </svg>
+          Calculated
+        </span>
+      `
+    }
+
+    if (this.hasCalculateTaxButtonTarget) {
+      this.calculateTaxButtonTarget.disabled = false
+    }
+  }
+
+  showTaxCalculationError(message) {
+    if (this.hasTaxContextStatusTarget) {
+      this.taxContextStatusTarget.textContent = message
+    }
+
+    if (this.hasTaxContextIndicatorTarget) {
+      this.taxContextIndicatorTarget.innerHTML = `
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+          <svg class="-ml-1 mr-1.5 h-3 w-3 text-red-800" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+          </svg>
+          Error
+        </span>
+      `
+    }
+
+    if (this.hasCalculateTaxButtonTarget) {
+      this.calculateTaxButtonTarget.disabled = false
+    }
+  }
+
+  async refreshTaxContext(event) {
+    if (event) event.preventDefault()
+
+    // Refresh company establishments and recalculate tax context
+    try {
+      await this.loadCompanyEstablishments()
+
+      if (this.hasEstablishmentSelectTarget && this.establishmentSelectTarget.value) {
+        this.onEstablishmentChange({ target: this.establishmentSelectTarget })
+      }
+
+    } catch (error) {
+      console.error('Error refreshing tax context:', error)
+    }
+  }
+
+  async loadCompanyEstablishments() {
+    // Get CSRF token for Rails
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+
+    const response = await fetch('/api/v1/company_establishments', {
+      headers: {
+        'X-CSRF-Token': csrfToken,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    this.companyEstablishmentsValue = data.establishments || []
   }
 }

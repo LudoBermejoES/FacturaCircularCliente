@@ -320,7 +320,144 @@ class InvoiceService < ApiService
       response = get('/invoices', token: token, params: { limit: limit, status: 'recent' })
       response&.[](:invoices) || []
     end
-    
+
+    # Tax context integration methods
+
+    # Calculate taxes for invoice with establishment context
+    def calculate_taxes_with_context(id, establishment_id: nil, token:)
+      # Get invoice tax calculation from API
+      tax_calculation = TaxService.calculate_invoice_tax(id, token: token)
+
+      # If establishment provided, enrich with tax context
+      if establishment_id
+        establishment_context = CompanyEstablishmentService.find_with_context(establishment_id, token: token)
+        tax_calculation[:establishment_context] = establishment_context
+      end
+
+      tax_calculation
+    rescue => e
+      Rails.logger.error "Error calculating taxes with context for invoice #{id}: #{e.message}"
+      { error: e.message }
+    end
+
+    # Create invoice with automatic tax context resolution
+    def create_with_tax_context(params, token:)
+      # Extract tax context parameters
+      establishment_id = params.delete(:establishment_id)
+      buyer_country_override = params.delete(:buyer_country_override)
+      buyer_city_override = params.delete(:buyer_city_override)
+      auto_calculate_tax_context = params.delete(:auto_calculate_tax_context)
+
+      # Create the invoice first
+      result = create(params, token: token)
+
+      # If auto-calculation is enabled and establishment is provided, calculate tax context
+      if auto_calculate_tax_context && establishment_id && result[:data]
+        invoice_id = result[:data][:id]
+
+        begin
+          # Resolve tax context
+          buyer_location = nil
+          if buyer_country_override.present? || buyer_city_override.present?
+            buyer_location = {
+              country: buyer_country_override,
+              city: buyer_city_override
+            }.compact
+          end
+
+          tax_context = TaxService.resolve_tax_context(
+            establishment_id: establishment_id,
+            buyer_location: buyer_location,
+            product_types: ['goods'], # Default for now
+            token: token
+          )
+
+          # Store tax context in the result for client use
+          result[:tax_context] = tax_context
+
+          # Optionally update the invoice with tax context data
+          if tax_context[:cross_border] || tax_context[:reverse_charge]
+            update_params = {
+              tax_context_establishment_id: establishment_id,
+              tax_context_cross_border: tax_context[:cross_border],
+              tax_context_reverse_charge: tax_context[:reverse_charge]
+            }
+
+            # Update the invoice with context (non-critical, don't fail if this fails)
+            begin
+              update(invoice_id, update_params, token: token)
+            rescue => update_error
+              Rails.logger.warn "Failed to update invoice #{invoice_id} with tax context: #{update_error.message}"
+            end
+          end
+
+        rescue => tax_error
+          Rails.logger.error "Error resolving tax context for invoice #{invoice_id}: #{tax_error.message}"
+          result[:tax_context_error] = tax_error.message
+        end
+      end
+
+      result
+    end
+
+    # Update invoice with automatic tax context resolution
+    def update_with_tax_context(id, params, token:)
+      # Extract tax context parameters
+      establishment_id = params.delete(:establishment_id)
+      buyer_country_override = params.delete(:buyer_country_override)
+      buyer_city_override = params.delete(:buyer_city_override)
+      auto_calculate_tax_context = params.delete(:auto_calculate_tax_context)
+
+      # Update the invoice first
+      result = update(id, params, token: token)
+
+      # If auto-calculation is enabled and establishment is provided, calculate tax context
+      if auto_calculate_tax_context && establishment_id
+        begin
+          # Get the current invoice buyer information for context
+          buyer_location = nil
+          if buyer_country_override.present? || buyer_city_override.present?
+            buyer_location = {
+              country: buyer_country_override,
+              city: buyer_city_override
+            }.compact
+          end
+
+          tax_context = TaxService.resolve_tax_context(
+            establishment_id: establishment_id,
+            buyer_location: buyer_location,
+            product_types: ['goods'], # Default for now
+            token: token
+          )
+
+          # Store tax context in the result for client use
+          result[:tax_context] = tax_context
+
+          # Update the invoice with tax context data if needed
+          if tax_context[:cross_border] || tax_context[:reverse_charge]
+            context_update_params = {
+              tax_context_establishment_id: establishment_id,
+              tax_context_cross_border: tax_context[:cross_border],
+              tax_context_reverse_charge: tax_context[:reverse_charge]
+            }
+
+            # Perform secondary update with context (non-critical)
+            begin
+              update(id, context_update_params, token: token)
+            rescue => update_error
+              Rails.logger.warn "Failed to update invoice #{id} with tax context: #{update_error.message}"
+            end
+          end
+
+        rescue => tax_error
+          Rails.logger.error "Error resolving tax context for invoice #{id}: #{tax_error.message}"
+          result[:tax_context_error] = tax_error.message
+        end
+      end
+
+      result
+    end
+
     private
     
     # Special method for downloading files (PDF, XML) that are not JSON
@@ -391,6 +528,54 @@ class InvoiceService < ApiService
       end
 
       json_api_params
+    end
+
+    # Tax context integration methods
+
+    # Calculate taxes for invoice with establishment context
+    def calculate_taxes_with_context(id, establishment_id: nil, token:)
+      # Get invoice tax calculation from API
+      tax_calculation = TaxService.calculate_invoice_tax(id, token: token)
+
+      # If establishment provided, enrich with tax context
+      if establishment_id
+        establishment_context = CompanyEstablishmentService.find_with_context(establishment_id, token: token)
+        tax_calculation[:establishment_context] = establishment_context
+      end
+
+      tax_calculation
+    rescue => e
+      Rails.logger.error "Error calculating taxes with context for invoice #{id}: #{e.message}"
+      { error: e.message }
+    end
+
+    # Validate cross-border transaction for invoice
+    def validate_cross_border_transaction(id, token:)
+      invoice = find(id, token: token)
+
+      # Get establishment and buyer information
+      establishment_id = invoice[:establishment_id] || invoice[:tax_context_establishment_id]
+
+      if establishment_id
+        establishment = CompanyEstablishmentService.find(establishment_id, token: token)
+        seller_jurisdiction = establishment[:tax_jurisdiction][:code] if establishment[:tax_jurisdiction]
+
+        # Determine buyer jurisdiction (simplified logic)
+        buyer_jurisdiction = 'ESP' # Default
+
+        # Use TaxService for cross-border validation
+        TaxService.validate_cross_border_transaction(
+          seller_jurisdiction: seller_jurisdiction,
+          buyer_jurisdiction: buyer_jurisdiction,
+          product_types: ['goods'],
+          token: token
+        )
+      else
+        { error: 'No establishment information available for cross-border validation' }
+      end
+    rescue => e
+      Rails.logger.error "Error validating cross-border transaction for invoice #{id}: #{e.message}"
+      { error: e.message }
     end
   end
 end

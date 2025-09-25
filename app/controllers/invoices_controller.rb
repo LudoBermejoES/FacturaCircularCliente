@@ -3,6 +3,7 @@ class InvoicesController < ApplicationController
   before_action :load_companies, only: [:new, :create, :edit, :update]
   before_action :load_invoice_series, only: [:new, :create, :edit, :update]
   before_action :load_workflows, only: [:new, :create, :edit, :update]
+  before_action :load_company_establishments, only: [:new, :create, :edit, :update]
   before_action :check_permission_to_create, only: [:new, :create]
   before_action :check_permission_to_edit, only: [:edit, :update, :destroy]
   
@@ -131,9 +132,9 @@ class InvoicesController < ApplicationController
       invoice_params_with_lines = process_invoice_params(invoice_params)
       Rails.logger.info "DEBUG: Processed params: #{invoice_params_with_lines.inspect}"
       
-      Rails.logger.info "DEBUG: Calling InvoiceService.create"
-      response = InvoiceService.create(invoice_params_with_lines, token: current_token)
-      Rails.logger.info "DEBUG: InvoiceService.create returned: #{response.inspect}"
+      Rails.logger.info "DEBUG: Calling InvoiceService.create_with_tax_context"
+      response = InvoiceService.create_with_tax_context(invoice_params_with_lines, token: current_token)
+      Rails.logger.info "DEBUG: InvoiceService.create_with_tax_context returned: #{response.inspect}"
       redirect_to invoice_path(response[:data][:id]), notice: 'Invoice created successfully'
     rescue ApiService::ValidationError => e
       Rails.logger.info "DEBUG: ValidationError caught: #{e.message}"
@@ -218,7 +219,7 @@ class InvoicesController < ApplicationController
       Rails.logger.info "DEBUG: InvoicesController#update - Processed params: #{invoice_params_with_lines.inspect}"
       Rails.logger.info "DEBUG: InvoicesController#update - workflow_definition_id in processed: '#{invoice_params_with_lines[:workflow_definition_id]}'"
 
-      InvoiceService.update(@invoice[:id], invoice_params_with_lines, token: current_token)
+      InvoiceService.update_with_tax_context(@invoice[:id], invoice_params_with_lines, token: current_token)
       redirect_to invoice_path(@invoice[:id]), notice: 'Invoice updated successfully'
     rescue ApiService::ValidationError => e
       # Parse API errors into a format the view can understand
@@ -419,6 +420,17 @@ class InvoicesController < ApplicationController
       # Don't show error to user as this might be called during error states
     end
   end
+
+  def load_company_establishments
+    begin
+      # Load company establishments for tax context
+      @company_establishments = CompanyEstablishmentService.all(token: current_token)
+    rescue ApiService::ApiError => e
+      @company_establishments = []
+      Rails.logger.warn "Error loading company establishments: #{e.message}"
+      # Don't show error to user as this might be called during error states
+    end
+  end
   
   def invoice_params
     # WORKAROUND: Rails 8 seems to have a bug with :issue_date parameter filtering
@@ -431,6 +443,9 @@ class InvoicesController < ApplicationController
       # Global financial fields
       :total_general_discounts, :total_general_surcharges, :total_financial_expenses,
       :total_reimbursable_expenses, :withholding_amount, :payment_in_kind_amount,
+      # Tax context fields
+      :establishment_id, :buyer_country_override, :buyer_city_override, :auto_calculate_tax_context,
+      :tax_context_establishment_id, :tax_context_cross_border, :tax_context_eu_transaction, :tax_context_reverse_charge,
       invoice_lines: {},  # Allow nested hash structure
       invoice_lines_attributes: [:id, :line_number, :description, :quantity, :unit_price, :tax_rate, :discount_percentage, :product_code]
     )

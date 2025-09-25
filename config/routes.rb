@@ -81,7 +81,7 @@ Rails.application.routes.draw do
 
   # Tax Management
   resources :tax_rates
-  resources :tax_calculations, only: [:new, :create, :show] do
+  resources :tax_calculations, only: [:index, :new, :create, :show] do
     collection do
       post :validate
       post :invoice
@@ -100,12 +100,26 @@ Rails.application.routes.draw do
       post :duplicate
     end
   end
-  
+
+  # Tax Jurisdictions (multi-jurisdiction tax management)
+  resources :tax_jurisdictions, only: [:index, :show]
+
+  # Company Establishments (tax location management)
+  resources :company_establishments do
+    collection do
+      post :resolve_tax_context
+    end
+  end
+
   # Invoice Numbering API endpoints (for AJAX calls)
   namespace :api do
     namespace :v1 do
       get 'invoice_numbering/next_available', to: 'invoice_numbering#next_available'
       get 'companies/:company_id/contacts', to: 'company_contacts#index'
+      # Tax context resolution endpoint
+      post 'establishments/:establishment_id/tax_context', to: 'company_establishments#resolve_tax_context'
+      post 'tax/resolve_context', to: 'tax#resolve_context'
+      get 'company_establishments', to: 'company_establishments#index'
     end
   end
   

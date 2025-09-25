@@ -6,8 +6,8 @@ class TaxRatesController < ApplicationController
     exemptions_response = TaxService.exemptions(token: current_user_token)
     
     # Extract data from JSON API format
-    @tax_rates = rates_response.dig('data')&.map { |rate| rate['attributes'] } || []
-    @exemptions = exemptions_response.dig('data')&.map { |exemption| exemption['attributes'] } || []
+    @tax_rates = (rates_response.is_a?(Hash) ? rates_response['data'] : rates_response)&.map { |rate| rate['attributes'] } || []
+    @exemptions = (exemptions_response.is_a?(Hash) ? exemptions_response['data'] : exemptions_response)&.map { |exemption| exemption['attributes'] } || []
     
     respond_to do |format|
       format.html

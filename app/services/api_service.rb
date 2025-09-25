@@ -7,9 +7,11 @@ class ApiService
   
   class ApiError < StandardError; end
   class AuthenticationError < ApiError; end
+  class NotFoundError < ApiError; end
+  class ForbiddenError < ApiError; end
   class ValidationError < ApiError
     attr_reader :errors
-    
+
     def initialize(message, errors = {})
       super(message)
       @errors = errors
@@ -56,7 +58,7 @@ class ApiService
     rescue HTTParty::Error => e
       Rails.logger.error "API Request Failed: #{e.message}"
       raise ApiError, "Network error: #{e.message}"
-    rescue AuthenticationError, ValidationError => e
+    rescue AuthenticationError, NotFoundError, ForbiddenError, ValidationError => e
       # Re-raise our own exceptions without wrapping
       raise e
     rescue => e
@@ -86,9 +88,9 @@ class ApiService
       when 401
         raise AuthenticationError, 'Authentication failed. Please login again.'
       when 403
-        raise ApiError, 'You do not have permission to perform this action.'
+        raise ForbiddenError, 'You do not have permission to perform this action.'
       when 404
-        raise ApiError, 'The requested resource was not found.'
+        raise NotFoundError, 'The requested resource was not found.'
       when 422
         Rails.logger.info "DEBUG: ApiService - 422 response body: #{response.body}"
         errors = parse_validation_errors(response)

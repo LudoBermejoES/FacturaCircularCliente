@@ -1,0 +1,297 @@
+<% content_for :title, @jurisdiction[:display_name] %>
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <!-- Header -->
+  <div class="md:flex md:items-center md:justify-between mb-6">
+    <div class="min-w-0 flex-1">
+      <nav class="flex" aria-label="Breadcrumb">
+        <ol role="list" class="flex items-center space-x-4">
+          <li>
+            <%= link_to tax_jurisdictions_path, class: "text-gray-400 hover:text-gray-500" do %>
+              Tax Jurisdictions
+            <% end %>
+          </li>
+          <li>
+            <div class="flex items-center">
+              <svg class="h-5 w-5 flex-shrink-0 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 111.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+              </svg>
+              <span class="ml-4 text-sm font-medium text-gray-500">
+                <%= @jurisdiction[:name] %>
+              </span>
+            </div>
+          </li>
+        </ol>
+      </nav>
+
+      <h2 class="mt-2 text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">
+        <%= @jurisdiction[:display_name] %>
+      </h2>
+      <div class="mt-1 flex flex-col sm:mt-0 sm:flex-row sm:flex-wrap sm:space-x-6">
+        <div class="mt-2 flex items-center text-sm text-gray-500">
+          <span class="inline-flex items-center rounded-full bg-gray-100 px-3 py-0.5 text-sm font-medium text-gray-800">
+            <%= @jurisdiction[:full_code] %>
+          </span>
+        </div>
+        <% if @jurisdiction[:eu_member] %>
+          <div class="mt-2 flex items-center text-sm text-gray-500">
+            <span class="inline-flex items-center rounded-full bg-blue-100 px-3 py-0.5 text-sm font-medium text-blue-800">
+              EU Member
+            </span>
+          </div>
+        <% end %>
+        <% if @jurisdiction[:spanish_territory] %>
+          <div class="mt-2 flex items-center text-sm text-gray-500">
+            <span class="inline-flex items-center rounded-full bg-yellow-100 px-3 py-0.5 text-sm font-medium text-yellow-800">
+              Spanish Territory
+            </span>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+    <!-- Jurisdiction Details -->
+    <div class="lg:col-span-1">
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+          <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4">
+            Jurisdiction Details
+          </h3>
+
+          <dl class="space-y-4">
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Name</dt>
+              <dd class="mt-1 text-sm text-gray-900"><%= @jurisdiction[:name] %></dd>
+            </div>
+
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Code</dt>
+              <dd class="mt-1 text-sm text-gray-900"><%= @jurisdiction[:code] %></dd>
+            </div>
+
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Country Code</dt>
+              <dd class="mt-1 text-sm text-gray-900"><%= @jurisdiction[:country_code] %></dd>
+            </div>
+
+            <% if @jurisdiction[:region_code] %>
+              <div>
+                <dt class="text-sm font-medium text-gray-500">Region Code</dt>
+                <dd class="mt-1 text-sm text-gray-900"><%= @jurisdiction[:region_code] %></dd>
+              </div>
+            <% end %>
+
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Currency</dt>
+              <dd class="mt-1 text-sm text-gray-900">
+                <%= @jurisdiction[:currency] %> (<%= @jurisdiction[:currency_symbol] %>)
+              </dd>
+            </div>
+
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Tax Regime</dt>
+              <dd class="mt-1 text-sm text-gray-900 capitalize">
+                <%= @jurisdiction[:tax_regime]&.humanize || 'Standard VAT' %>
+              </dd>
+            </div>
+
+            <% if @jurisdiction[:default_tax_regime] %>
+              <div>
+                <dt class="text-sm font-medium text-gray-500">Default Tax Regime</dt>
+                <dd class="mt-1 text-sm text-gray-900 capitalize">
+                  <%= @jurisdiction[:default_tax_regime]&.humanize %>
+                </dd>
+              </div>
+            <% end %>
+          </dl>
+        </div>
+      </div>
+
+      <!-- Requirements -->
+      <div class="mt-6 bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+          <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4">
+            Requirements
+          </h3>
+
+          <div class="space-y-3">
+            <div class="flex items-center">
+              <% if @jurisdiction[:requires_einvoice] %>
+                <svg class="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+              <% else %>
+                <svg class="h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                </svg>
+              <% end %>
+              <span class="ml-2 text-sm text-gray-900">Electronic invoicing required</span>
+            </div>
+
+            <div class="flex items-center">
+              <% if @jurisdiction[:requires_vat_id] %>
+                <svg class="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+              <% else %>
+                <svg class="h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                </svg>
+              <% end %>
+              <span class="ml-2 text-sm text-gray-900">VAT ID required for businesses</span>
+            </div>
+
+            <div class="flex items-center">
+              <% if @jurisdiction[:euro_currency] %>
+                <svg class="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+              <% else %>
+                <svg class="h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                </svg>
+              <% end %>
+              <span class="ml-2 text-sm text-gray-900">Eurozone member</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tax Rates -->
+    <div class="lg:col-span-2">
+      <div class="bg-white shadow rounded-lg" id="rates">
+        <div class="px-4 py-5 sm:p-6">
+          <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4">
+            Tax Rates
+          </h3>
+
+          <% if @tax_rates.present? %>
+            <!-- Tax Rates Table -->
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Rate Name
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Rate
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Type
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Group
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Scope
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <% @tax_rates.each do |rate| %>
+                    <tr class="hover:bg-gray-50">
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">
+                          <%= rate[:name] %>
+                        </div>
+                        <div class="text-sm text-gray-500">
+                          <%= rate[:code] %>
+                        </div>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="text-lg font-semibold text-gray-900">
+                          <%= rate[:display_rate] %>
+                        </span>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
+                          <%= case rate[:rate_type]
+                              when 'standard' then 'bg-blue-100 text-blue-800'
+                              when 'reduced' then 'bg-green-100 text-green-800'
+                              when 'super_reduced' then 'bg-yellow-100 text-yellow-800'
+                              when 'zero' then 'bg-gray-100 text-gray-800'
+                              when 'exempt' then 'bg-purple-100 text-purple-800'
+                              else 'bg-gray-100 text-gray-800'
+                              end %>">
+                          <%= rate[:rate_type]&.humanize || 'Standard' %>
+                        </span>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <%= rate[:group_code] %>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
+                          <%= case rate[:tax_scope]
+                              when 'sale' then 'bg-blue-100 text-blue-800'
+                              when 'withholding' then 'bg-red-100 text-red-800'
+                              when 'surcharge' then 'bg-orange-100 text-orange-800'
+                              else 'bg-gray-100 text-gray-800'
+                              end %>">
+                          <%= rate[:tax_scope]&.humanize || 'Sale' %>
+                        </span>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <% if rate[:is_active] %>
+                          <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                            Active
+                          </span>
+                        <% else %>
+                          <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">
+                            Inactive
+                          </span>
+                        <% end %>
+                      </td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Rate Summary -->
+            <div class="mt-6 grid grid-cols-2 gap-6 sm:grid-cols-4">
+              <% standard_rates = @tax_rates.select { |r| r[:rate_type] == 'standard' } %>
+              <% reduced_rates = @tax_rates.select { |r| r[:rate_type] == 'reduced' } %>
+              <% withholding_rates = @tax_rates.select { |r| r[:tax_scope] == 'withholding' } %>
+              <% active_rates = @tax_rates.select { |r| r[:is_active] } %>
+
+              <div class="text-center">
+                <div class="text-2xl font-semibold text-blue-600"><%= standard_rates.count %></div>
+                <div class="text-sm text-gray-500">Standard Rates</div>
+              </div>
+              <div class="text-center">
+                <div class="text-2xl font-semibold text-green-600"><%= reduced_rates.count %></div>
+                <div class="text-sm text-gray-500">Reduced Rates</div>
+              </div>
+              <div class="text-center">
+                <div class="text-2xl font-semibold text-red-600"><%= withholding_rates.count %></div>
+                <div class="text-sm text-gray-500">Withholding Rates</div>
+              </div>
+              <div class="text-center">
+                <div class="text-2xl font-semibold text-gray-900"><%= active_rates.count %></div>
+                <div class="text-sm text-gray-500">Active Rates</div>
+              </div>
+            </div>
+          <% else %>
+            <!-- Empty state for tax rates -->
+            <div class="text-center py-8">
+              <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+              <h3 class="mt-4 text-lg font-medium text-gray-900">No tax rates configured</h3>
+              <p class="mt-2 text-sm text-gray-500">
+                Tax rates for this jurisdiction will appear here once they are configured.
+              </p>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

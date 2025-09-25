@@ -811,4 +811,266 @@ RSpec.describe InvoiceService do
       end
     end
   end
+
+  # New tax context methods
+  describe '.calculate_taxes_with_context' do
+    let(:invoice_id) { '123' }
+    let(:establishment_id) { '1' }
+
+    context 'with establishment context' do
+      let(:tax_calculation_response) do
+        {
+          invoice_id: invoice_id,
+          base_amount: 1000.0,
+          tax_amount: 210.0,
+          total_amount: 1210.0,
+          tax_breakdown: [
+            { rate: 21.0, base: 1000.0, amount: 210.0 }
+          ]
+        }
+      end
+
+      let(:tax_context_response) do
+        {
+          establishment: { id: 1, name: 'Madrid Office' },
+          tax_jurisdiction: { code: 'ESP', country_name: 'Spain' },
+          cross_border: false,
+          applicable_rates: [
+            { name: 'Standard VAT', rate: 21.0 }
+          ]
+        }
+      end
+
+      before do
+        # Mock TaxService.calculate_invoice_tax
+        allow(TaxService).to receive(:calculate_invoice_tax)
+          .with(invoice_id, token: token)
+          .and_return(tax_calculation_response)
+
+        # Mock TaxService.resolve_tax_context
+        allow(TaxService).to receive(:resolve_tax_context)
+          .with(establishment_id: establishment_id, token: token)
+          .and_return(tax_context_response)
+      end
+
+      it 'combines tax calculation with context' do
+        result = described_class.calculate_taxes_with_context(
+          invoice_id,
+          establishment_id: establishment_id,
+          token: token
+        )
+
+        expect(result).to include(
+          invoice_id: invoice_id,
+          base_amount: 1000.0,
+          tax_amount: 210.0,
+          total_amount: 1210.0,
+          tax_context: tax_context_response
+        )
+      end
+    end
+
+    context 'without establishment context' do
+      let(:tax_calculation_response) do
+        {
+          invoice_id: invoice_id,
+          base_amount: 500.0,
+          tax_amount: 105.0,
+          total_amount: 605.0
+        }
+      end
+
+      before do
+        allow(TaxService).to receive(:calculate_invoice_tax)
+          .with(invoice_id, token: token)
+          .and_return(tax_calculation_response)
+      end
+
+      it 'returns only tax calculation' do
+        result = described_class.calculate_taxes_with_context(invoice_id, token: token)
+
+        expect(result).to eq(tax_calculation_response)
+        expect(result[:tax_context]).to be_nil
+      end
+    end
+  end
+
+  describe '.validate_tax_compliance' do
+    let(:invoice_id) { '456' }
+    let(:jurisdiction_code) { 'ESP' }
+
+    context 'successful validation' do
+      let(:compliance_response) do
+        {
+          invoice_id: invoice_id,
+          jurisdiction: {
+            code: jurisdiction_code,
+            country_name: 'Spain'
+          },
+          compliance_status: {
+            is_compliant: true,
+            missing_requirements: [],
+            warnings: ['Consider adding delivery terms for international shipments']
+          },
+          tax_validation: {
+            rates_correct: true,
+            exemptions_valid: true,
+            cross_border_rules_applied: true
+          }
+        }
+      end
+
+      before do
+        allow(TaxService).to receive(:validate_cross_border_transaction)
+          .and_return(compliance_response)
+      end
+
+      it 'validates tax compliance for jurisdiction' do
+        result = described_class.validate_tax_compliance(
+          invoice_id,
+          jurisdiction_code: jurisdiction_code,
+          token: token
+        )
+
+        expect(result).to include(
+          invoice_id: invoice_id,
+          jurisdiction: hash_including(
+            code: jurisdiction_code,
+            country_name: 'Spain'
+          ),
+          compliance_status: hash_including(
+            is_compliant: true
+          ),
+          tax_validation: hash_including(
+            rates_correct: true,
+            exemptions_valid: true
+          )
+        )
+      end
+    end
+
+    context 'with compliance issues' do
+      let(:non_compliant_response) do
+        {
+          invoice_id: invoice_id,
+          jurisdiction: {
+            code: jurisdiction_code,
+            country_name: 'Spain'
+          },
+          compliance_status: {
+            is_compliant: false,
+            missing_requirements: ['vat_number', 'delivery_address'],
+            warnings: ['Missing buyer VAT number for B2B transaction']
+          },
+          tax_validation: {
+            rates_correct: true,
+            exemptions_valid: false,
+            cross_border_rules_applied: false
+          }
+        }
+      end
+
+      before do
+        allow(TaxService).to receive(:validate_cross_border_transaction)
+          .and_return(non_compliant_response)
+      end
+
+      it 'returns compliance issues' do
+        result = described_class.validate_tax_compliance(
+          invoice_id,
+          jurisdiction_code: jurisdiction_code,
+          token: token
+        )
+
+        expect(result[:compliance_status][:is_compliant]).to be(false)
+        expect(result[:compliance_status][:missing_requirements]).to include('vat_number', 'delivery_address')
+        expect(result[:tax_validation][:exemptions_valid]).to be(false)
+      end
+    end
+  end
+
+  describe '.get_tax_summary' do
+    let(:invoice_id) { '789' }
+    let(:establishment_id) { '2' }
+
+    context 'successful summary generation' do
+      let(:invoice_data) do
+        {
+          data: {
+            id: invoice_id,
+            type: 'invoices',
+            attributes: {
+              invoice_number: 'FC-2025-0003',
+              buyer_name: 'French Customer SA',
+              buyer_country: 'France',
+              total_invoice: '1500.00',
+              currency_code: 'EUR'
+            }
+          }
+        }
+      end
+
+      let(:tax_context) do
+        {
+          establishment: { id: establishment_id, name: 'Barcelona Office' },
+          tax_jurisdiction: { code: 'ESP', country_name: 'Spain' },
+          cross_border: true,
+          eu_transaction: true,
+          applicable_rates: [
+            { name: 'Standard VAT', rate: 21.0, applies_to: ['goods'] }
+          ]
+        }
+      end
+
+      let(:compliance_validation) do
+        {
+          compliance_status: { is_compliant: true },
+          tax_validation: { rates_correct: true }
+        }
+      end
+
+      before do
+        stub_request(:get, "http://albaranes-api:3000/api/v1/invoices/#{invoice_id}")
+          .with(headers: { 'Authorization' => "Bearer #{token}" })
+          .to_return(status: 200, body: invoice_data.to_json)
+
+        allow(TaxService).to receive(:resolve_tax_context)
+          .with(establishment_id: establishment_id, token: token)
+          .and_return(tax_context)
+
+        allow(described_class).to receive(:validate_tax_compliance)
+          .with(invoice_id, jurisdiction_code: 'ESP', token: token)
+          .and_return(compliance_validation)
+      end
+
+      it 'generates comprehensive tax summary' do
+        result = described_class.get_tax_summary(
+          invoice_id,
+          establishment_id: establishment_id,
+          token: token
+        )
+
+        expect(result).to include(
+          invoice: hash_including(
+            invoice_number: 'FC-2025-0003',
+            buyer_name: 'French Customer SA',
+            total_invoice: '1500.00'
+          ),
+          tax_context: hash_including(
+            cross_border: true,
+            eu_transaction: true
+          ),
+          compliance: hash_including(
+            compliance_status: hash_including(is_compliant: true)
+          )
+        )
+
+        expect(result[:summary]).to include(
+          transaction_type: 'Cross-border EU transaction',
+          applicable_jurisdiction: 'Spain (ESP)',
+          compliance_status: 'Compliant'
+        )
+      end
+    end
+  end
 end

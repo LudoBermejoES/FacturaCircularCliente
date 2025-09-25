@@ -1,0 +1,201 @@
+<% content_for :title, "Add Company Establishment" %>
+
+<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+  <!-- Header -->
+  <div class="mb-6">
+    <div class="flex items-center">
+      <%= link_to company_establishments_path,
+          class: "mr-3 inline-flex items-center text-sm text-gray-500 hover:text-gray-700" do %>
+        <svg class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Back to Establishments
+      <% end %>
+    </div>
+    <h1 class="text-3xl font-bold leading-tight text-gray-900">Add Company Establishment</h1>
+    <p class="mt-1 text-sm text-gray-500">
+      Create a new physical location for tax jurisdiction purposes
+    </p>
+  </div>
+
+  <!-- Form Card -->
+  <div class="bg-white shadow rounded-lg">
+    <div class="px-6 py-6">
+      <%= form_with url: company_establishments_path, method: :post,
+          local: true, class: "space-y-6" do |form| %>
+
+        <!-- Basic Information Section -->
+        <div>
+          <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4">Basic Information</h3>
+
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <!-- Name -->
+            <div>
+              <%= form.label "establishment[name]", "Name", class: "block text-sm font-medium text-gray-700" %>
+              <%= form.text_field "establishment[name]",
+                  class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                  placeholder: "e.g., Main Office, Barcelona Warehouse" %>
+              <% if @establishment.is_a?(Hash) && @establishment[:errors] && @establishment[:errors][:name] %>
+                <p class="mt-1 text-sm text-red-600"><%= @establishment[:errors][:name].first %></p>
+              <% end %>
+            </div>
+
+            <!-- Currency -->
+            <div>
+              <%= form.label "establishment[currency_code]", "Currency", class: "block text-sm font-medium text-gray-700" %>
+              <%= form.select "establishment[currency_code]",
+                  options_for_select([
+                    ['Euro (EUR)', 'EUR'],
+                    ['US Dollar (USD)', 'USD'],
+                    ['British Pound (GBP)', 'GBP'],
+                    ['Mexican Peso (MXN)', 'MXN'],
+                    ['Polish Złoty (PLN)', 'PLN']
+                  ], @establishment.is_a?(Hash) ? @establishment[:currency_code] : @establishment&.currency_code),
+                  { prompt: "Select currency" },
+                  { class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" } %>
+              <% if @establishment.is_a?(Hash) && @establishment[:errors] && @establishment[:errors][:currency_code] %>
+                <p class="mt-1 text-sm text-red-600"><%= @establishment[:errors][:currency_code].first %></p>
+              <% end %>
+            </div>
+          </div>
+        </div>
+
+        <!-- Address Section -->
+        <div class="border-t border-gray-200 pt-6">
+          <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4">Address</h3>
+
+          <div class="space-y-4">
+            <!-- Address Line 1 -->
+            <div>
+              <%= form.label "establishment[address_line_1]", "Address Line 1", class: "block text-sm font-medium text-gray-700" %>
+              <%= form.text_field "establishment[address_line_1]",
+                  class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                  placeholder: "Street address" %>
+              <% if @establishment.is_a?(Hash) && @establishment[:errors] && @establishment[:errors][:address_line_1] %>
+                <p class="mt-1 text-sm text-red-600"><%= @establishment[:errors][:address_line_1].first %></p>
+              <% end %>
+            </div>
+
+            <!-- Address Line 2 -->
+            <div>
+              <%= form.label "establishment[address_line_2]", "Address Line 2 (Optional)", class: "block text-sm font-medium text-gray-700" %>
+              <%= form.text_field "establishment[address_line_2]",
+                  class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                  placeholder: "Apartment, suite, etc." %>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <!-- City -->
+              <div>
+                <%= form.label "establishment[city]", "City", class: "block text-sm font-medium text-gray-700" %>
+                <%= form.text_field "establishment[city]",
+                    class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+                <% if @establishment.is_a?(Hash) && @establishment[:errors] && @establishment[:errors][:city] %>
+                  <p class="mt-1 text-sm text-red-600"><%= @establishment[:errors][:city].first %></p>
+                <% end %>
+              </div>
+
+              <!-- State/Province -->
+              <div>
+                <%= form.label "establishment[state_province]", "State/Province", class: "block text-sm font-medium text-gray-700" %>
+                <%= form.text_field "establishment[state_province]",
+                    class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+              </div>
+
+              <!-- Postal Code -->
+              <div>
+                <%= form.label "establishment[postal_code]", "Postal Code", class: "block text-sm font-medium text-gray-700" %>
+                <%= form.text_field "establishment[postal_code]",
+                    class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+                <% if @establishment.is_a?(Hash) && @establishment[:errors] && @establishment[:errors][:postal_code] %>
+                  <p class="mt-1 text-sm text-red-600"><%= @establishment[:errors][:postal_code].first %></p>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tax Configuration Section -->
+        <div class="border-t border-gray-200 pt-6">
+          <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4">Tax Configuration</h3>
+
+          <div class="space-y-4">
+            <!-- Tax Jurisdiction -->
+            <div>
+              <%= form.label "establishment[tax_jurisdiction_id]", "Tax Jurisdiction", class: "block text-sm font-medium text-gray-700" %>
+              <% if @jurisdictions.present? %>
+                <%= form.select "establishment[tax_jurisdiction_id]",
+                    options_for_select(@jurisdictions.map { |j| [j[:name], j[:id]] },
+                      @establishment.is_a?(Hash) ? @establishment[:tax_jurisdiction_id] : @establishment&.tax_jurisdiction_id),
+                    { prompt: "Select tax jurisdiction" },
+                    { class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" } %>
+              <% else %>
+                <div class="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-500">
+                  No tax jurisdictions available. Please contact system administrator.
+                </div>
+              <% end %>
+              <p class="mt-1 text-sm text-gray-500">
+                The tax jurisdiction determines applicable tax rates and requirements for this location
+              </p>
+              <% if @establishment.is_a?(Hash) && @establishment[:errors] && @establishment[:errors][:tax_jurisdiction_id] %>
+                <p class="mt-1 text-sm text-red-600"><%= @establishment[:errors][:tax_jurisdiction_id].first %></p>
+              <% end %>
+            </div>
+
+            <!-- Default Location -->
+            <div class="flex items-center">
+              <%= form.check_box "establishment[is_default]",
+                  class: "h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" %>
+              <%= form.label "establishment[is_default]", "Set as default establishment",
+                  class: "ml-2 block text-sm text-gray-700" %>
+              <div class="ml-3">
+                <div class="relative" data-controller="tooltip" data-tooltip-content="Only one establishment can be the default. This will be used for invoices when no specific establishment is selected.">
+                  <svg class="h-4 w-4 text-gray-400 cursor-help" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="border-t border-gray-200 pt-6 flex justify-end space-x-3">
+          <%= link_to company_establishments_path,
+              class: "bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" do %>
+            Cancel
+          <% end %>
+          <%= form.submit "Create Establishment",
+              class: "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600" %>
+        </div>
+
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<!-- Simple tooltip implementation -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const tooltipTriggers = document.querySelectorAll('[data-controller="tooltip"]');
+
+    tooltipTriggers.forEach(trigger => {
+      const content = trigger.dataset.tooltipContent;
+      let tooltip = null;
+
+      trigger.addEventListener('mouseenter', function() {
+        tooltip = document.createElement('div');
+        tooltip.className = 'absolute z-50 px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg -top-8 left-1/2 transform -translate-x-1/2 whitespace-nowrap';
+        tooltip.textContent = content;
+        trigger.appendChild(tooltip);
+      });
+
+      trigger.addEventListener('mouseleave', function() {
+        if (tooltip) {
+          tooltip.remove();
+          tooltip = null;
+        }
+      });
+    });
+  });
+</script>

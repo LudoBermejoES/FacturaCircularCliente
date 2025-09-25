@@ -1,0 +1,172 @@
+<% content_for :title, "Tax Jurisdictions" %>
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <!-- Header -->
+  <div class="md:flex md:items-center md:justify-between mb-6">
+    <div class="min-w-0 flex-1">
+      <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">
+        Tax Jurisdictions
+      </h2>
+      <p class="mt-1 text-sm text-gray-500">
+        Manage tax jurisdictions and rates across different regions
+      </p>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="mb-6 bg-white shadow rounded-lg">
+    <div class="px-4 py-5 sm:p-6">
+      <%= form_with url: tax_jurisdictions_path, method: :get, local: true, class: "grid grid-cols-1 gap-6 sm:grid-cols-3 lg:grid-cols-4" do |form| %>
+        <div>
+          <%= form.label :country, "Country", class: "block text-sm font-medium text-gray-700" %>
+          <%= form.select :country,
+              options_for_select([
+                ['All Countries', ''],
+                ['Spain', 'ES'],
+                ['Portugal', 'PT'],
+                ['Mexico', 'MX'],
+                ['Poland', 'PL']
+              ], params[:country]),
+              {},
+              { class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" } %>
+        </div>
+
+        <div>
+          <%= form.label :tax_regime, "Tax Regime", class: "block text-sm font-medium text-gray-700" %>
+          <%= form.select :tax_regime,
+              options_for_select([
+                ['All Regimes', ''],
+                ['Standard VAT', 'standard_vat'],
+                ['Simplified', 'simplified'],
+                ['Special', 'special']
+              ], params[:tax_regime]),
+              {},
+              { class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" } %>
+        </div>
+
+        <div>
+          <%= form.label :eu_member, "EU Membership", class: "block text-sm font-medium text-gray-700" %>
+          <%= form.select :eu_member,
+              options_for_select([
+                ['All', ''],
+                ['EU Members Only', 'true'],
+                ['Non-EU Only', 'false']
+              ], params[:eu_member]),
+              {},
+              { class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" } %>
+        </div>
+
+        <div class="flex items-end">
+          <%= form.submit "Filter", class: "w-full inline-flex justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Jurisdictions Grid -->
+  <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    <% @jurisdictions.each do |jurisdiction| %>
+      <div class="relative group bg-white overflow-hidden shadow rounded-lg">
+        <div class="p-6">
+          <!-- Header -->
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <span class="inline-flex items-center justify-center h-10 w-10 rounded-lg bg-indigo-600 text-white font-medium text-sm">
+                  <%= jurisdiction[:country_code] %>
+                </span>
+              </div>
+              <div class="ml-4">
+                <h3 class="text-lg font-medium text-gray-900">
+                  <%= jurisdiction[:name] %>
+                </h3>
+                <p class="text-sm text-gray-500">
+                  <%= jurisdiction[:code] %>
+                </p>
+              </div>
+            </div>
+            <% if jurisdiction[:eu_member] %>
+              <span class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+                EU
+              </span>
+            <% end %>
+          </div>
+
+          <!-- Details -->
+          <dl class="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Currency</dt>
+              <dd class="mt-1 text-sm text-gray-900">
+                <%= jurisdiction[:currency] %>
+                <span class="text-gray-500">(<%= jurisdiction[:currency_symbol] %>)</span>
+              </dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">Tax Regime</dt>
+              <dd class="mt-1 text-sm text-gray-900 capitalize">
+                <%= jurisdiction[:tax_regime]&.humanize || 'Standard' %>
+              </dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">E-Invoice Required</dt>
+              <dd class="mt-1">
+                <% if jurisdiction[:requires_einvoice] %>
+                  <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
+                    Yes
+                  </span>
+                <% else %>
+                  <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-800">
+                    No
+                  </span>
+                <% end %>
+              </dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500">VAT ID Required</dt>
+              <dd class="mt-1">
+                <% if jurisdiction[:requires_vat_id] %>
+                  <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
+                    Yes
+                  </span>
+                <% else %>
+                  <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-800">
+                    No
+                  </span>
+                <% end %>
+              </dd>
+            </div>
+          </dl>
+
+          <!-- Actions -->
+          <div class="mt-6 flex justify-between">
+            <%= link_to tax_jurisdiction_path(jurisdiction[:id]),
+                class: "text-indigo-600 hover:text-indigo-500 text-sm font-medium" do %>
+              View Details →
+            <% end %>
+            <%= link_to tax_jurisdiction_path(jurisdiction[:id], anchor: 'rates'),
+                class: "text-indigo-600 hover:text-indigo-500 text-sm font-medium" do %>
+              View Rates
+            <% end %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Empty state -->
+  <% if @jurisdictions.empty? %>
+    <div class="text-center py-12">
+      <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+      <h3 class="mt-4 text-lg font-medium text-gray-900">No tax jurisdictions found</h3>
+      <p class="mt-2 text-sm text-gray-500">
+        <% if params.any? { |k, v| k.in?(['country', 'tax_regime', 'eu_member']) && v.present? } %>
+          Try adjusting your filters to see more results.
+        <% else %>
+          Tax jurisdictions will appear here once they are configured.
+        <% end %>
+      </p>
+    </div>
+  <% end %>
+</div>

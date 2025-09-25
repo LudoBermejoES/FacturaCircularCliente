@@ -1,6 +1,27 @@
 class TaxCalculationsController < ApplicationController
   before_action :authenticate_user!
-  
+
+  def index
+    # Tax Calculator interface for manual calculations
+    @jurisdictions = []
+    @establishments = []
+
+    begin
+      # Load jurisdictions for dropdown
+      @jurisdictions = TaxJurisdictionService.all(token: current_token)
+
+      # Load company establishments for context
+      @establishments = CompanyEstablishmentService.all(token: current_token)
+    rescue ApiService::ApiError => e
+      Rails.logger.error "Failed to load tax calculation data: #{e.message}"
+    end
+
+    respond_to do |format|
+      format.html
+      format.json { render json: { jurisdictions: @jurisdictions, establishments: @establishments } }
+    end
+  end
+
   def new
     redirect_to invoices_path, alert: "Manual tax calculations are not supported by the API. Use invoice-specific calculations instead."
   end

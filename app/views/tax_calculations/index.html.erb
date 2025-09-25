@@ -1,0 +1,111 @@
+<div class="space-y-6">
+  <div class="border-b border-gray-200 pb-5">
+    <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">
+      Tax Calculator
+    </h2>
+    <p class="mt-2 text-sm text-gray-700">
+      Calculate taxes for different jurisdictions and transaction types
+    </p>
+  </div>
+
+  <div class="bg-white shadow sm:rounded-lg">
+    <div class="px-4 py-5 sm:p-6">
+      <div class="sm:flex sm:items-center">
+        <div class="sm:flex-auto">
+          <h3 class="text-lg font-medium text-gray-900">Manual Tax Calculation</h3>
+          <p class="mt-2 text-sm text-gray-700">
+            For manual tax calculations, please use the invoice creation form which provides
+            comprehensive tax context resolution and cross-border validation.
+          </p>
+        </div>
+      </div>
+
+      <div class="mt-6 flex items-center justify-center rounded-md border-2 border-dashed border-gray-300 p-12">
+        <div class="text-center">
+          <div class="mx-auto h-12 w-12 text-gray-400 flex items-center justify-center">
+            <span class="text-2xl">🧮</span>
+          </div>
+          <h3 class="mt-2 text-sm font-medium text-gray-900">Tax calculations available in invoices</h3>
+          <p class="mt-1 text-sm text-gray-500">
+            Tax calculations are integrated into the invoice creation process with automatic
+            jurisdiction detection and cross-border compliance validation.
+          </p>
+          <div class="mt-6">
+            <%= link_to new_invoice_path,
+                class: "inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" do %>
+              <span class="mr-2">➕</span>
+              Create Invoice with Tax Calculation
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-gray-50 shadow sm:rounded-lg">
+    <div class="px-4 py-5 sm:p-6">
+      <h3 class="text-lg font-medium text-gray-900 mb-4">Available Tax Jurisdictions</h3>
+
+      <% if @jurisdictions&.any? %>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <% @jurisdictions.each do |jurisdiction| %>
+            <div class="relative rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm">
+              <div>
+                <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-600">
+                  <span class="text-sm font-medium leading-none text-white"><%= jurisdiction[:country_code] %></span>
+                </span>
+              </div>
+              <div class="mt-4">
+                <h3 class="text-sm font-medium text-gray-900">
+                  <%= jurisdiction[:name] %>
+                </h3>
+                <p class="mt-2 text-sm text-gray-500">
+                  <%= jurisdiction[:region_name] %> • <%= jurisdiction[:currency] %>
+                </p>
+                <p class="mt-1 text-xs text-gray-400">
+                  <%= jurisdiction[:tax_regime] %> regime
+                </p>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <p class="text-sm text-gray-500">No tax jurisdictions available</p>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="bg-white shadow sm:rounded-lg">
+    <div class="px-4 py-5 sm:p-6">
+      <h3 class="text-lg font-medium text-gray-900 mb-4">Company Establishments</h3>
+
+      <% if @establishments&.any? %>
+        <div class="space-y-4">
+          <% @establishments.each do |establishment| %>
+            <div class="border rounded-lg p-4">
+              <div class="flex items-center justify-between">
+                <h4 class="text-sm font-medium text-gray-900"><%= establishment[:name] %></h4>
+                <% if establishment[:is_default] %>
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    Default
+                  </span>
+                <% end %>
+              </div>
+              <p class="mt-1 text-sm text-gray-600">
+                <%= establishment[:city] %>, <%= establishment[:country_code] %>
+              </p>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="text-center">
+          <p class="text-sm text-gray-500 mb-4">No company establishments found</p>
+          <%= link_to company_establishments_path,
+              class: "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-indigo-600 bg-indigo-100 hover:bg-indigo-200" do %>
+            Manage Establishments
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
